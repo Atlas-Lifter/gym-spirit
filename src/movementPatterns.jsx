@@ -91,6 +91,11 @@ export const PATTERNS = {
     start: { ankle: [128, 210], t: 2, gr: [2, 58] },
     bottom: { ankle: [150, 210], sh: -12, th: 82, t: 3, th2: -22, sh2: -80, ft2: 10, gr: [2, 56] },
   } },
+  // 바벨을 등에 지고 걸어가며 하는 런지 (손은 스쿼트처럼 어깨 옆에서 바벨을 잡는다)
+  lunge_barbell: { equip: 'barbell', hold: 'back', track: 'hip', frames: {
+    start: { ankle: [128, 210], t: 4, gr: [-12, -2], eb: -1 },
+    bottom: { ankle: [150, 210], sh: -12, th: 82, t: 6, th2: -22, sh2: -80, ft2: 10, gr: [-12, -2], eb: -1 },
+  } },
   split_squat: { equip: 'dumbbell', track: 'hip', scene: () => <Bench x1={36} x2={82} y={162} />, frames: {
     start: { ankle: [140, 210], sh: -4, th: 12, t: 4, th2: -28, sh2: -92, ft2: -60, gr: [2, 56] },
     bottom: { ankle: [140, 210], sh: -15, th: 80, t: 8, th2: -20, sh2: -150, ft2: -60, gr: [2, 56] },

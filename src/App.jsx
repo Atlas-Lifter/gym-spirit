@@ -64,6 +64,7 @@ const EXERCISE_OPTIONS = [
   { id: 'fsq', name: '프론트 스쿼트', target: '하체(전면)', tool: '바벨' },
   { id: 'vsq', name: '브이스쿼트', target: '하체(전면)', tool: '머신' },
   { id: 'hack_sq', name: '핵 스쿼트', target: '하체(전면)', tool: '머신' },
+  { id: 'smith_sq', name: '스미스머신 스쿼트', target: '하체(전면)', tool: '머신' },
   { id: 'lpd', name: '레그 프레스', target: '하체(전면)', tool: '머신' },
   { id: 's_lpd', name: '원레그 프레스', target: '하체(전체)', tool: '머신' },
   { id: 'le', name: '레그 익스텐션', target: '하체(전면)', tool: '머신' },
@@ -71,6 +72,7 @@ const EXERCISE_OPTIONS = [
   { id: 'rdl', name: '루마니안 데드리프트', target: '하체(후면)', tool: '바벨' },
   { id: 'stiff_dl', name: '스티프 레그 데드리프트', target: '하체(후면)', tool: '바벨' },
   { id: 'lunge', name: '덤벨 런지', target: '하체(전체)', tool: '덤벨' },
+  { id: 'walk_lunge', name: '바벨 워킹 런지', target: '하체(전체)', tool: '바벨' },
   { id: 'bss', name: '불가리안 스플릿 스쿼트', target: '하체(둔근)', tool: '덤벨' },
   { id: 'ht', name: '힙 쓰러스트', target: '하체(둔근)', tool: '바벨' },
   { id: 'glute_kick', name: '글루트 킥백', target: '하체(둔근)', tool: '케이블' },
@@ -211,83 +213,81 @@ const OLYMPIA_LEGENDS = [
     id: 'leg_ronnie', name: '로니 콜먼 (Ronnie Coleman)', nickname: 'The King', era: '1998-2005 (올림피아 8회 우승)',
     desc: '"Yeah Buddy! Light weight, baby!" 역대 최고의 등과 하체를 지닌 압도적인 매스 몬스터. 초고중량 프리웨이트를 즐겨했습니다.',
     imageColor: 'from-blue-700 to-blue-900',
+    split: '주 6일 · 3분할을 주 2회 (등·이두·어깨 / 하체 / 가슴·삼두)',
+    basis: '로니 콜먼이 훈련 영상과 인터뷰에서 밝힌 주 6일 3분할을 바탕으로, 그가 즐겨 한 종목으로 구성했어요. 세트·횟수는 따라 하기 좋게 다듬은 값이에요.',
+    youtube: { label: '로니 콜먼 영상 보기', url: 'https://www.youtube.com/results?search_query=Ronnie+Coleman+workout' },
     routines: [
-      { id: 'r_leg_1', title: '하체 (전설의 800lbs 스쿼트)', desc: '경이로운 하체 사이즈를 만든 초고중량 바벨 스쿼트 중심 루틴', workouts: [{exerciseId: 'sq', sets: 5, reps: 8, weight: 140}, {exerciseId: 'lpd', sets: 4, reps: 12, weight: 300}, {exerciseId: 'fsq', sets: 4, reps: 10, weight: 100}, {exerciseId: 'le', sets: 4, reps: 15, weight: 60}, {exerciseId: 'lunge', sets: 3, reps: 20, weight: 40}] },
-      { id: 'r_leg_2', title: '하체 (대퇴이두 & 둔근 폭격)', desc: '뒷다리를 찢어놓는 스티프 데드리프트와 고립 운동', workouts: [{exerciseId: 'rdl', sets: 5, reps: 10, weight: 120}, {exerciseId: 'lc', sets: 5, reps: 12, weight: 50}, {exerciseId: 'bss', sets: 4, reps: 12, weight: 40}, {exerciseId: 'ht', sets: 4, reps: 10, weight: 100}] },
-      { id: 'r_back_1', title: '등 (두께감의 제왕)', desc: '괴물 같은 등 두께를 만든 800lbs 데드리프트와 헤비 로우', workouts: [{exerciseId: 'dl', sets: 5, reps: 5, weight: 160}, {exerciseId: 'br', sets: 4, reps: 8, weight: 120}, {exerciseId: 'tbar', sets: 4, reps: 10, weight: 100}, {exerciseId: 'sr', sets: 4, reps: 12, weight: 90}] },
-      { id: 'r_back_2', title: '등 (광활한 광배근)', desc: '등의 너비를 극대화하는 풀다운과 덤벨 로우', workouts: [{exerciseId: 'pd', sets: 5, reps: 12, weight: 90}, {exerciseId: 'pu', sets: 4, reps: 10, weight: 0}, {exerciseId: 'dr_back', sets: 4, reps: 10, weight: 60}, {exerciseId: 'apd', sets: 4, reps: 15, weight: 35}] },
-      { id: 'r_chest_1', title: '가슴 (무자비한 바벨 프레스)', desc: '가슴 매스를 키우기 위한 고중량 바벨 벤치프레스', workouts: [{exerciseId: 'bp', sets: 5, reps: 8, weight: 120}, {exerciseId: 'ip', sets: 4, reps: 8, weight: 100}, {exerciseId: 'dbp', sets: 4, reps: 10, weight: 100}, {exerciseId: 'dfly', sets: 4, reps: 12, weight: 25}] },
-      { id: 'r_chest_2', title: '가슴 (헤비 덤벨 타격)', desc: '200lbs 덤벨 프레스의 신화, 가동범위를 극한으로 쓰는 루틴', workouts: [{exerciseId: 'dp_chest', sets: 5, reps: 10, weight: 50}, {exerciseId: 'idp', sets: 4, reps: 10, weight: 45}, {exerciseId: 'cpm', sets: 4, reps: 12, weight: 90}, {exerciseId: 'pdf', sets: 4, reps: 15, weight: 40}] },
-      { id: 'r_sh_1', title: '어깨 (헤비 숄더 프레스)', desc: '밀리터리 프레스와 덤벨로 어깨 덩치를 키우는 훈련', workouts: [{exerciseId: 'ohp', sets: 5, reps: 8, weight: 80}, {exerciseId: 'dp', sets: 4, reps: 10, weight: 40}, {exerciseId: 'uprow', sets: 4, reps: 12, weight: 60}] },
-      { id: 'r_sh_2', title: '어깨 (측/후면 볼륨 트레이닝)', desc: '어깨에 입체감을 불어넣는 고반복 레이즈 훈련', workouts: [{exerciseId: 'spm', sets: 4, reps: 12, weight: 80}, {exerciseId: 'lr', sets: 5, reps: 15, weight: 20}, {exerciseId: 'fr', sets: 4, reps: 15, weight: 20}, {exerciseId: 'rpdf', sets: 4, reps: 15, weight: 45}] },
-      { id: 'r_arm_1', title: '이두 (헤비 바벨 컬)', desc: '산맥 같은 이두근을 만든 반동 없는 정자세 바벨 컬', workouts: [{exerciseId: 'bc', sets: 5, reps: 10, weight: 50}, {exerciseId: 'dc', sets: 4, reps: 12, weight: 25}, {exerciseId: 'pcurl', sets: 4, reps: 12, weight: 40}] },
-      { id: 'r_arm_2', title: '삼두 (파워 프레스 & 익스텐션)', desc: '두꺼운 말굽 삼두를 만드는 라잉 트라이셉스 익스텐션', workouts: [{exerciseId: 'sc', sets: 5, reps: 10, weight: 50}, {exerciseId: 'tc', sets: 4, reps: 12, weight: 45}, {exerciseId: 'ct', sets: 4, reps: 12, weight: 35}] }
+      { id: 'r_d1', title: 'Day 1 · 등·이두·어깨 (A)', desc: '데드리프트로 시작하는 두께 중심의 등, 바벨 컬, 밀리터리 프레스까지 한 번에', workouts: [{exerciseId: 'dl', sets: 4, reps: 8, weight: 160, note: '점점 무겁게'}, {exerciseId: 'br', sets: 4, reps: 10, weight: 110}, {exerciseId: 'tbar', sets: 3, reps: 10, weight: 90}, {exerciseId: 'dr_back', sets: 3, reps: 10, weight: 50}, {exerciseId: 'bc', sets: 4, reps: 12, weight: 45}, {exerciseId: 'dc', sets: 3, reps: 12, weight: 20}, {exerciseId: 'ohp', sets: 4, reps: 10, weight: 70}, {exerciseId: 'fr', sets: 3, reps: 12, weight: 15}, {exerciseId: 'lr', sets: 3, reps: 12, weight: 15}] },
+      { id: 'r_d2', title: 'Day 2 · 하체 (A) 스쿼트 데이', desc: '"Light weight, baby!" 초고중량 스쿼트와 바벨 워킹 런지로 다리를 키우는 날', workouts: [{exerciseId: 'sq', sets: 5, reps: 10, weight: 160, note: '허벅지가 평행이 될 때까지'}, {exerciseId: 'lpd', sets: 4, reps: 12, weight: 300}, {exerciseId: 'hack_sq', sets: 3, reps: 12, weight: 140}, {exerciseId: 'walk_lunge', sets: 2, reps: 24, weight: 60, note: '좌우 합쳐 24걸음'}, {exerciseId: 'stiff_dl', sets: 3, reps: 12, weight: 100}, {exerciseId: 'lc', sets: 3, reps: 12, weight: 50}] },
+      { id: 'r_d3', title: 'Day 3 · 가슴·삼두 (A)', desc: '벤치프레스 중심으로 가슴 매스를 쌓고 클로즈그립으로 삼두를 마무리', workouts: [{exerciseId: 'bp', sets: 5, reps: 12, weight: 130}, {exerciseId: 'ip', sets: 3, reps: 12, weight: 100}, {exerciseId: 'dp_chest', sets: 3, reps: 12, weight: 50}, {exerciseId: 'dfly', sets: 3, reps: 12, weight: 25}, {exerciseId: 'cg_bench', sets: 3, reps: 12, weight: 90}, {exerciseId: 'sc', sets: 3, reps: 12, weight: 45}, {exerciseId: 'tc', sets: 3, reps: 15, weight: 40}] },
+      { id: 'r_d4', title: 'Day 4 · 등·이두·어깨 (B)', desc: '풀다운과 케이블 로우로 등 너비를, 덤벨 프레스로 어깨를 채우는 날', workouts: [{exerciseId: 'pd', sets: 4, reps: 12, weight: 90}, {exerciseId: 'pu', sets: 3, reps: 10, weight: 0}, {exerciseId: 'csr', sets: 3, reps: 12, weight: 80}, {exerciseId: 'pcurl', sets: 3, reps: 12, weight: 35}, {exerciseId: 'cable_curl', sets: 3, reps: 12, weight: 30}, {exerciseId: 'dp', sets: 4, reps: 12, weight: 40}, {exerciseId: 'lr', sets: 3, reps: 15, weight: 15}, {exerciseId: 'bentover', sets: 3, reps: 15, weight: 14}] },
+      { id: 'r_d5', title: 'Day 5 · 하체 (B) 프론트 스쿼트 데이', desc: '프론트 스쿼트와 레그 익스텐션으로 대퇴사두를, 루마니안 데드로 뒷다리를', workouts: [{exerciseId: 'fsq', sets: 4, reps: 10, weight: 120}, {exerciseId: 'lpd', sets: 4, reps: 15, weight: 280}, {exerciseId: 'le', sets: 4, reps: 15, weight: 60}, {exerciseId: 'lc', sets: 4, reps: 12, weight: 50}, {exerciseId: 'rdl', sets: 3, reps: 10, weight: 120}, {exerciseId: 'calf', sets: 4, reps: 15, weight: 100}] },
+      { id: 'r_d6', title: 'Day 6 · 가슴·삼두 (B) 덤벨 데이', desc: '90kg 덤벨 프레스로 유명했던 로니의 덤벨 중심 가슴 루틴', workouts: [{exerciseId: 'dp_chest', sets: 4, reps: 12, weight: 55}, {exerciseId: 'idp', sets: 3, reps: 12, weight: 45}, {exerciseId: 'dbp', sets: 3, reps: 12, weight: 100}, {exerciseId: 'pdf', sets: 3, reps: 15, weight: 50}, {exerciseId: 'french_p', sets: 3, reps: 12, weight: 30}, {exerciseId: 'rope_pd', sets: 3, reps: 15, weight: 35}, {exerciseId: 'dips', sets: 3, reps: 12, weight: 0}] }
     ]
   },
   {
     id: 'leg_jay', name: '제이 커틀러 (Jay Cutler)', nickname: 'The Comeback Kid', era: '2006-2007, 2009-2010 (올림피아 4회 우승)',
     desc: '엄청난 볼륨과 근육의 고립, 철저한 식단과 정석적인 펌핑으로 로니 콜먼의 시대를 끝낸 장본인입니다.',
     imageColor: 'from-amber-600 to-amber-900',
+    split: '주 5~6일 · 부위별 분할 (가슴 / 등 / 팔 / 어깨 / 대퇴사두 / 햄스트링)',
+    basis: '제이 커틀러가 오래 써 온 부위별 분할과 그가 자주 소개한 종목을 바탕으로 구성했어요. 대회 시즌마다 바꿔서 하나의 공식 루틴은 없어요.',
+    youtube: { label: '제이 커틀러 영상 보기', url: 'https://www.youtube.com/results?search_query=Jay+Cutler+TV+workout' },
     routines: [
-      { id: 'j_leg_1', title: '하체 (Quad Stomp - 전면 폭격)', desc: '다리를 찢어놓는 엄청난 볼륨의 대퇴사두 고립 훈련', workouts: [{exerciseId: 'le', sets: 5, reps: 20, weight: 40}, {exerciseId: 'vsq', sets: 4, reps: 12, weight: 140}, {exerciseId: 'lpd', sets: 4, reps: 15, weight: 260}, {exerciseId: 'lunge', sets: 4, reps: 15, weight: 25}] },
-      { id: 'j_leg_2', title: '하체 (햄스트링 디테일)', desc: '대퇴이두의 결을 파내는 다양한 컬과 데드리프트', workouts: [{exerciseId: 'lc', sets: 5, reps: 15, weight: 45}, {exerciseId: 'rdl', sets: 4, reps: 12, weight: 100}, {exerciseId: 'ht', sets: 4, reps: 12, weight: 120}, {exerciseId: 'calf', sets: 5, reps: 15, weight: 60}] },
-      { id: 'j_chest_1', title: '가슴 (볼륨 & 쥐어짜기)', desc: '머신과 덤벨을 활용해 흉근을 극한으로 수축하는 루틴', workouts: [{exerciseId: 'cpm', sets: 5, reps: 12, weight: 80}, {exerciseId: 'idp', sets: 4, reps: 12, weight: 35}, {exerciseId: 'pdf', sets: 4, reps: 15, weight: 45}, {exerciseId: 'cf', sets: 4, reps: 15, weight: 25}] },
-      { id: 'j_chest_2', title: '가슴 (스미스머신 고립 타격)', desc: '안전하게 가슴 근육만 찢는 스미스머신 프레스 위주', workouts: [{exerciseId: 'sip', sets: 5, reps: 10, weight: 90}, {exerciseId: 'dp_chest', sets: 4, reps: 12, weight: 40}, {exerciseId: 'dips', sets: 4, reps: 12, weight: 0}, {exerciseId: 'dfly', sets: 4, reps: 15, weight: 20}] },
-      { id: 'j_back_1', title: '등 (광배근 하부 스윕)', desc: '로니를 꺾기 위해 연구한 광배근 넓이 극대화 훈련', workouts: [{exerciseId: 'pu', sets: 4, reps: 10, weight: 0}, {exerciseId: 'pd', sets: 5, reps: 12, weight: 80}, {exerciseId: 'apd', sets: 4, reps: 15, weight: 30}, {exerciseId: 'csr', sets: 4, reps: 12, weight: 70}] },
-      { id: 'j_back_2', title: '등 (승모 및 두께감 분리도)', desc: '등 중앙의 디테일을 오밀조밀하게 채우는 로우', workouts: [{exerciseId: 'tbar', sets: 4, reps: 12, weight: 80}, {exerciseId: 'sr', sets: 4, reps: 12, weight: 70}, {exerciseId: 'dr_back', sets: 4, reps: 10, weight: 45}, {exerciseId: 'br', sets: 4, reps: 10, weight: 80}] },
-      { id: 'j_sh_1', title: '어깨 (측면 레터럴 볼륨)', desc: '넓은 프레임을 완성하는 고볼륨 측면 어깨 타격', workouts: [{exerciseId: 'dp', sets: 4, reps: 10, weight: 30}, {exerciseId: 'lr', sets: 6, reps: 15, weight: 15}, {exerciseId: 'clr', sets: 4, reps: 15, weight: 15}, {exerciseId: 'uprow', sets: 4, reps: 12, weight: 40}] },
-      { id: 'j_sh_2', title: '어깨 (3D 전/후면 분리)', desc: '어깨의 완성도를 높이는 머신 및 후면 훈련', workouts: [{exerciseId: 'spm', sets: 4, reps: 12, weight: 80}, {exerciseId: 'fr', sets: 4, reps: 15, weight: 15}, {exerciseId: 'bentover', sets: 4, reps: 15, weight: 15}, {exerciseId: 'rpdf', sets: 4, reps: 15, weight: 40}] },
-      { id: 'j_arm_1', title: '이두 (스파이더 & 얼터네이트)', desc: '양팔을 번갈아 가며 고립을 극대화하는 컬', workouts: [{exerciseId: 'dc', sets: 5, reps: 12, weight: 20}, {exerciseId: 'pcurl', sets: 4, reps: 12, weight: 30}, {exerciseId: 'hc', sets: 4, reps: 12, weight: 20}] },
-      { id: 'j_arm_2', title: '삼두 (로프다운 & 딥스)', desc: '삼두 외측두를 선명하게 깎아내는 케이블 타격', workouts: [{exerciseId: 'tc', sets: 5, reps: 15, weight: 35}, {exerciseId: 'dips', sets: 4, reps: 15, weight: 0}, {exerciseId: 'tkb', sets: 4, reps: 15, weight: 12}] }
+      { id: 'j_chest', title: 'Day 1 · 가슴', desc: '인클라인 덤벨로 시작하는 커틀러식 가슴. 수축 구간을 끝까지 쥐어짜요.', workouts: [{exerciseId: 'idp', sets: 4, reps: 10, weight: 45}, {exerciseId: 'dp_chest', sets: 3, reps: 10, weight: 45}, {exerciseId: 'sip', sets: 3, reps: 10, weight: 100}, {exerciseId: 'dfly', sets: 3, reps: 12, weight: 22}, {exerciseId: 'cf', sets: 3, reps: 15, weight: 25}] },
+      { id: 'j_back', title: 'Day 2 · 등', desc: '너비(풀다운)와 두께(로우)를 모두 잡는 고볼륨 등', workouts: [{exerciseId: 'pd', sets: 4, reps: 10, weight: 90}, {exerciseId: 'dr_back', sets: 3, reps: 10, weight: 55}, {exerciseId: 'chest_row', sets: 3, reps: 10, weight: 90}, {exerciseId: 'csr', sets: 3, reps: 12, weight: 80}, {exerciseId: 'apd', sets: 3, reps: 15, weight: 35}, {exerciseId: 'dl', sets: 3, reps: 8, weight: 180}] },
+      { id: 'j_arm', title: 'Day 3 · 팔 (이두·삼두)', desc: '이두와 삼두를 번갈아 다양한 각도로 고립', workouts: [{exerciseId: 'ez_curl', sets: 4, reps: 10, weight: 45}, {exerciseId: 'dc', sets: 3, reps: 10, weight: 20}, {exerciseId: 'pcurl', sets: 3, reps: 12, weight: 35}, {exerciseId: 'hc', sets: 3, reps: 12, weight: 22}, {exerciseId: 'tc', sets: 4, reps: 12, weight: 45}, {exerciseId: 'sc', sets: 3, reps: 10, weight: 45}, {exerciseId: 'ct', sets: 3, reps: 12, weight: 35}] },
+      { id: 'j_sh', title: 'Day 4 · 어깨·승모', desc: '앉아서 하는 덤벨 프레스, 측면 고볼륨, 슈러그까지', workouts: [{exerciseId: 'dp', sets: 4, reps: 10, weight: 40}, {exerciseId: 'lr', sets: 4, reps: 12, weight: 16}, {exerciseId: 'clr', sets: 3, reps: 15, weight: 12}, {exerciseId: 'rpdf', sets: 3, reps: 15, weight: 50}, {exerciseId: 'bentover', sets: 3, reps: 15, weight: 14}, {exerciseId: 'shrug_db', sets: 4, reps: 12, weight: 45}] },
+      { id: 'j_quad', title: 'Day 5 · 대퇴사두 (Quad Stomp)', desc: '"Quad Stomp"로 알려진 커틀러의 앞허벅지 집중 하체', workouts: [{exerciseId: 'le', sets: 4, reps: 20, weight: 50, note: '예비 피로용 고반복'}, {exerciseId: 'hack_sq', sets: 4, reps: 10, weight: 160}, {exerciseId: 'lpd', sets: 4, reps: 12, weight: 300}, {exerciseId: 'smith_sq', sets: 3, reps: 10, weight: 100}, {exerciseId: 'lunge', sets: 3, reps: 12, weight: 25}] },
+      { id: 'j_ham', title: 'Day 6 · 햄스트링·종아리', desc: '레그 컬과 스티프 데드리프트로 뒷다리 결을 살리는 날', workouts: [{exerciseId: 'lc', sets: 4, reps: 12, weight: 50}, {exerciseId: 'stiff_dl', sets: 4, reps: 10, weight: 110}, {exerciseId: 's_lpd', sets: 3, reps: 12, weight: 120, note: '발을 발판 위쪽에'}, {exerciseId: 'calf', sets: 5, reps: 15, weight: 120}] }
     ]
   },
   {
     id: 'leg_arnold', name: '아놀드 슈왈제네거 (Arnold)', nickname: 'The Austrian Oak', era: '1970-1975, 1980 (올림피아 7회 우승)',
     desc: '보디빌딩의 상징. 조각 같은 가슴과 봉우리 같은 이두근, 그리고 펌핑을 극대화하는 슈퍼세트의 창시자입니다.',
     imageColor: 'from-emerald-600 to-emerald-900',
+    split: '주 6일 · 가슴·등 / 어깨·팔 / 하체를 주 2회 (더블 스플릿)',
+    basis: '아놀드가 「보디빌딩 백과사전(The New Encyclopedia of Modern Bodybuilding)」에서 소개한 주 6일 분할을 바탕으로 구성했어요. 가슴과 등은 슈퍼세트로 번갈아 하던 방식이에요.',
+    youtube: { label: '아놀드 영상 보기', url: 'https://www.youtube.com/results?search_query=Arnold+Schwarzenegger+training' },
     routines: [
-      { id: 'a_chest_1', title: '가슴 (아놀드 흉곽 확장)', desc: '황금기 시대 특유의 흉곽을 넓히는 덤벨 플라이 중심', workouts: [{exerciseId: 'bp', sets: 5, reps: 10, weight: 90}, {exerciseId: 'dfly', sets: 5, reps: 15, weight: 25}, {exerciseId: 'ip', sets: 4, reps: 10, weight: 70}, {exerciseId: 'dips', sets: 4, reps: 12, weight: 0}] },
-      { id: 'a_chest_2', title: '가슴 (인클라인 & 펌핑)', desc: '웅장한 윗가슴을 채우는 바벨 인클라인과 풀오버 방식', workouts: [{exerciseId: 'sip', sets: 5, reps: 10, weight: 80}, {exerciseId: 'idp', sets: 4, reps: 12, weight: 30}, {exerciseId: 'cf', sets: 4, reps: 15, weight: 20}, {exerciseId: 'pushup', sets: 4, reps: 20, weight: 0}] },
-      { id: 'a_back_1', title: '등 (와이드 그립 턱걸이)', desc: '역삼각형 등을 만든 무자비한 턱걸이와 바벨 로우', workouts: [{exerciseId: 'pu', sets: 5, reps: 10, weight: 0}, {exerciseId: 'br', sets: 5, reps: 10, weight: 80}, {exerciseId: 'tbar', sets: 4, reps: 12, weight: 70}, {exerciseId: 'dr_back', sets: 4, reps: 12, weight: 35}] },
-      { id: 'a_back_2', title: '등 (데드리프트 & 친업)', desc: '등 하부 두께감까지 채우는 올드스쿨 파워 훈련', workouts: [{exerciseId: 'dl', sets: 5, reps: 6, weight: 140}, {exerciseId: 'cu', sets: 4, reps: 10, weight: 0}, {exerciseId: 'sr', sets: 4, reps: 12, weight: 60}, {exerciseId: 'pd', sets: 4, reps: 12, weight: 70}] },
-      { id: 'a_leg_1', title: '하체 (하이 렙 스쿼트)', desc: '쉬지 않고 다리를 태우는 고반복 프리웨이트 스쿼트', workouts: [{exerciseId: 'sq', sets: 5, reps: 15, weight: 100}, {exerciseId: 'fsq', sets: 4, reps: 12, weight: 80}, {exerciseId: 'le', sets: 4, reps: 20, weight: 50}, {exerciseId: 'lunge', sets: 4, reps: 15, weight: 20}] },
-      { id: 'a_leg_2', title: '하체 (선명도 및 근육 분리)', desc: '클래식한 다리 라인을 위한 디테일 고립 운동', workouts: [{exerciseId: 'rdl', sets: 4, reps: 12, weight: 80}, {exerciseId: 'lc', sets: 4, reps: 15, weight: 40}, {exerciseId: 'bss', sets: 4, reps: 12, weight: 30}, {exerciseId: 'calf', sets: 5, reps: 20, weight: 60}] },
-      { id: 'a_sh_1', title: '어깨 (아놀드 프레스 변형)', desc: '어깨 전면과 측면을 동시에 깨우는 덤벨 프레스 위주', workouts: [{exerciseId: 'dp', sets: 5, reps: 10, weight: 30}, {exerciseId: 'ohp', sets: 4, reps: 10, weight: 60}, {exerciseId: 'lr', sets: 5, reps: 15, weight: 12}, {exerciseId: 'uprow', sets: 4, reps: 12, weight: 40}] },
-      { id: 'a_sh_2', title: '어깨 (후면 삼각근 고립)', desc: '조각 같은 후면 어깨를 만드는 벤트오버 레이즈 중심', workouts: [{exerciseId: 'bentover', sets: 5, reps: 15, weight: 15}, {exerciseId: 'rpdf', sets: 4, reps: 15, weight: 35}, {exerciseId: 'fr', sets: 4, reps: 15, weight: 15}, {exerciseId: 'clr', sets: 4, reps: 15, weight: 10}] },
-      { id: 'a_arm_1', title: '이두 (The Mountain Peak)', desc: '봉우리 같은 이두를 만드는 아놀드의 시그니처 훈련', workouts: [{exerciseId: 'bc', sets: 5, reps: 10, weight: 40}, {exerciseId: 'dc', sets: 4, reps: 12, weight: 20}, {exerciseId: 'pcurl', sets: 4, reps: 12, weight: 30}, {exerciseId: 'hc', sets: 4, reps: 12, weight: 20}] },
-      { id: 'a_arm_2', title: '삼두 (말굽 모양 트라이셉스)', desc: '팔을 거대하게 만드는 익스텐션과 푸시다운 슈퍼세트', workouts: [{exerciseId: 'sc', sets: 5, reps: 12, weight: 40}, {exerciseId: 'tc', sets: 4, reps: 15, weight: 30}, {exerciseId: 'ct', sets: 4, reps: 12, weight: 25}, {exerciseId: 'tkb', sets: 4, reps: 15, weight: 10}] }
+      { id: 'a_cb_1', title: 'Day 1 · 가슴·등 (A) 슈퍼세트', desc: '벤치프레스와 턱걸이를 번갈아 하는 아놀드의 대표 상체 훈련', workouts: [{exerciseId: 'bp', sets: 5, reps: 10, weight: 100, note: '턱걸이와 슈퍼세트'}, {exerciseId: 'pu', sets: 5, reps: 10, weight: 0, note: '와이드 그립'}, {exerciseId: 'ip', sets: 4, reps: 10, weight: 80}, {exerciseId: 'br', sets: 4, reps: 10, weight: 90}, {exerciseId: 'dfly', sets: 4, reps: 10, weight: 22}, {exerciseId: 'tbar', sets: 4, reps: 10, weight: 80}, {exerciseId: 'db_pullover', sets: 4, reps: 12, weight: 30, note: '흉곽을 넓히는 느낌으로'}] },
+      { id: 'a_sa_1', title: 'Day 2 · 어깨·팔 (A)', desc: '프레스와 레이즈로 어깨를, 바벨 컬로 봉우리 이두를', workouts: [{exerciseId: 'ohp', sets: 4, reps: 10, weight: 60}, {exerciseId: 'arnold', sets: 4, reps: 10, weight: 26}, {exerciseId: 'lr', sets: 4, reps: 10, weight: 12}, {exerciseId: 'bentover', sets: 4, reps: 10, weight: 12}, {exerciseId: 'bc', sets: 4, reps: 10, weight: 45}, {exerciseId: 'inc_curl', sets: 3, reps: 10, weight: 16}, {exerciseId: 'sc', sets: 4, reps: 10, weight: 40}, {exerciseId: 'tc', sets: 4, reps: 12, weight: 35}] },
+      { id: 'a_leg_1', title: 'Day 3 · 하체 (A)', desc: '스쿼트와 "종아리 10세트"로 유명한 클래식 하체', workouts: [{exerciseId: 'sq', sets: 5, reps: 10, weight: 120}, {exerciseId: 'fsq', sets: 4, reps: 10, weight: 90}, {exerciseId: 'le', sets: 4, reps: 12, weight: 55}, {exerciseId: 'lc', sets: 4, reps: 10, weight: 45}, {exerciseId: 'stiff_dl', sets: 3, reps: 10, weight: 90}, {exerciseId: 'calf', sets: 10, reps: 10, weight: 100, note: '아놀드식 10×10'}] },
+      { id: 'a_cb_2', title: 'Day 4 · 가슴·등 (B)', desc: '인클라인 덤벨과 친업, 딥스와 로우로 다른 각도를 채우는 날', workouts: [{exerciseId: 'idp', sets: 4, reps: 10, weight: 36}, {exerciseId: 'cu', sets: 4, reps: 10, weight: 0, note: '인클라인과 슈퍼세트'}, {exerciseId: 'dips', sets: 4, reps: 12, weight: 0}, {exerciseId: 'csr', sets: 4, reps: 10, weight: 70}, {exerciseId: 'cf', sets: 4, reps: 12, weight: 22}, {exerciseId: 'dr_back', sets: 4, reps: 10, weight: 45}, {exerciseId: 'dl', sets: 3, reps: 8, weight: 160}] },
+      { id: 'a_sa_2', title: 'Day 5 · 어깨·팔 (B)', desc: '업라이트 로우와 컨센트레이션 컬, 프렌치 프레스로 디테일을', workouts: [{exerciseId: 'dp', sets: 4, reps: 10, weight: 30}, {exerciseId: 'uprow', sets: 4, reps: 10, weight: 40}, {exerciseId: 'clr', sets: 3, reps: 12, weight: 10}, {exerciseId: 'dc', sets: 4, reps: 10, weight: 18}, {exerciseId: 'con_curl', sets: 3, reps: 10, weight: 14}, {exerciseId: 'french_p', sets: 4, reps: 10, weight: 28}, {exerciseId: 'tkb', sets: 3, reps: 12, weight: 12}, {exerciseId: 'wrist_curl', sets: 3, reps: 15, weight: 30}] },
+      { id: 'a_leg_2', title: 'Day 6 · 하체 (B)·복근', desc: '핵 스쿼트와 런지, 그리고 매일 하던 복근 운동', workouts: [{exerciseId: 'hack_sq', sets: 4, reps: 10, weight: 120}, {exerciseId: 'lunge', sets: 4, reps: 12, weight: 22}, {exerciseId: 'lc', sets: 4, reps: 10, weight: 45}, {exerciseId: 'calf', sets: 5, reps: 15, weight: 100}, {exerciseId: 'hl', sets: 4, reps: 15, weight: 0}, {exerciseId: 'cr', sets: 4, reps: 25, weight: 0}] }
     ]
   },
   {
     id: 'leg_cbum', name: '크리스 범스테드 (CBUM)', nickname: 'Daddy CBum', era: '2019-2023 (클래식 피지크 5연패)',
     desc: '현대 클래식 피지크의 완벽한 표본. 넓은 어깨와 잘록한 허리로 완벽한 V테이퍼를 자랑합니다.',
     imageColor: 'from-rose-600 to-rose-900',
+    split: '3일 운동 · 1일 휴식 (대퇴사두 / 가슴·등 / 어깨 / 햄스트링 / 팔)',
+    basis: '크리스 범스테드의 2023 올림피아 준비 분할(3일 운동, 1일 휴식)과 그가 영상에서 자주 보여준 종목을 바탕으로 구성했어요. 세트 수는 적게, 대신 실패 지점까지 하는 방식이에요.',
+    youtube: { label: 'CBum 영상 보기', url: 'https://www.youtube.com/results?search_query=Chris+Bumstead+workout' },
     routines: [
-      { id: 'c_chest_1', title: '가슴 (인클라인 메인 타격)', desc: '위압감 있는 상체를 위한 스미스/덤벨 인클라인 집중', workouts: [{exerciseId: 'sip', sets: 5, reps: 10, weight: 100}, {exerciseId: 'idp', sets: 4, reps: 12, weight: 40}, {exerciseId: 'cpm', sets: 4, reps: 12, weight: 80}, {exerciseId: 'pdf', sets: 4, reps: 15, weight: 40}] },
-      { id: 'c_chest_2', title: '가슴 (플라이 볼륨 & 자극)', desc: '근질을 살리는 덤벨 플라이와 케이블 타격', workouts: [{exerciseId: 'bp', sets: 4, reps: 10, weight: 100}, {exerciseId: 'dp_chest', sets: 4, reps: 12, weight: 40}, {exerciseId: 'cf', sets: 5, reps: 15, weight: 25}, {exerciseId: 'dips', sets: 4, reps: 15, weight: 0}] },
-      { id: 'c_back_1', title: '등 (V테이퍼 광배근 타격)', desc: '넓은 프레임을 완성하는 풀다운 위주의 훈련', workouts: [{exerciseId: 'pd', sets: 5, reps: 12, weight: 80}, {exerciseId: 'apd', sets: 4, reps: 15, weight: 35}, {exerciseId: 'csr', sets: 4, reps: 12, weight: 70}, {exerciseId: 'pu', sets: 4, reps: 10, weight: 0}] },
-      { id: 'c_back_2', title: '등 (미드백 두께감 완성)', desc: '클래식 포징을 빛내줄 등 상/중부 로우 루틴', workouts: [{exerciseId: 'br', sets: 5, reps: 10, weight: 100}, {exerciseId: 'prow', sets: 4, reps: 10, weight: 90}, {exerciseId: 'sr', sets: 4, reps: 12, weight: 75}, {exerciseId: 'dr_back', sets: 4, reps: 12, weight: 45}] },
-      { id: 'c_leg_1', title: '하체 (머신 활용 대퇴사두)', desc: '부상을 방지하며 허벅지를 폭파하는 스쿼트 변형', workouts: [{exerciseId: 'vsq', sets: 5, reps: 12, weight: 160}, {exerciseId: 'lpd', sets: 4, reps: 15, weight: 240}, {exerciseId: 'le', sets: 5, reps: 20, weight: 60}, {exerciseId: 'sq', sets: 3, reps: 10, weight: 100}] },
-      { id: 'c_leg_2', title: '하체 (햄스트링 타이-인)', desc: '둔근과 햄스트링의 완벽한 분리를 위한 후면 훈련', workouts: [{exerciseId: 'rdl', sets: 5, reps: 10, weight: 120}, {exerciseId: 'lc', sets: 5, reps: 15, weight: 50}, {exerciseId: 'bss', sets: 4, reps: 12, weight: 30}, {exerciseId: 'calf', sets: 4, reps: 20, weight: 70}] },
-      { id: 'c_sh_1', title: '어깨 (프레스 중량 훈련)', desc: '둥글고 거대한 어깨를 빚어내는 무거운 프레스 타격', workouts: [{exerciseId: 'spm', sets: 5, reps: 10, weight: 90}, {exerciseId: 'dp', sets: 4, reps: 10, weight: 35}, {exerciseId: 'ohp', sets: 4, reps: 10, weight: 70}, {exerciseId: 'fr', sets: 4, reps: 15, weight: 15}] },
-      { id: 'c_sh_2', title: '어깨 (3D 후/측면 레이즈)', desc: '어깨 라인을 선명하게 파는 레이즈와 머신 위주', workouts: [{exerciseId: 'lr', sets: 6, reps: 15, weight: 15}, {exerciseId: 'clr', sets: 4, reps: 15, weight: 15}, {exerciseId: 'rpdf', sets: 4, reps: 15, weight: 45}, {exerciseId: 'bentover', sets: 4, reps: 15, weight: 12}] },
-      { id: 'c_arm_1', title: '이두 (머신 & 프리웨이트 믹스)', desc: '안전하고 정교하게 이두근의 텐션을 유지하는 훈련', workouts: [{exerciseId: 'pcurl', sets: 5, reps: 12, weight: 35}, {exerciseId: 'hc', sets: 4, reps: 12, weight: 20}, {exerciseId: 'bc', sets: 4, reps: 10, weight: 40}, {exerciseId: 'dc', sets: 3, reps: 12, weight: 15}] },
-      { id: 'c_arm_2', title: '삼두 (오버헤드 타겟팅)', desc: '장두를 찢어놓는 케이블과 덤벨 오버헤드 위주', workouts: [{exerciseId: 'ct', sets: 5, reps: 15, weight: 30}, {exerciseId: 'tc', sets: 4, reps: 15, weight: 40}, {exerciseId: 'sc', sets: 4, reps: 12, weight: 35}, {exerciseId: 'tkb', sets: 3, reps: 15, weight: 10}] }
+      { id: 'c_quad', title: 'Day 1 · 대퇴사두·종아리', desc: '레그 익스텐션 드롭세트로 시작해 스미스 스쿼트, 한 다리 레그 프레스로 마무리', workouts: [{exerciseId: 'le', sets: 2, reps: 10, weight: 60, note: '마지막 세트 드롭세트'}, {exerciseId: 'smith_sq', sets: 2, reps: 8, weight: 120, note: '실패 지점까지'}, {exerciseId: 's_lpd', sets: 3, reps: 10, weight: 120, note: '한 다리씩'}, {exerciseId: 'sissy_sq', sets: 3, reps: 10, weight: 0}, {exerciseId: 'calf', sets: 3, reps: 10, weight: 80}] },
+      { id: 'c_pp', title: 'Day 2 · 가슴·등 (푸시 & 풀)', desc: '인클라인 스미스로 윗가슴을, 클로즈그립 풀다운과 머신 로우로 등을', workouts: [{exerciseId: 'sip', sets: 3, reps: 8, weight: 100}, {exerciseId: 'dp_chest', sets: 2, reps: 10, weight: 45}, {exerciseId: 'pdf', sets: 2, reps: 12, weight: 50}, {exerciseId: 'cg_pd', sets: 3, reps: 10, weight: 80}, {exerciseId: 'chest_row', sets: 3, reps: 10, weight: 90}, {exerciseId: 'apd', sets: 2, reps: 15, weight: 35, note: '케이블 랫 익스텐션'}] },
+      { id: 'c_sh', title: 'Day 4 · 어깨', desc: '무거운 덤벨 레터럴로 시작하는 2023 올림피아 준비 어깨 루틴', workouts: [{exerciseId: 'lr', sets: 3, reps: 12, weight: 20}, {exerciseId: 'spm', sets: 3, reps: 10, weight: 90}, {exerciseId: 'clr', sets: 2, reps: 12, weight: 12}, {exerciseId: 'rpdf', sets: 3, reps: 12, weight: 55, note: '마지막 세트 드롭세트'}, {exerciseId: 'machine_lr', sets: 2, reps: 15, weight: 40}] },
+      { id: 'c_ham', title: 'Day 5 · 햄스트링·둔근', desc: '앉아서 하는 레그 컬과 루마니안 데드리프트로 뒷다리와 엉덩이 경계를 선명하게', workouts: [{exerciseId: 'lc', sets: 3, reps: 10, weight: 50}, {exerciseId: 'rdl', sets: 3, reps: 8, weight: 120}, {exerciseId: 'bss', sets: 2, reps: 10, weight: 24}, {exerciseId: 'inth', sets: 2, reps: 15, weight: 60}] },
+      { id: 'c_arm', title: 'Day 6 · 팔', desc: '프리처 컬과 로프 푸시다운 중심으로 팔을 펌핑', workouts: [{exerciseId: 'pcurl', sets: 3, reps: 10, weight: 35}, {exerciseId: 'inc_curl', sets: 3, reps: 10, weight: 14}, {exerciseId: 'bayesian_curl', sets: 2, reps: 12, weight: 15}, {exerciseId: 'rope_pd', sets: 3, reps: 12, weight: 35}, {exerciseId: 'ct', sets: 3, reps: 12, weight: 30}, {exerciseId: 'dips', sets: 2, reps: 12, weight: 0}] }
     ]
   }
 ];
 
 const KOREAN_LEGENDS = [
   {
-    id: 'k_park', name: '박재훈 (Jaehoon Park)', nickname: 'Korean Classic', era: '클래식 피지크 올림피언',
-    desc: '"한 개만 더!" 지옥에서 돌아온 극한의 멘탈과 완벽한 볼륨 트레이닝. 올림피아 무대를 위한 클래식 프레임 훈련법.',
+    id: 'k_park', name: '박재훈 (Jaehoon Park)', nickname: 'Korean Classic', era: 'IFBB 프로 클래식 피지크 · 2022 올림피아 TOP 15',
+    desc: '한국을 대표하는 클래식 피지크 프로. 넓은 어깨와 윗가슴, 잘록한 허리로 만드는 V라인과 무대에서 빛나는 다리 라인이 강점이에요.',
     imageColor: 'from-blue-600 to-indigo-900',
+    split: '주 5~6일 · 부위별 분할 (하체 2회)',
+    basis: '공개된 대회 이력과 체급 특성, 선수가 유튜브에서 보여준 훈련 스타일을 바탕으로 재구성한 루틴이에요. 선수 본인의 실제 루틴과 다를 수 있으니 정확한 방법은 선수 채널에서 확인해 주세요.',
+    youtube: { label: 'Jaehun_Allright24 채널', url: 'https://www.youtube.com/@Allright24_' },
     routines: [
       { id: 'kp_leg_1', title: '하체 전면 (멘탈 붕괴 볼륨)', desc: '토가 나올 때까지 밀어붙이는 고강도 대퇴사두 타격', workouts: [{exerciseId: 'sq', sets: 5, reps: 10, weight: 140}, {exerciseId: 'vsq', sets: 4, reps: 12, weight: 120}, {exerciseId: 'lpd', sets: 5, reps: 15, weight: 240}, {exerciseId: 'le', sets: 4, reps: 20, weight: 60}] },
       { id: 'kp_leg_2', title: '하체 후면 (둔근/햄스트링 분리)', desc: '클래식 피지크의 완성, 다리 후면부를 깊게 파는 루틴', workouts: [{exerciseId: 'rdl', sets: 5, reps: 12, weight: 100}, {exerciseId: 'lc', sets: 5, reps: 15, weight: 45}, {exerciseId: 'bss', sets: 4, reps: 12, weight: 40}, {exerciseId: 'calf', sets: 4, reps: 20, weight: 60}] },
       { id: 'kp_chest_1', title: '가슴 상부 (윗가슴 매스업)', desc: '웅장한 윗가슴 볼륨을 채우는 인클라인 위주의 훈련', workouts: [{exerciseId: 'ip', sets: 5, reps: 10, weight: 90}, {exerciseId: 'idp', sets: 4, reps: 12, weight: 35}, {exerciseId: 'sip', sets: 4, reps: 12, weight: 80}, {exerciseId: 'cf', sets: 4, reps: 15, weight: 25}] },
       { id: 'kp_chest_2', title: '가슴 전체 (흉곽 확장 펌핑)', desc: '가슴의 너비와 두께를 동시에 잡는 베이직 루틴', workouts: [{exerciseId: 'bp', sets: 5, reps: 10, weight: 100}, {exerciseId: 'cpm', sets: 4, reps: 12, weight: 80}, {exerciseId: 'dips', sets: 4, reps: 15, weight: 0}, {exerciseId: 'pdf', sets: 4, reps: 15, weight: 35}] },
-      { id: 'kp_back_1', title: '등 (하부 광배 타격)', desc: 'V테이퍼를 위한 광배근 하부 고립 집중', workouts: [{exerciseId: 'pd', sets: 5, reps: 12, weight: 70}, {exerciseId: 'apd', sets: 4, reps: 15, weight: 30}, {exerciseId: 'dr_back', sets: 4, reps: 12, weight: 40}, {exerciseId: 'sr', sets: 4, reps: 12, weight: 60}] },
+      { id: 'kp_back_1', title: '등 (V테이퍼 광배 너비)', desc: '클래식 피지크의 핵심인 V라인을 위한 광배 너비·하부 집중', workouts: [{exerciseId: 'pd', sets: 5, reps: 12, weight: 70}, {exerciseId: 'onearm_lpd', sets: 4, reps: 12, weight: 30}, {exerciseId: 'apd', sets: 4, reps: 15, weight: 30}, {exerciseId: 'csr', sets: 4, reps: 12, weight: 60}] },
       { id: 'kp_back_2', title: '등 (두께감 집중 매스업)', desc: '등판의 두께를 거대하게 만드는 프리웨이트 로우', workouts: [{exerciseId: 'br', sets: 5, reps: 10, weight: 100}, {exerciseId: 'tbar', sets: 4, reps: 12, weight: 80}, {exerciseId: 'pu', sets: 4, reps: 10, weight: 0}, {exerciseId: 'csr', sets: 4, reps: 15, weight: 55}] },
       { id: 'kp_sh_1', title: '어깨 전/측면 (대포알 볼륨)', desc: '둥글고 거대한 어깨를 만드는 측면 고반복 훈련', workouts: [{exerciseId: 'ohp', sets: 5, reps: 10, weight: 60}, {exerciseId: 'dp', sets: 4, reps: 12, weight: 25}, {exerciseId: 'lr', sets: 6, reps: 15, weight: 12}, {exerciseId: 'clr', sets: 4, reps: 15, weight: 15}] },
       { id: 'kp_sh_2', title: '어깨 후면 (입체감 완성)', desc: '어깨의 완성도를 높이는 후면 삼각근 폭격', workouts: [{exerciseId: 'rpdf', sets: 5, reps: 15, weight: 40}, {exerciseId: 'bentover', sets: 4, reps: 15, weight: 10}, {exerciseId: 'uprow', sets: 4, reps: 12, weight: 40}, {exerciseId: 'fr', sets: 4, reps: 15, weight: 15}] },
@@ -296,9 +296,12 @@ const KOREAN_LEGENDS = [
     ]
   },
   {
-    id: 'k_kim_gw', name: '김건우 (Gunwoo Kim)', nickname: 'The Back Monster', era: 'IFBB 프로 오픈/212',
-    desc: '광활한 등판과 어깨 깡패의 표본. 정확한 타겟팅과 영리한 고립으로 근육의 한계를 끌어내는 훈련법.',
+    id: 'k_kim_gw', name: '김건우 (Gunwoo Kim)', nickname: '건담포스 (Gundam Force)', era: 'IFBB 프로 212 · 2024 올림피아 진출',
+    desc: "'건담포스'로 활동하는 212 보디빌더. 2023 몬스터짐 프로 퀄리파이어 212 종합 우승과 같은 날 열린 프로쇼 우승으로 IFBB 프로카드와 올림피아 출전권을 함께 얻었어요.",
     imageColor: 'from-emerald-600 to-teal-900',
+    split: '주 5~6일 · 부위별 분할',
+    basis: '공개된 대회 이력과 체급 특성, 선수가 유튜브에서 보여준 훈련 스타일을 바탕으로 재구성한 루틴이에요. 선수 본인의 실제 루틴과 다를 수 있으니 정확한 방법은 선수 채널에서 확인해 주세요.',
+    youtube: { label: 'GUNDAMFORCE 채널', url: 'https://www.youtube.com/@gundamforcekim' },
     routines: [
       { id: 'kg_back_1', title: '등 (너비감 극대화 랫풀)', desc: '넓은 프레임을 위한 랫풀다운/풀업 위주 타격', workouts: [{exerciseId: 'pd', sets: 5, reps: 12, weight: 80}, {exerciseId: 'pu', sets: 4, reps: 10, weight: 0}, {exerciseId: 'apd', sets: 4, reps: 15, weight: 30}, {exerciseId: 'csr', sets: 4, reps: 12, weight: 60}] },
       { id: 'kg_back_2', title: '등 (두께감 머신/바벨 로우)', desc: '등 상/중부를 꽉 채우는 묵직한 로우 루틴', workouts: [{exerciseId: 'br', sets: 5, reps: 10, weight: 100}, {exerciseId: 'sr', sets: 4, reps: 12, weight: 70}, {exerciseId: 'tbar', sets: 4, reps: 12, weight: 80}, {exerciseId: 'dr_back', sets: 4, reps: 10, weight: 45}] },
@@ -313,26 +316,32 @@ const KOREAN_LEGENDS = [
     ]
   },
   {
-    id: 'k_jang', name: '장성엽 (Sungyeop Jang)', nickname: 'Korean Mass Monster', era: 'IFBB 212 올림피언',
-    desc: '작은 체구에서 뿜어져 나오는 압도적인 매스와 두께감. 초고중량을 다루면서도 부상 없이 타겟을 정확히 때리는 정통 리프팅.',
+    id: 'k_jang', name: '장성엽 (Sungyeop Jang)', nickname: '리틀성엽', era: 'IFBB 프로 212 · 2025 올림피아 출전',
+    desc: '안양에서 체육관을 운영하는 212 프로. 2022 재팬 프로와 2024 차이나 프로에서 우승했고 2025 212 올림피아 무대에 섰어요. 정확한 자세와 느린 네거티브를 강조하는 운동 영상으로 유명해요.',
     imageColor: 'from-rose-600 to-red-900',
+    split: '주 5~6일 · 부위별 분할',
+    basis: '공개된 대회 이력과 체급 특성, 선수가 유튜브에서 보여준 훈련 스타일을 바탕으로 재구성한 루틴이에요. 선수 본인의 실제 루틴과 다를 수 있으니 정확한 방법은 선수 채널에서 확인해 주세요.',
+    youtube: { label: '리틀성엽 채널', url: 'https://www.youtube.com/results?search_query=리틀성엽' },
     routines: [
-      { id: 'kj_leg_1', title: '하체 (매스업 V스쿼트 중심)', desc: '거대한 대퇴사두를 만드는 초고중량 머신 훈련', workouts: [{exerciseId: 'vsq', sets: 5, reps: 10, weight: 160}, {exerciseId: 'lpd', sets: 5, reps: 12, weight: 300}, {exerciseId: 'sq', sets: 4, reps: 8, weight: 140}, {exerciseId: 'le', sets: 4, reps: 15, weight: 70}] },
-      { id: 'kj_leg_2', title: '하체 (후면 고중량 데드)', desc: '212 파운드를 꽉 채운 거대한 하체 후면 두께', workouts: [{exerciseId: 'rdl', sets: 5, reps: 8, weight: 140}, {exerciseId: 'lc', sets: 5, reps: 12, weight: 55}, {exerciseId: 'ht', sets: 4, reps: 10, weight: 140}, {exerciseId: 'calf', sets: 4, reps: 15, weight: 80}] },
-      { id: 'kj_chest_1', title: '가슴 (스트렝스 고중량 프레스)', desc: '가슴 두께를 무식하게 키우는 베이직 프레스', workouts: [{exerciseId: 'bp', sets: 5, reps: 8, weight: 120}, {exerciseId: 'ip', sets: 4, reps: 8, weight: 100}, {exerciseId: 'dips', sets: 4, reps: 12, weight: 20}, {exerciseId: 'dp_chest', sets: 4, reps: 10, weight: 45}] },
+      { id: 'kj_leg_1', title: '하체 (매스업 V스쿼트 중심)', desc: '거대한 대퇴사두를 만드는 초고중량 머신 훈련', workouts: [{exerciseId: 'vsq', sets: 5, reps: 10, weight: 160, note: '네거티브 3~4초'}, {exerciseId: 'lpd', sets: 5, reps: 12, weight: 300}, {exerciseId: 'sq', sets: 4, reps: 8, weight: 140}, {exerciseId: 'le', sets: 4, reps: 15, weight: 70}] },
+      { id: 'kj_leg_2', title: '하체 (후면 고중량 데드)', desc: '212 파운드를 꽉 채운 거대한 하체 후면 두께', workouts: [{exerciseId: 'rdl', sets: 5, reps: 8, weight: 140, note: '네거티브 3~4초'}, {exerciseId: 'lc', sets: 5, reps: 12, weight: 55}, {exerciseId: 'ht', sets: 4, reps: 10, weight: 140}, {exerciseId: 'calf', sets: 4, reps: 15, weight: 80}] },
+      { id: 'kj_chest_1', title: '가슴 (스트렝스 고중량 프레스)', desc: '가슴 두께를 무식하게 키우는 베이직 프레스', workouts: [{exerciseId: 'bp', sets: 5, reps: 8, weight: 120, note: '네거티브 3~4초'}, {exerciseId: 'ip', sets: 4, reps: 8, weight: 100}, {exerciseId: 'dips', sets: 4, reps: 12, weight: 20}, {exerciseId: 'dp_chest', sets: 4, reps: 10, weight: 45}] },
       { id: 'kj_chest_2', title: '가슴 (윗가슴 집중 두께)', desc: '비어있는 윗가슴을 꽉 채우는 인클라인 타격', workouts: [{exerciseId: 'sip', sets: 5, reps: 10, weight: 100}, {exerciseId: 'idp', sets: 4, reps: 10, weight: 40}, {exerciseId: 'pdf', sets: 4, reps: 12, weight: 50}, {exerciseId: 'cf', sets: 4, reps: 15, weight: 35}] },
-      { id: 'kj_back_1', title: '등 (등신 바벨로우)', desc: '등을 가장 두껍게 만드는 프리웨이트 로우 마스터', workouts: [{exerciseId: 'br', sets: 5, reps: 8, weight: 120}, {exerciseId: 'prow', sets: 4, reps: 8, weight: 100}, {exerciseId: 'tbar', sets: 4, reps: 10, weight: 100}, {exerciseId: 'sr', sets: 4, reps: 12, weight: 80}] },
-      { id: 'kj_back_2', title: '등 (너비감 케이블/머신)', desc: '안전하고 강하게 광배근을 뽑아내는 훈련', workouts: [{exerciseId: 'pd', sets: 5, reps: 10, weight: 90}, {exerciseId: 'csr', sets: 4, reps: 12, weight: 70}, {exerciseId: 'apd', sets: 4, reps: 15, weight: 35}, {exerciseId: 'astpu', sets: 4, reps: 10, weight: 20}] },
-      { id: 'kj_sh_1', title: '어깨 (고중량 숄더프레스)', desc: '밀어올리는 힘으로 삼각근 전체 사이즈업', workouts: [{exerciseId: 'spm', sets: 5, reps: 10, weight: 100}, {exerciseId: 'ohp', sets: 4, reps: 8, weight: 80}, {exerciseId: 'dp', sets: 4, reps: 10, weight: 35}, {exerciseId: 'uprow', sets: 4, reps: 12, weight: 50}] },
+      { id: 'kj_back_1', title: '등 (등신 바벨로우)', desc: '등을 가장 두껍게 만드는 프리웨이트 로우 마스터', workouts: [{exerciseId: 'br', sets: 5, reps: 8, weight: 120, note: '네거티브 3~4초'}, {exerciseId: 'prow', sets: 4, reps: 8, weight: 100}, {exerciseId: 'tbar', sets: 4, reps: 10, weight: 100}, {exerciseId: 'sr', sets: 4, reps: 12, weight: 80}] },
+      { id: 'kj_back_2', title: '등 (너비감 케이블/머신)', desc: '안전하고 강하게 광배근을 뽑아내는 훈련', workouts: [{exerciseId: 'pd', sets: 5, reps: 10, weight: 90, note: '네거티브 3~4초'}, {exerciseId: 'csr', sets: 4, reps: 12, weight: 70}, {exerciseId: 'apd', sets: 4, reps: 15, weight: 35}, {exerciseId: 'astpu', sets: 4, reps: 10, weight: 20}] },
+      { id: 'kj_sh_1', title: '어깨 (고중량 숄더프레스)', desc: '밀어올리는 힘으로 삼각근 전체 사이즈업', workouts: [{exerciseId: 'spm', sets: 5, reps: 10, weight: 100, note: '네거티브 3~4초'}, {exerciseId: 'ohp', sets: 4, reps: 8, weight: 80}, {exerciseId: 'dp', sets: 4, reps: 10, weight: 35}, {exerciseId: 'uprow', sets: 4, reps: 12, weight: 50}] },
       { id: 'kj_sh_2', title: '어깨 (측/후면 입체 타격)', desc: '어깨 측면과 후면을 찢어놓는 디테일 루틴', workouts: [{exerciseId: 'lr', sets: 5, reps: 15, weight: 15}, {exerciseId: 'rpdf', sets: 5, reps: 15, weight: 50}, {exerciseId: 'bentover', sets: 4, reps: 15, weight: 15}, {exerciseId: 'clr', sets: 4, reps: 15, weight: 15}] },
-      { id: 'kj_arm_1', title: '이두 (고중량 바벨컬)', desc: '무거운 바벨로 이두근의 매스를 극한으로 키움', workouts: [{exerciseId: 'bc', sets: 5, reps: 8, weight: 50}, {exerciseId: 'hc', sets: 4, reps: 10, weight: 25}, {exerciseId: 'dc', sets: 4, reps: 12, weight: 20}] },
-      { id: 'kj_arm_2', title: '삼두 (헤비 프레스)', desc: '팔 둘레를 넓히는 고중량 삼두 프레스와 익스텐션', workouts: [{exerciseId: 'tc', sets: 5, reps: 10, weight: 50}, {exerciseId: 'sc', sets: 4, reps: 10, weight: 45}, {exerciseId: 'ct', sets: 4, reps: 12, weight: 35}] }
+      { id: 'kj_arm_1', title: '이두 (고중량 바벨컬)', desc: '무거운 바벨로 이두근의 매스를 극한으로 키움', workouts: [{exerciseId: 'bc', sets: 5, reps: 8, weight: 50, note: '네거티브 3~4초'}, {exerciseId: 'hc', sets: 4, reps: 10, weight: 25}, {exerciseId: 'dc', sets: 4, reps: 12, weight: 20}] },
+      { id: 'kj_arm_2', title: '삼두 (헤비 프레스)', desc: '팔 둘레를 넓히는 고중량 삼두 프레스와 익스텐션', workouts: [{exerciseId: 'tc', sets: 5, reps: 10, weight: 50}, {exerciseId: 'sc', sets: 4, reps: 10, weight: 45, note: '네거티브 3~4초'}, {exerciseId: 'ct', sets: 4, reps: 12, weight: 35}] }
     ]
   },
   {
-    id: 'k_kim_km', name: '김강민 (Kangmin Kim)', nickname: 'The Champion', era: 'NABBA 그랑프리 / IFBB 프로',
-    desc: '단점 없는 완벽한 밸런스와 극강의 다이어트 강도. 고볼륨, 쉼 없는 세트간 휴식 최소화로 근육을 갈기갈기 찢는 혹독한 루틴.',
+    id: 'k_kim_km', name: '김강민 (Kangmin Kim)', nickname: '나바의 왕', era: 'NABBA 프로전 5회 우승',
+    desc: "NABBA 프로전에서 다섯 번 우승해 '나바의 왕'으로 불리는 보디빌더. 단점 없는 밸런스를 위해 고반복과 짧은 휴식으로 펌핑을 극대화하는 스타일이에요.",
     imageColor: 'from-amber-500 to-orange-800',
+    split: '주 5~6일 · 부위별 분할 (고볼륨)',
+    basis: '공개된 대회 이력과 체급 특성, 선수가 유튜브에서 보여준 훈련 스타일을 바탕으로 재구성한 루틴이에요. 선수 본인의 실제 루틴과 다를 수 있으니 정확한 방법은 선수 채널에서 확인해 주세요.',
+    youtube: { label: '김강민_Kim Kang min 채널', url: 'https://www.youtube.com/results?search_query=김강민_Kim+Kang+min' },
     routines: [
       { id: 'kk_sh_1', title: '어깨 (쉬는 시간 없는 측면 폭격)', desc: '지독한 고반복으로 어깨 측면을 불태우는 볼륨 루틴', workouts: [{exerciseId: 'lr', sets: 8, reps: 20, weight: 8}, {exerciseId: 'clr', sets: 5, reps: 15, weight: 10}, {exerciseId: 'spm', sets: 4, reps: 15, weight: 50}, {exerciseId: 'uprow', sets: 4, reps: 15, weight: 30}] },
       { id: 'kk_sh_2', title: '어깨 (전/후면 입체 슈퍼세트)', desc: '전면과 후면을 번갈아 타격하여 펌핑 극대화', workouts: [{exerciseId: 'ohp', sets: 5, reps: 12, weight: 50}, {exerciseId: 'rpdf', sets: 5, reps: 20, weight: 35}, {exerciseId: 'fr', sets: 4, reps: 15, weight: 12}, {exerciseId: 'bentover', sets: 4, reps: 20, weight: 8}] },
@@ -499,11 +508,13 @@ const EXERCISE_MUSCLE_OVERRIDES = {
   zercher_sq: { p: ['quads'], s: ['glutes', 'abs', 'biceps'] },
   vsq: { p: ['quads'], s: ['glutes'] },
   hack_sq: { p: ['quads'], s: ['glutes'] },
+  smith_sq: { p: ['quads'], s: ['glutes', 'adductors'] },
   lpd: { p: ['quads'], s: ['glutes', 'adductors'] },
   s_lpd: { p: ['quads', 'glutes'], s: ['hamstrings'] },
   goblet: { p: ['quads'], s: ['glutes', 'abs'] },
   pistol_sq: { p: ['quads'], s: ['glutes', 'abs'] },
   lunge: { p: ['quads', 'glutes'], s: ['hamstrings', 'adductors'] },
+  walk_lunge: { p: ['quads', 'glutes'], s: ['hamstrings', 'adductors', 'abs'] },
   bss: { p: ['glutes', 'quads'], s: ['hamstrings', 'adductors'] },
   step_up: { p: ['glutes', 'quads'], s: ['hamstrings'] },
   rdl: { p: ['hamstrings', 'glutes'], s: ['erectors'] },
@@ -3403,7 +3414,24 @@ export default function App() {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-6 bg-neutral-50 space-y-4">
-              <h3 className="text-sm font-black text-neutral-500 mb-2">🔥 부위별 올림피아 훈련 프로그램</h3>
+              {selectedLegendModal.split && (
+                <div className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <CalendarDays className="w-4 h-4 text-[#4768ff] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-[11px] font-black text-neutral-400">주간 분할</p>
+                      <p className="text-sm font-black text-neutral-900 leading-snug">{selectedLegendModal.split}</p>
+                    </div>
+                  </div>
+                  {selectedLegendModal.basis && <p className="text-[11px] font-bold text-neutral-500 leading-relaxed bg-neutral-50 rounded-xl p-3 flex gap-1.5"><Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-neutral-400" />{selectedLegendModal.basis}</p>}
+                  {selectedLegendModal.youtube && (
+                    <a href={selectedLegendModal.youtube.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#ff0033] text-white text-sm font-black active:scale-[0.98] transition-transform">
+                      <Play className="w-4 h-4 fill-white" /> {selectedLegendModal.youtube.label}
+                    </a>
+                  )}
+                </div>
+              )}
+              <h3 className="text-sm font-black text-neutral-500 mb-2">🔥 {selectedLegendModal.split ? '요일별 훈련 프로그램' : '부위별 훈련 프로그램'}</h3>
               {selectedLegendModal.routines.map((routine, idx) => (
                 <div key={`leg-r-${idx}`} className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden group">
                   <div className="p-5 border-b border-neutral-100">
@@ -3422,7 +3450,10 @@ export default function App() {
                               <SmartExerciseThumbnail exerciseId={ex?.id} target={ex ? ex.target : '전신'} tool={ex ? ex.tool : '바벨'} size="w-10 h-10" showShadow={false}/>
                               <span className="font-black text-sm text-neutral-800">{ex ? ex.name : '운동'}</span>
                            </div>
-                           <span className="text-xs font-black text-neutral-400 bg-neutral-100 px-2 py-1 rounded">{w.sets}세트 x {w.reps}회</span>
+                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                             <span className="text-xs font-black text-neutral-400 bg-neutral-100 px-2 py-1 rounded">{w.sets}세트 x {w.reps}회</span>
+                             {w.note && <span className="text-[10px] font-black text-[#4768ff]">{w.note}</span>}
+                           </div>
                         </div>
                       );
                     })}
