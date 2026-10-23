@@ -18,13 +18,30 @@ const goodSets = (ex) => (ex?.sets || []).filter(s => s.completed && s.type !== 
 const e1rm = (w, r) => (r === 1 ? w : w * (1 + r / 30));
 
 // ── 레벨 ────────────────────────────────────────────────────
-// 레벨 n이 되려면 누적 50·n·(n-1) XP (2레벨 100, 3레벨 300, 4레벨 600 …)
-export const levelInfo = (xp = 0) => {
+// 레벨 n이 되려면 누적 100·(n-1) + 13.3·(n-1)² XP. 초반은 빠르게 오르고,
+// 운동과 식단 퀘스트를 매일 꾸준히 하면 약 1년에 100레벨(약 14만 XP)에 닿는다.
+// 100레벨이 끝이 아니라 '각성'하면 1레벨부터 다시 시작하고 각성 횟수가 쌓인다 (넘친 XP는 이어진다).
+export const MAX_LEVEL = 100;
+export const AWAKEN_NAME = '각성';
+export const xpForLevel = (n) => Math.round(100 * (n - 1) + 13.3 * (n - 1) ** 2);
+const TITLES = [[100, 'GYM SPIRIT 레전드'], [85, '전설의 철인'], [70, '짐 마스터'], [50, '철인'], [35, '아이언 워리어'], [20, '근성장 장인'], [10, '짐 레귤러'], [5, '운동 습관러'], [1, '헬린이']];
+// 각성 횟수별 색 (LV 배지)
+export const AWAKEN_STYLE = [
+  'from-amber-300 to-orange-500 shadow-[0_8px_24px_rgba(251,146,60,0.45)]',
+  'from-cyan-300 to-blue-500 shadow-[0_8px_24px_rgba(56,189,248,0.5)]',
+  'from-fuchsia-300 to-violet-600 shadow-[0_8px_24px_rgba(168,85,247,0.5)]',
+  'from-rose-300 to-red-600 shadow-[0_8px_24px_rgba(244,63,94,0.5)]',
+  'from-emerald-300 to-teal-600 shadow-[0_8px_24px_rgba(16,185,129,0.5)]',
+  'from-yellow-200 via-amber-400 to-rose-500 shadow-[0_8px_28px_rgba(250,204,21,0.6)]',
+];
+export const levelInfo = (xp = 0, awakenBase = 0) => {
+  const x = Math.max(0, xp - awakenBase);
   let lv = 1;
-  while (50 * (lv + 1) * lv <= xp) lv++;
-  const cur = 50 * lv * (lv - 1), next = 50 * (lv + 1) * lv;
-  const title = lv >= 30 ? '전설의 철인' : lv >= 20 ? '아이언 워리어' : lv >= 15 ? '근성장 장인' : lv >= 10 ? '짐 레귤러' : lv >= 5 ? '운동 습관러' : '헬린이';
-  return { level: lv, title, cur, next, into: xp - cur, need: next - cur, pct: Math.min(100, ((xp - cur) / (next - cur)) * 100) };
+  while (lv < MAX_LEVEL && xpForLevel(lv + 1) <= x) lv++;
+  const max = lv >= MAX_LEVEL;
+  const cur = xpForLevel(lv), next = max ? cur : xpForLevel(lv + 1);
+  const title = TITLES.find(([min]) => lv >= min)[1];
+  return { level: lv, title, cur, next, into: x - cur, need: max ? 0 : next - cur, pct: max ? 100 : Math.min(100, ((x - cur) / (next - cur)) * 100), max, xp: x };
 };
 
 // ── 기록 요약 ───────────────────────────────────────────────

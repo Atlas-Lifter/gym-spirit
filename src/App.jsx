@@ -15,6 +15,7 @@ import { DEFAULT_COVER_PHOTOS } from './coverPhotos.js';
 import { AiCoach } from './aiCoach.jsx';
 import { PosingGuideSection } from './PosingGuide.jsx';
 import { QuestCenter } from './QuestCenter.jsx';
+import { levelInfo, xpForLevel, MAX_LEVEL } from './questSystem.js';
 import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
 import { StopwatchDial } from './StopwatchDial.jsx';
@@ -1779,9 +1780,19 @@ export default function App() {
       if (!fresh.length) return prev;
       const claimed = { ...(qs.claimed || {}) };
       fresh.forEach(it => { claimed[it.key] = Date.now(); });
-      return { ...prev, questState: { xp: (qs.xp || 0) + fresh.reduce((a, it) => a + it.xp, 0), claimed } };
+      return { ...prev, questState: { ...qs, xp: (qs.xp || 0) + fresh.reduce((a, it) => a + it.xp, 0), claimed } };
     });
     showToast(items.length === 1 ? `🎁 ${items[0].label} 보상 +${items[0].xp} XP` : `🎁 보상 ${items.length}개 +${items.reduce((a, it) => a + it.xp, 0)} XP`);
+  };
+
+  // 100레벨에서 각성: 레벨은 1부터 다시, 각성 횟수 +1, 넘친 XP는 이어진다 (업적·기록은 그대로)
+  const awakenLevel = () => {
+    setCurrentUser(prev => {
+      const qs = prev.questState || { xp: 0, claimed: {} };
+      if (!levelInfo(qs.xp || 0, qs.awakenBase || 0).max) return prev;
+      return { ...prev, questState: { ...qs, awaken: (qs.awaken || 0) + 1, awakenBase: (qs.awakenBase || 0) + xpForLevel(MAX_LEVEL), awakenedAt: [...(qs.awakenedAt || []), new Date().toISOString()] } };
+    });
+    showToast(`⚡ 각성 ${((activeUser?.questState?.awaken) || 0) + 1}회! 새로운 여정이 시작됩니다.`);
   };
 
   // 3대 합계 기준 등급 (업적 '3대 중량 마스터' 구간과 동일)
@@ -3508,6 +3519,7 @@ export default function App() {
                  total3={getTotalLift3()}
                  questState={activeUser?.questState}
                  onClaim={claimQuestRewards}
+                 onAwaken={awakenLevel}
                />
 
                <PosingGuideSection profile={activeUser?.profile} />

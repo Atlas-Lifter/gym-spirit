@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Trophy, Check, Gift, ChevronDown, Lock, Flame, Sparkles } from 'lucide-react';
-import { summarize, dailyQuests, weeklyQuests, achievements, levelInfo, timeLeft, TIER_STYLE, TIER_XP, dateKey } from './questSystem.js';
+import { summarize, dailyQuests, weeklyQuests, achievements, levelInfo, timeLeft, TIER_STYLE, TIER_XP, dateKey, MAX_LEVEL, AWAKEN_NAME, AWAKEN_STYLE } from './questSystem.js';
 
 const WEEK = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -54,7 +54,7 @@ const QuestRow = ({ q, claimed, onClaim }) => {
   );
 };
 
-export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onClaim }) => {
+export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onClaim, onAwaken }) => {
   const [tab, setTab] = useState('daily');
   const [openAch, setOpenAch] = useState(null);
   const [pop, setPop] = useState(null);
@@ -66,7 +66,9 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
   const daily = dailyQuests(S, bodyStats, now);
   const weekly = weeklyQuests(S, now);
   const achs = achievements(S, total3);
-  const lv = levelInfo(xp);
+  const awaken = questState?.awaken || 0;
+  const lv = levelInfo(xp, questState?.awakenBase || 0);
+  const [awakenAsk, setAwakenAsk] = useState(false);
   const left = timeLeft(now);
   const todayKey = dateKey(now);
 
@@ -106,17 +108,37 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
       <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#1e1b4b] via-[#312e81] to-[#4c1d95] text-white p-5 shadow-lg mb-3">
         <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 blur-2xl" />
         <div className="flex items-center gap-4 relative">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-300 to-orange-500 flex flex-col items-center justify-center shadow-[0_8px_24px_rgba(251,146,60,0.45)] flex-shrink-0">
+          <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br ${AWAKEN_STYLE[Math.min(awaken, AWAKEN_STYLE.length - 1)]} flex flex-col items-center justify-center flex-shrink-0`}>
             <span className="text-[10px] font-black text-white/80 leading-none">LV</span>
             <span className="text-2xl font-black leading-none">{lv.level}</span>
+            {awaken > 0 && <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 rounded-full bg-white text-[#312e81] text-[10px] font-black flex items-center justify-center shadow-md">★{awaken}</span>}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-bold text-white/60">나의 칭호</div>
+            <div className="text-[11px] font-bold text-white/60">나의 칭호{awaken > 0 && <span className="ml-1.5 text-amber-300 font-black">· {AWAKEN_NAME} {awaken}회</span>}</div>
             <div className="text-lg font-black leading-tight">{lv.title}</div>
             <div className="mt-2 h-2.5 bg-white/15 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-300 to-pink-400 rounded-full transition-all duration-700" style={{ width: `${Math.max(3, lv.pct)}%` }} /></div>
-            <div className="flex justify-between text-[10px] font-bold text-white/60 mt-1"><span>{xp.toLocaleString()} XP</span><span>다음 레벨까지 {(lv.need - lv.into).toLocaleString()} XP</span></div>
+            <div className="flex justify-between text-[10px] font-bold text-white/60 mt-1"><span>누적 {xp.toLocaleString()} XP</span><span>{lv.max ? `최고 레벨 ${MAX_LEVEL} 달성!` : `다음 레벨까지 ${(lv.need - lv.into).toLocaleString()} XP`}</span></div>
           </div>
         </div>
+        {lv.max && (
+          <button onClick={() => setAwakenAsk(true)} className="relative w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-[#312e81] font-black text-sm shadow-[0_0_24px_rgba(251,191,36,0.6)] animate-pulse active:scale-[0.98] transition-transform">
+            ⚡ {AWAKEN_NAME}하기 · LV.1부터 새로운 여정
+          </button>
+        )}
+        {awakenAsk && (
+          <div className="relative mt-3 bg-black/30 border border-amber-300/40 rounded-2xl p-4">
+            <p className="text-sm font-black mb-1">{awaken + 1}번째 {AWAKEN_NAME}을 할까요?</p>
+            <ul className="text-[11px] font-bold text-white/70 leading-relaxed mb-3 list-disc pl-4">
+              <li>레벨이 1로 돌아가고 {AWAKEN_NAME} 횟수가 {awaken + 1}회가 돼요</li>
+              <li>LV 배지 색이 바뀌고 ★{awaken + 1} 표시가 붙어요</li>
+              <li>100레벨을 넘겨 쌓인 XP는 그대로 이어지고, 업적·뱃지·운동 기록은 모두 유지돼요</li>
+            </ul>
+            <div className="flex gap-2">
+              <button onClick={() => setAwakenAsk(false)} className="flex-1 py-2.5 rounded-xl bg-white/10 text-white/80 text-xs font-black">나중에</button>
+              <button onClick={() => { setAwakenAsk(false); onAwaken?.(); }} className="flex-[2] py-2.5 rounded-xl bg-amber-300 text-[#312e81] text-xs font-black">⚡ {AWAKEN_NAME}하기</button>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-2 mt-4 relative">
           <div className="bg-white/10 rounded-xl py-2 text-center"><div className="text-base font-black flex items-center justify-center gap-1"><Flame className="w-4 h-4 text-orange-300" />{streak}일</div><div className="text-[10px] font-bold text-white/60">연속 운동</div></div>
           <div className="bg-white/10 rounded-xl py-2 text-center"><div className="text-base font-black">{badgesEarned}/{badgesTotal}</div><div className="text-[10px] font-bold text-white/60">획득 뱃지</div></div>
