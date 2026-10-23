@@ -1187,9 +1187,11 @@ export default function App() {
     showToast("신체 정보가 성공적으로 저장되었습니다.");
   };
 
-  const triggerSaveWorkout = () => {
-    if (!session || session.length === 0) { showToast("운동 기록이 없습니다. 먼저 종목을 추가해주세요."); return; }
-    const cleanSession = session.map(ex => ({
+  const triggerSaveWorkout = (source) => {
+    const src = Array.isArray(source) ? source : session;
+    if (!src || src.length === 0) { showToast("운동 기록이 없습니다. 먼저 종목을 추가해주세요."); return; }
+    setWorkoutMinimized(false);
+    const cleanSession = src.map(ex => ({
       id: String(ex.id || Date.now()),
       exercise: { id: String(getExId(ex)), name: String(getExName(ex)), target: String(getExTarget(ex)), tool: String(ex.exercise?.tool || ex.tool || '바벨') },
       sets: (ex.sets || []).map(s => ({ id: String(s.id || Date.now()), type: String(s.type || '-'), weight: String(s.weight || '0'), reps: String(s.reps || '0'), rpe: String(s.rpe || ''), completed: Boolean(s.completed) }))
@@ -1231,6 +1233,16 @@ export default function App() {
     setIsTimerActive(false); setTimeLeft(0); setOvertimeSec(null);
     setSession([]); setWorkoutDurationSec(0); setWorkoutMinimized(false);
     start?.();
+  };
+
+  const completedOnlySession = () => session
+    .map(ex => ({ ...ex, sets: (ex.sets || []).filter(st => st.completed) }))
+    .filter(ex => ex.sets.length > 0);
+  const quitAndSaveDone = () => {
+    const done = completedOnlySession();
+    setIsExitConfirmOpen(false);
+    if (!done.length) { exitWorkout(); return; }
+    triggerSaveWorkout(done);
   };
 
   const exitWorkout = () => {
@@ -2081,18 +2093,23 @@ export default function App() {
             </div>
           </div>
         )}
-        {isExitConfirmOpen && (
+        {isExitConfirmOpen && (() => {
+          const doneSets = session.reduce((n, ex) => n + (ex.sets || []).filter(st => st.completed).length, 0);
+          return (
           <div className="fixed inset-0 bg-black/80 z-[85] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setIsExitConfirmOpen(false)}>
-            <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 max-w-sm w-full text-white shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-black mb-2">운동을 끝내고 나갈까요?</h3>
-              <p className="text-sm font-bold text-neutral-400 mb-6 leading-relaxed">저장하지 않고 끝내면 이번 운동 기록이 사라져요. 기록을 남기려면 '훈련 완료 및 저장'을 눌러 주세요.</p>
-              <div className="flex gap-3">
-                <button onClick={() => setIsExitConfirmOpen(false)} className="flex-1 py-3.5 bg-neutral-800 text-neutral-300 font-black rounded-xl hover:bg-neutral-700 transition-colors active:scale-95">계속 운동하기</button>
-                <button onClick={exitWorkout} className="flex-1 py-3.5 bg-rose-500 text-white font-black rounded-xl hover:bg-rose-400 transition-colors active:scale-95">기록 버리고 나가기</button>
+            <div className="bg-[#060b10] border border-rose-500/40 rounded-[32px] p-6 max-w-sm w-full text-white shadow-[0_0_30px_rgba(244,63,94,0.2)] animate-scale-up" onClick={e => e.stopPropagation()}>
+              <div className="text-3xl mb-2">🏳️</div>
+              <h3 className="text-xl font-black mb-2">오늘 운동은 여기까지 할까요?</h3>
+              <p className="text-sm font-bold text-neutral-400 mb-6 leading-relaxed">{doneSets > 0 ? `지금까지 완료한 ${doneSets}세트는 기록으로 남길 수 있어요.` : '아직 완료한 세트가 없어서 남길 기록이 없어요.'}</p>
+              <div className="flex flex-col gap-2">
+                {doneSets > 0 && <button onClick={quitAndSaveDone} className="w-full py-3.5 bg-emerald-400 text-black font-black rounded-xl active:scale-95 transition-transform shadow-[0_0_18px_rgba(16,185,129,0.5)]">완료한 {doneSets}세트만 저장하고 끝내기</button>}
+                <button onClick={exitWorkout} className="w-full py-3.5 bg-black border border-rose-500/50 text-rose-400 font-black rounded-xl active:scale-95 transition-transform">기록 버리고 끝내기</button>
+                <button onClick={() => setIsExitConfirmOpen(false)} className="w-full py-3 text-neutral-400 font-black text-sm">계속 운동하기</button>
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {workoutMinimized && currentScreen !== 'workout' && (() => {
           const allSets = session.reduce((n, ex) => n + (ex.sets || []).length, 0);
@@ -2547,6 +2564,7 @@ export default function App() {
         <div className="max-w-md mx-auto w-full px-4 mb-6 relative z-10">
           <button onClick={() => { setSwapTargetExerciseId(null); setIsAddExerciseModalOpen(true); }} className="w-full bg-black text-yellow-300 font-black py-4 rounded-2xl mb-4 h-14 hover:bg-yellow-400/5 transition-colors active:scale-[0.98] shadow-[0_0_18px_rgba(250,204,21,0.25)] flex items-center justify-center gap-2 border border-yellow-400/50"><Plus className="w-5 h-5"/> 종목 추가하기</button>
           <button onClick={triggerSaveWorkout} className={`w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 h-14 transition-all active:scale-[0.98] text-lg ${session.length > 0 ? 'bg-emerald-400 text-black hover:bg-emerald-300 shadow-[0_0_28px_rgba(16,185,129,0.6)]' : 'bg-neutral-900 text-neutral-600 border border-neutral-800 cursor-not-allowed'}`}><Save className="w-5 h-5 stroke-[3]"/> 훈련 완료 및 저장</button>
+          {session.length > 0 && <button onClick={() => setIsExitConfirmOpen(true)} className="w-full mt-3 py-3 text-sm font-black text-rose-400/80 hover:text-rose-300 transition-colors">🏳️ 운동 그만두기</button>}
         </div>
 
         <div className={`fixed bottom-0 left-0 right-0 bg-[#03060a]/95 backdrop-blur-xl border-t p-5 rounded-t-[32px] transform transition-transform duration-500 z-40 ${overtimeOn ? 'ot-border' : 'border-emerald-400/40 shadow-[0_-10px_40px_rgba(16,185,129,0.18)]'} ${isTimerActive || timeLeft > 0 || overtimeOn ? 'translate-y-0' : 'translate-y-full'}`}>
