@@ -41,7 +41,7 @@ const useCountUp = (value, ms = 650) => {
 };
 
 // 밑줄이 미끄러지듯 움직이는 탭
-const Segmented = ({ options, value, onChange, dark }) => {
+export const Segmented = ({ options, value, onChange, dark }) => {
   const idx = Math.max(0, options.findIndex(o => o[0] === value));
   return (
     <div className={`relative flex p-1 rounded-2xl ${dark ? 'bg-neutral-900' : 'bg-neutral-200/70'}`}>
@@ -54,7 +54,7 @@ const Segmented = ({ options, value, onChange, dark }) => {
   );
 };
 
-const Avatar = ({ user, size = 48, ring, Avatar3 }) => {
+export const Avatar = ({ user, size = 48, ring, Avatar3 }) => {
   const g = AVATAR_GRAD[user.avatarColor] || ['#94a3b8', '#475569'];
   return (
     <div className="relative flex-shrink-0 rounded-full" style={{ width: size, height: size, padding: ring ? 2.5 : 0, background: ring || 'transparent' }}>
@@ -68,7 +68,7 @@ const Avatar = ({ user, size = 48, ring, Avatar3 }) => {
 };
 
 // 아래에서 올라오고, 손잡이를 끌어내리면 닫히는 시트
-const Sheet = ({ open, onClose, children }) => {
+export const Sheet = ({ open, onClose, children }) => {
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(false);
   const [drag, setDrag] = useState(0);
@@ -117,13 +117,14 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
   const isFriend = friends.includes(user.id);
   const pending = sentRequests.includes(user.id);
   const count = cheers[user.id] || 0;
-  // 최애 종목 중심으로 최근 루틴을 보여준다 (데모 데이터)
-  const base = Math.max(40, Math.round((user.lift * 0.32) / 5) * 5);
-  const routine = [
-    { name: user.fav || '바벨 스쿼트', sets: 5, reps: 5, w: base },
-    { name: '보조 1종목', sets: 4, reps: 10, w: Math.round((base * 0.6) / 5) * 5 },
-    { name: '마무리 펌핑', sets: 3, reps: 15, w: Math.round((base * 0.35) / 5) * 5 },
-  ];
+  // 그 사람이 가장 최근에 저장한 운동 (없으면 루틴 가져오기 비활성)
+  const items = Array.isArray(user.routine?.items) ? user.routine.items : [];
+  const routine = items.map(it => {
+    const sets = Array.isArray(it.sets) ? it.sets : [];
+    const top = sets.reduce((m, st) => Math.max(m, Number(st.weight) || 0), 0);
+    return { name: it.name, sets: sets.length, reps: sets[0]?.reps || '-', w: top };
+  });
+  const routineDate = user.routine?.date ? user.routine.date.slice(5).replace('-', '/') : '';
   const cheer = () => { onCheer(user.id); setBurst(b => b + 1); setPop(true); setTimeout(() => setPop(false), 220); };
   return (
     <>
@@ -150,7 +151,8 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
       </div>
 
       <div className="mb-5">
-        <div className="text-xs font-black text-neutral-500 mb-2">🔥 최근 루틴</div>
+        <div className="text-xs font-black text-neutral-500 mb-2">🔥 최근 루틴{routineDate && <span className="text-neutral-400 font-bold"> · {routineDate}</span>}</div>
+        {routine.length === 0 && <div className="bg-neutral-50 border border-neutral-100 rounded-xl px-3.5 py-4 text-center text-xs font-bold text-neutral-400">아직 저장된 운동 기록이 없어요</div>}
         <div className="space-y-1.5">
           {routine.map((r, i) => (
             <div key={i} className="flex items-center justify-between bg-white border border-neutral-100 rounded-xl px-3.5 py-3 shadow-sm">
@@ -168,7 +170,7 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
               <HeartBurst burst={burst} />
               <Heart className={`w-4 h-4 fill-current transition-transform ${pop ? 'scale-125' : ''}`} /> 응원하기
             </button>
-            <button onClick={() => setConfirmSteal(c => !c)} className={`flex-1 py-3.5 rounded-2xl font-black text-sm active:scale-[0.97] transition-all flex items-center justify-center gap-1.5 ${confirmSteal ? 'bg-neutral-900 text-white' : 'bg-[#4768ff] text-white shadow-[0_10px_24px_rgba(71,104,255,0.3)]'}`}>
+            <button disabled={!routine.length} onClick={() => setConfirmSteal(c => !c)} className={`flex-1 disabled:opacity-40 disabled:shadow-none py-3.5 rounded-2xl font-black text-sm active:scale-[0.97] transition-all flex items-center justify-center gap-1.5 ${confirmSteal ? 'bg-neutral-900 text-white' : 'bg-[#4768ff] text-white shadow-[0_10px_24px_rgba(71,104,255,0.3)]'}`}>
               <Download className="w-4 h-4" /> 루틴 가져오기
             </button>
           </div>
@@ -197,7 +199,7 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
   );
 };
 
-export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, Avatar3 }) => {
+export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3 }) => {
   const [scope, setScope] = useState('global');
   const [metric, setMetric] = useState('volume');
   const [selected, setSelected] = useState(null);
@@ -309,12 +311,23 @@ export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers 
         <Segmented options={[['global', '전체 랭킹'], ['friends', `친구 랭킹${friends.length ? ` ${friends.length}` : ''}`]]} value={scope} onChange={change(setScope)} />
         <Segmented options={Object.entries(METRIC).map(([k, m]) => [k, `${m.icon} ${m.label}`])} value={metric} onChange={change(setMetric)} />
 
-        {list.length <= 1 ? (
+        {guest && (
+          <button onClick={onLogin} className="w-full flex items-center gap-3 bg-[#eef2ff] border border-[#dbe3ff] rounded-2xl px-4 py-3 text-left active:scale-[0.99] transition-transform">
+            <span className="text-xl">🔒</span>
+            <span className="flex-1 text-xs font-bold text-[#3550d6] leading-relaxed">게스트 기록은 이 기기에만 있어서 다른 사람에게 보이지 않아요. <b className="font-black">회원가입</b>하면 랭킹에 올라가고 친구와 응원을 주고받을 수 있어요.</span>
+          </button>
+        )}
+        {loading && list.length <= 1 ? (
+          <div className="bg-white rounded-[28px] border border-neutral-100 p-10 flex justify-center"><div className="w-6 h-6 rounded-full border-2 border-neutral-200 border-t-[#4768ff] animate-spin" /></div>
+        ) : list.length <= 1 ? (
           <div className="bg-white rounded-[28px] border border-neutral-100 p-8 text-center">
-            <div className="text-3xl mb-2">🤝</div>
-            <p className="text-sm font-black text-neutral-900 mb-1">아직 함께하는 친구가 없어요</p>
-            <p className="text-xs font-bold text-neutral-500 mb-4">친구를 추가하면 서로의 순위를 비교하고 응원할 수 있어요.</p>
-            <button onClick={onFindFriends} className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-xs font-black active:scale-95 transition-transform">친구 찾기</button>
+            <div className="text-3xl mb-2">{scope === 'friends' ? '🤝' : '🏁'}</div>
+            <p className="text-sm font-black text-neutral-900 mb-1">{scope === 'friends' ? '아직 함께하는 친구가 없어요' : '아직 함께 경쟁할 유저가 없어요'}</p>
+            <p className="text-xs font-bold text-neutral-500 mb-4">{scope === 'friends' ? '친구를 추가하면 서로의 순위를 비교하고 응원할 수 있어요.' : '친구에게 GYM SPIRIT을 알려 주면 이곳에서 함께 순위를 겨룰 수 있어요.'}</p>
+            <div className="flex gap-2 justify-center">
+              {onInvite && <button onClick={onInvite} className="px-5 py-2.5 rounded-xl bg-[#4768ff] text-white text-xs font-black active:scale-95 transition-transform">친구 초대하기</button>}
+              <button onClick={onFindFriends} className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-xs font-black active:scale-95 transition-transform">친구 찾기</button>
+            </div>
           </div>
         ) : (
           <>

@@ -17,6 +17,8 @@ import { PosingGuideSection } from './PosingGuide.jsx';
 import { QuestCenter } from './QuestCenter.jsx';
 import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
+import { FriendCenter } from './FriendCenter.jsx';
+import * as cloud from './cloud.js';
 import { FullBodyAvatar, AVATAR_SKIN_TONES, AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS } from './realAvatar.jsx';
 
 const formatDate = (date) => {
@@ -378,17 +380,6 @@ const SHIRT_COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#1
 const BOTTOM_COLORS = ['#171717', '#4b5563', '#1e3a8a', '#3b82f6', '#f3f4f6', '#a8a29e', '#7f1d1d'];
 const ACC_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#171717', '#ffffff', '#fbbf24', '#9ca3af', '#ec4899', '#06b6d4'];
 const HAIR_COLORS = ['#171717', '#451a03', '#b45309', '#fcd34d', '#dc2626', '#e4e4e7', '#a855f7'];
-
-const MOCK_RANKING = [
-  { id: 'u1', name: '강철하체', volume: 85400, lift: 550, avatarColor: 'bg-rose-500', fav: '스쿼트' },
-  { id: 'u2', name: '벤치마스터', volume: 72100, lift: 480, avatarColor: 'bg-blue-500', fav: '벤치프레스' },
-  { id: 'u3', name: '등신', volume: 68500, lift: 510, avatarColor: 'bg-emerald-500', fav: '데드리프트' },
-  { id: 'u4', name: '득근득근', volume: 54200, lift: 380, avatarColor: 'bg-purple-500', fav: '풀업' },
-  { id: 'u5', name: '헬린이탈출', volume: 49800, lift: 250, avatarColor: 'bg-orange-500', fav: '바벨 로우' },
-  { id: 'u6', name: '운동하는직장인', volume: 45000, lift: 310, avatarColor: 'bg-cyan-500', fav: '오버헤드프레스' },
-  { id: 'u7', name: '득근마차', volume: 38000, lift: 280, avatarColor: 'bg-indigo-500', fav: '레그프레스' },
-  { id: 'u8', name: '단백질도둑', volume: 21000, lift: 180, avatarColor: 'bg-amber-500', fav: '덤벨컬' },
-];
 
 const getExName = (exItem) => {
   if (!exItem) return '운동';
@@ -791,7 +782,6 @@ export default function App() {
   const [isRoutineLoaderOpen, setIsRoutineLoaderOpen] = useState(false);
   const [selectedPastDate, setSelectedPastDate] = useState(null);
   const [isNotiOpen, setIsNotiOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(3);
   const [showCelebration, setShowCelebration] = useState(false);
   const [isAddExerciseModalOpen, setIsAddExerciseModalOpen] = useState(false);
   const [exSearchQuery, setExSearchQuery] = useState('');
@@ -824,6 +814,21 @@ export default function App() {
   const [isFriendSearchModalOpen, setIsFriendSearchModalOpen] = useState(false);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [cheersData, setCheersData] = useState({});
+  const [cloudUser, setCloudUser] = useState(null); // 로그인한 회원 { id, email }
+  const [cloudReady, setCloudReady] = useState(false); // 클라우드 기록을 다 불러온 뒤에만 저장한다
+  const [authChecking, setAuthChecking] = useState(true); // 첫 화면에서 로그인 상태 확인 중
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authNotice, setAuthNotice] = useState('');
+  const [signupNickname, setSignupNickname] = useState('');
+  const [recoveryMode, setRecoveryMode] = useState(false); // 비밀번호 재설정 메일로 들어온 경우
+  const [friendState, setFriendState] = useState({ friends: [], sent: [], incoming: [] });
+  const [rankProfiles, setRankProfiles] = useState([]); // 랭킹에 보이는 회원들
+  const [extraProfiles, setExtraProfiles] = useState({}); // 친구·요청 보낸 사람 프로필
+  const [rankLoading, setRankLoading] = useState(false);
+  const [editingNick, setEditingNick] = useState(null);
+  const cloudSaveTimer = useRef(null);
+  const pendingCloudSave = useRef(null);
+  const unreadCount = friendState.incoming.length;
   const [selectedFood, setSelectedFood] = useState(null);
   const [selectedMealId, setSelectedMealId] = useState(null);
   const [isAddFoodModalOpen, setIsAddFoodModalOpen] = useState(false);
@@ -831,25 +836,30 @@ export default function App() {
   const [foodCategoryFilter, setFoodCategoryFilter] = useState('전체');
   const [foodWeight, setFoodWeight] = useState(100);
 
-  const handleCheer = (userId) => {
+  const handleCheer = async (userId) => {
+    if (!cloudUser) { showToast('응원은 회원가입 후 보낼 수 있어요.'); return; }
     setCheersData(prev => ({ ...prev, [userId]: (prev[userId] || 0) + 1 }));
-    showToast("🔥 힘찬 응원을 보냈습니다!");
+    try {
+      await cloud.sendCheer(cloudUser.id, userId);
+      showToast("🔥 힘찬 응원을 보냈습니다!");
+    } catch (e) {
+      setCheersData(prev => ({ ...prev, [userId]: Math.max(0, (prev[userId] || 1) - 1) }));
+      showToast('응원을 보내지 못했어요. 잠시 후 다시 시도해 주세요.');
+    }
   };
 
+  // 다른 회원이 가장 최근에 저장한 운동을 오늘 운동으로 불러온다
   const stealRoutine = (user) => {
-    const mockSession = [
-      { id: `steal-1-${Date.now()}`, exercise: EXERCISE_OPTIONS.find(e => e.name.includes(user.fav)) || EXERCISE_OPTIONS[0],
-        sets: [
-          { id: `s1-${Date.now()}`, type: '-', weight: '120', reps: '10', rpe: '', completed: false },
-          { id: `s2-${Date.now()}`, type: '-', weight: '120', reps: '10', rpe: '', completed: false }
-        ] },
-      { id: `steal-2-${Date.now()}`, exercise: EXERCISE_OPTIONS.find(e => e.name === '레그 프레스') || EXERCISE_OPTIONS[3],
-        sets: [
-          { id: `s3-${Date.now()}`, type: '-', weight: '200', reps: '12', rpe: '', completed: false },
-          { id: `s4-${Date.now()}`, type: '-', weight: '200', reps: '12', rpe: '', completed: false }
-        ] }
-    ];
-    setSession(mockSession);
+    const items = Array.isArray(user.routine?.items) ? user.routine.items : [];
+    if (!items.length) { showToast('가져올 운동 기록이 없어요.'); return; }
+    const stamp = Date.now();
+    const newSession = items.map((it, i) => ({
+      id: `steal-${i}-${stamp}`,
+      exercise: EXERCISE_OPTIONS.find(e => e.id === it.id) || EXERCISE_OPTIONS.find(e => e.name === it.name)
+        || { id: String(it.id || `custom-${i}`), name: String(it.name || '운동'), target: String(it.target || '기타'), tool: String(it.tool || '바벨') },
+      sets: (it.sets || []).map((st, j) => ({ id: `s${i}-${j}-${stamp}`, type: '-', weight: String(st.weight ?? ''), reps: String(st.reps ?? ''), rpe: '', completed: false })),
+    }));
+    setSession(newSession);
     setCurrentDate(formatDate(new Date()));
     setWorkoutDurationSec(0);
     setRankingProfileModal(null);
@@ -958,34 +968,87 @@ export default function App() {
   };
   const weekDays = getWeekDays(currentDate);
 
-  const handleAuth = (e) => {
-    e.preventDefault();
-    setAuthError('');
-    if (!email || password.length < 4) { setAuthError('이메일과 4자리 이상 비밀번호를 입력해주세요.'); return; }
+  // 회원 기록을 불러와 앱에 들어간다. 클라우드에 기록이 없으면 이 기기의 예전 기록(같은 이메일 또는 게스트)을 옮겨온다
+  const enterCloud = async (user) => {
+    const [data, prof] = await Promise.all([cloud.loadUserData(user.id), cloud.loadMyProfile(user.id)]);
+    let base = data && Object.keys(data).length ? data : null;
+    if (!base) {
+      let local = null;
+      try { local = (JSON.parse(localStorage.getItem('gymwork_pro_users_v21')) || {})[user.email] || null; } catch (e) {}
+      if (!local && currentUser?.email === 'guest@gymwork.com') local = currentUser;
+      if (local) {
+        const { password: _pw, email: _em, friends: _f, sentRequests: _s, pendingRequests: _p, ...rest } = local;
+        base = rest;
+      } else {
+        base = {
+          profile: { years: 1, avatarColor: '#171717', skinColor: SKIN_COLORS[0], shirtColor: SHIRT_COLORS[0], bottomColor: BOTTOM_COLORS[0], gender: 'male', faceExpression: 'normal' },
+          bodyStats: { weight: '', muscle: '', fat: '' }, workouts: {}, diet: {},
+        };
+      }
+    }
+    const nickname = prof?.nickname || base.profile?.nickname || user.email.split('@')[0];
+    setCloudUser({ id: user.id, email: user.email });
+    setCurrentUser({ ...base, email: user.email, cloudId: user.id, profile: { ...(base.profile || {}), nickname } });
+    setCloudReady(true);
+    setCurrentScreen('home');
+  };
 
-    if (isLoginMode) {
-      const user = usersDB[email];
-      if (user && user.password === password) {
-        setCurrentUser(user);
-        setCurrentScreen('home');
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setAuthError(''); setAuthNotice('');
+    if (recoveryMode) {
+      if (password.length < 6) { setAuthError('비밀번호는 6자리 이상이어야 해요.'); return; }
+      setAuthBusy(true);
+      try {
+        await cloud.updatePassword(password);
+        setRecoveryMode(false);
+        const { data } = await cloud.supabase.auth.getUser();
+        if (data.user) await enterCloud(data.user);
+        setPassword('');
+        showToast('비밀번호를 바꿨어요.');
+      } catch (err) { setAuthError(cloud.authErrorText(err)); }
+      finally { setAuthBusy(false); }
+      return;
+    }
+    if (!email || password.length < 6) { setAuthError('이메일과 6자리 이상 비밀번호를 입력해주세요.'); return; }
+    if (!isLoginMode && !signupNickname.trim()) { setAuthError('랭킹에 보일 닉네임을 입력해주세요.'); return; }
+    setAuthBusy(true);
+    try {
+      if (isLoginMode) {
+        const { user } = await cloud.signIn({ email, password });
+        await enterCloud(user);
+        setPassword('');
         showToast("로그인 성공! 환영합니다.");
       } else {
-        setAuthError('계정이 존재하지 않거나 비밀번호가 틀렸습니다.');
+        const { session, user } = await cloud.signUp({ email, password, nickname: signupNickname.trim().slice(0, 12) });
+        if (session && user) {
+          await enterCloud(user);
+          setPassword('');
+          setIsAvatarStudioOpen(true);
+          showToast("회원가입 완료! 아바타를 꾸며보세요.");
+        } else {
+          setIsLoginMode(true);
+          setAuthNotice(`${email} 로 인증 메일을 보냈어요. 메일 속 링크를 누르면 바로 시작돼요.`);
+        }
       }
-    } else {
-      if (usersDB[email]) { setAuthError('이미 가입된 이메일입니다. 로그인을 이용해주세요.'); return; }
-      const newUser = {
-        email, password,
-        profile: { nickname: email.split('@')[0], years: 1, avatarColor: '#171717', skinColor: SKIN_COLORS[0], shirtColor: SHIRT_COLORS[0], bottomColor: BOTTOM_COLORS[0], gender: 'male', faceExpression: 'normal' },
-        bodyStats: { weight: '', muscle: '', fat: '' },
-        workouts: {}, diet: {}, friends: [], pendingRequests: []
-      };
-      setUsersDB({ ...usersDB, [email]: newUser });
-      setCurrentUser(newUser);
-      setCurrentScreen('home');
-      setIsAvatarStudioOpen(true);
-      showToast("회원가입 완료! 아바타를 꾸며보세요.");
-    }
+    } catch (err) { setAuthError(cloud.authErrorText(err)); }
+    finally { setAuthBusy(false); }
+  };
+
+  const handlePasswordReset = async () => {
+    setAuthError(''); setAuthNotice('');
+    if (!email) { setAuthError('비밀번호를 재설정할 이메일을 먼저 입력해 주세요.'); return; }
+    setAuthBusy(true);
+    try { await cloud.sendPasswordReset(email); setAuthNotice(`${email} 로 비밀번호 재설정 메일을 보냈어요.`); }
+    catch (err) { setAuthError(cloud.authErrorText(err)); }
+    finally { setAuthBusy(false); }
+  };
+
+  const goToSignup = () => {
+    setIsFriendSearchModalOpen(false);
+    setIsLoginMode(false);
+    setAuthError(''); setAuthNotice('');
+    setCurrentScreen('auth');
   };
 
   const handleGuestLogin = () => {
@@ -1009,7 +1072,22 @@ export default function App() {
     showToast("게스트 모드로 시작합니다.");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (cloudUser) {
+      clearTimeout(cloudSaveTimer.current);
+      try { await pendingCloudSave.current?.(); } catch (e) {}
+      pendingCloudSave.current = null;
+      try { await cloud.signOut(); } catch (e) {}
+      try {
+        const db = JSON.parse(localStorage.getItem('gymwork_pro_users_v21')) || {};
+        delete db[cloudUser.email];
+        localStorage.setItem('gymwork_pro_users_v21', JSON.stringify(db));
+        setUsersDB(db);
+      } catch (e) {}
+      setCloudUser(null);
+      setCloudReady(false);
+      setRankProfiles([]);
+    }
     setCurrentUser(null);
     setCurrentScreen('auth');
     setActiveTab('workout');
@@ -1634,28 +1712,47 @@ export default function App() {
   };
   const todayMacros = calculateTotalMacros(todayDiet.meals);
 
-  const acceptFriend = (uid) => {
-    if(!currentUser) return;
-    setCurrentUser(prev => ({ ...prev, friends: [...(prev.friends || []), uid], pendingRequests: (prev.pendingRequests || []).filter(id => id !== uid) }));
-    setUnreadCount(Math.max(0, unreadCount - 1));
-    showToast("친구 수락이 완료되었습니다!");
+  const refreshFriends = async (uid = cloudUser?.id) => {
+    if (!uid) return;
+    const st = cloud.summarizeFriends(await cloud.fetchFriendRequests(uid), uid);
+    setFriendState(st);
+    const ids = [...new Set([...st.friends, ...st.sent, ...st.incoming.map(r => r.from)])];
+    const profs = await cloud.fetchProfiles(ids);
+    setExtraProfiles(prev => ({ ...prev, ...Object.fromEntries(profs.map(p => [p.id, cloud.toRankUser(p)])) }));
   };
 
-  const sendFriendRequest = (targetId) => {
-    if (!currentUser) return;
-    const updatedMe = { ...currentUser, sentRequests: [...(currentUser.sentRequests || [])] };
-    if (!updatedMe.sentRequests.includes(targetId)) updatedMe.sentRequests.push(targetId);
-    const updatedDB = { ...usersDB };
-    if (updatedDB[targetId]) {
-       const targetUser = { ...updatedDB[targetId], pendingRequests: [...(updatedDB[targetId].pendingRequests || [])] };
-       if (!targetUser.pendingRequests.includes(currentUser.email)) targetUser.pendingRequests.push(currentUser.email);
-       updatedDB[targetId] = targetUser;
+  const sendFriendRequest = async (targetId) => {
+    if (!cloudUser) { showToast('친구 추가는 회원가입 후 할 수 있어요.'); return; }
+    try {
+      const r = await cloud.requestFriend(cloudUser.id, targetId);
+      showToast(r === 'accepted' ? '🤝 서로 친구가 되었어요!' : '친구 요청을 보냈어요! 상대가 수락하면 친구가 돼요.');
+      await refreshFriends();
+    } catch (e) { showToast('친구 요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+  };
+
+  const acceptFriend = async (requestId) => {
+    try { await cloud.acceptFriendRequest(requestId); showToast("친구 수락이 완료되었습니다!"); await refreshFriends(); }
+    catch (e) { showToast('수락하지 못했어요. 다시 시도해 주세요.'); }
+  };
+
+  const declineFriend = async (requestId) => {
+    try { await cloud.deleteFriendRequest(requestId); await refreshFriends(); }
+    catch (e) { showToast('거절하지 못했어요. 다시 시도해 주세요.'); }
+  };
+
+  const removeFriendship = async (otherId) => {
+    try { await cloud.removeFriend(cloudUser.id, otherId); showToast('친구 목록에서 삭제했어요.'); await refreshFriends(); }
+    catch (e) { showToast('삭제하지 못했어요. 다시 시도해 주세요.'); }
+  };
+
+  const inviteFriends = async () => {
+    const text = 'GYM SPIRIT에서 같이 운동 기록하고 랭킹 겨뤄요! 💪';
+    if (navigator.share) {
+      try { await navigator.share({ title: 'GYM SPIRIT', text, url: cloud.SITE_URL }); } catch (e) {}
+      return;
     }
-    updatedDB[currentUser.email] = updatedMe;
-    setUsersDB(updatedDB);
-    setCurrentUser(updatedMe);
-    try { localStorage.setItem('gymwork_pro_users_v21', JSON.stringify(updatedDB)); } catch (e) {}
-    showToast("친구 요청을 보냈습니다! (수락 대기중)");
+    try { await navigator.clipboard.writeText(`${text} ${cloud.SITE_URL}`); showToast('초대 링크를 복사했어요. 친구에게 붙여넣어 보내 주세요!'); }
+    catch (e) { showToast(`초대 링크: ${cloud.SITE_URL}`); }
   };
 
   const renderAccessoryCategory = (title, typeKey, colorKey, options, colorsArray = ACC_COLORS, defaultValue = 'none', alwaysShowColors = false) => {
@@ -1679,6 +1776,94 @@ export default function App() {
       </div>
     );
   };
+
+  // 랭킹에 공개되는 내 정보: 닉네임, 아바타, 이번 주 볼륨, 3대, 최애 종목, 최근 운동
+  const buildPublicProfile = () => {
+    const vol = getWeeklyVolumeData(getAnalysisWeekInfo(new Date()).monday).total;
+    const count = {};
+    pastWorkoutDates.slice(0, 20).forEach(d => (safeWorkouts[d] || []).forEach(ex => { const n = getExName(ex); count[n] = (count[n] || 0) + 1; }));
+    const fav = Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    const lastDate = pastWorkoutDates[0];
+    const last_routine = lastDate ? {
+      date: lastDate,
+      items: safeWorkouts[lastDate].slice(0, 12).map(ex => ({
+        id: String(getExId(ex)), name: getExName(ex), target: getExTarget(ex), tool: String(ex.exercise?.tool || ex.tool || ''),
+        sets: (ex.sets || []).slice(0, 10).map(st => ({ weight: String(st.weight || ''), reps: String(st.reps || '') })),
+      })),
+    } : null;
+    return {
+      nickname: String(currentUser?.profile?.nickname || '짐스피릿 유저').slice(0, 20),
+      avatar: currentUser?.profile || {},
+      week_start: cloud.mondayKey(), weekly_volume: Math.round(vol || 0), lift3: getTotalLift3() || 0, fav, last_routine,
+    };
+  };
+
+  // 앱을 열면 로그인 상태를 확인하고, 회원이면 클라우드 기록으로 바로 들어간다
+  useEffect(() => {
+    let alive = true;
+    cloud.supabase.auth.getSession()
+      .then(async ({ data }) => { if (alive && data.session?.user) await enterCloud(data.session.user); })
+      .catch(() => {})
+      .finally(() => { if (alive) setAuthChecking(false); });
+    const { data: sub } = cloud.supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') { setRecoveryMode(true); setPassword(''); setCurrentScreen('auth'); }
+    });
+    return () => { alive = false; sub.subscription.unsubscribe(); };
+  }, []);
+
+  // 회원이면 기록이 바뀔 때마다 잠시 뒤 클라우드에 저장 (개인 기록 + 랭킹용 공개 프로필)
+  useEffect(() => {
+    if (!cloudReady || !cloudUser || currentUser?.cloudId !== cloudUser.id) return undefined;
+    const uid = cloudUser.id;
+    const data = Object.fromEntries(Object.entries(currentUser).filter(([k]) => !['email', 'password', 'cloudId', 'friends', 'sentRequests', 'pendingRequests'].includes(k)));
+    const pub = buildPublicProfile();
+    const save = () => Promise.all([cloud.saveUserData(uid, data), cloud.savePublicProfile(uid, pub)]);
+    pendingCloudSave.current = save;
+    clearTimeout(cloudSaveTimer.current);
+    cloudSaveTimer.current = setTimeout(() => {
+      pendingCloudSave.current = null;
+      save().catch(() => showToast('클라우드 저장에 실패했어요. 인터넷 연결을 확인해 주세요.'));
+    }, 1200);
+    return undefined;
+  }, [currentUser, cloudReady, cloudUser]);
+
+  // 화면을 떠나거나 앱을 내릴 때 아직 저장 안 된 기록을 바로 보낸다
+  useEffect(() => {
+    const flush = () => {
+      if (document.visibilityState !== 'hidden' || !pendingCloudSave.current) return;
+      clearTimeout(cloudSaveTimer.current);
+      const save = pendingCloudSave.current; pendingCloudSave.current = null;
+      save().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', flush);
+    return () => document.removeEventListener('visibilitychange', flush);
+  }, []);
+
+  // 친구 요청: 로그인하면 불러오고, 새 요청·수락은 실시간으로 받는다
+  useEffect(() => {
+    if (!cloudUser) { setFriendState({ friends: [], sent: [], incoming: [] }); return undefined; }
+    const uid = cloudUser.id;
+    refreshFriends(uid).catch(() => {});
+    return cloud.subscribeFriendRequests(uid, (payload, side) => {
+      if (payload.eventType === 'INSERT' && side === 'to') showToast('💌 새 친구 요청이 도착했어요!');
+      if (payload.eventType === 'UPDATE' && side === 'from' && payload.new?.status === 'accepted') showToast('🤝 친구 요청이 수락됐어요!');
+      refreshFriends(uid).catch(() => {});
+    });
+  }, [cloudUser]);
+
+  // 랭킹 탭을 열 때마다 최신 순위와 이번 주 응원 수를 불러온다
+  useEffect(() => {
+    if (activeTab !== 'ranking') return undefined;
+    let alive = true;
+    setRankLoading(true);
+    Promise.all([cloud.fetchRanking(), cloud.fetchCheerCounts()])
+      .then(([profs, cheers]) => { if (!alive) return; setRankProfiles(profs.map(p => cloud.toRankUser(p))); setCheersData(cheers); })
+      .catch(() => { if (alive) showToast('랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.'); })
+      .finally(() => { if (alive) setRankLoading(false); });
+    return () => { alive = false; };
+  }, [activeTab, cloudUser]);
+
+  const profilesById = { ...Object.fromEntries(rankProfiles.map(u => [u.id, u])), ...extraProfiles };
 
   const globalOverlays = (
     <>
@@ -1755,6 +1940,10 @@ export default function App() {
           </div>
         );
       })()}
+        <FriendCenter open={isFriendSearchModalOpen} onClose={() => setIsFriendSearchModalOpen(false)} isCloud={!!cloudUser} onLogin={goToSignup}
+          friends={friendState.friends} sent={friendState.sent} incoming={friendState.incoming} profilesById={profilesById}
+          onSearch={async (q) => (await cloud.searchProfiles(q, cloudUser?.id)).map(p => cloud.toRankUser(p))}
+          onRequest={sendFriendRequest} onAccept={acceptFriend} onDecline={declineFriend} onRemove={removeFriendship} onInvite={inviteFriends} Avatar3={FullBodyAvatar} />
         {toastMessage && (
           <div className="fixed top-16 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-slide-down">
             <div className="bg-emerald-500 text-neutral-950 font-black px-6 py-3 rounded-full shadow-[0_10px_20px_rgba(16,185,129,0.3)] flex items-center gap-2 text-sm border border-emerald-400"><CheckCircle2 className="w-5 h-5"/> {toastMessage}</div>
@@ -1867,23 +2056,45 @@ export default function App() {
              <h1 className="text-3xl font-black text-white tracking-tight">GYM <span className="text-emerald-400">SPIRIT</span></h1>
              <p className="text-neutral-500 font-bold mt-2 text-sm">가장 완벽한 운동 일지</p>
           </div>
+          {authChecking ? (
+            <div className="py-10 flex flex-col items-center gap-3">
+              <div className="w-7 h-7 rounded-full border-2 border-neutral-700 border-t-emerald-400 animate-spin" />
+              <p className="text-xs font-bold text-neutral-500">로그인 정보를 확인하고 있어요</p>
+            </div>
+          ) : (<>
           <form onSubmit={handleAuth} className="space-y-5">
+            {recoveryMode ? (
+              <p className="text-sm font-bold text-neutral-300 bg-neutral-950 border border-neutral-800 rounded-xl p-3">새로 사용할 비밀번호를 입력해 주세요.</p>
+            ) : (
+              <div>
+                <label className="text-sm font-bold text-neutral-400 mb-1.5 block">이메일 (아이디)</label>
+                <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-4 text-white focus:border-emerald-500 outline-none transition-colors" placeholder="you@example.com" />
+              </div>
+            )}
+            {!isLoginMode && !recoveryMode && (
+              <div>
+                <label className="text-sm font-bold text-neutral-400 mb-1.5 block">닉네임 (랭킹에 보여요)</label>
+                <input type="text" required maxLength={12} value={signupNickname} onChange={e => setSignupNickname(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-4 text-white focus:border-emerald-500 outline-none transition-colors" placeholder="예: 3대500가즈아" />
+              </div>
+            )}
             <div>
-              <label className="text-sm font-bold text-neutral-400 mb-1.5 block">이메일 (아이디)</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-4 text-white focus:border-emerald-500 outline-none transition-colors" placeholder="user@gymwork.com" />
+              <label className="text-sm font-bold text-neutral-400 mb-1.5 block">{recoveryMode ? '새 비밀번호 (6자리 이상)' : '비밀번호 (6자리 이상)'}</label>
+              <input type="password" required minLength={6} autoComplete={isLoginMode && !recoveryMode ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-4 text-white focus:border-emerald-500 outline-none transition-colors" placeholder="••••••••" />
             </div>
-            <div>
-              <label className="text-sm font-bold text-neutral-400 mb-1.5 block">비밀번호 (4자리 이상)</label>
-              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-4 text-white focus:border-emerald-500 outline-none transition-colors" placeholder="••••••••" />
-            </div>
-            {authError && <p className="text-rose-400 text-sm font-bold bg-rose-950/30 p-3 rounded-lg border border-rose-900/50 flex items-center gap-2"><Info className="w-4 h-4"/> {authError}</p>}
-            <button type="submit" className="w-full bg-emerald-500 text-neutral-950 font-black py-4 rounded-xl mt-4 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:bg-emerald-400 active:scale-95 transition-all text-lg">{isLoginMode ? '로그인하기' : '가입하고 시작하기'}</button>
+            {authError && <p className="text-rose-400 text-sm font-bold bg-rose-950/30 p-3 rounded-lg border border-rose-900/50 flex items-center gap-2"><Info className="w-4 h-4 flex-shrink-0"/> {authError}</p>}
+            {authNotice && <p className="text-emerald-300 text-sm font-bold bg-emerald-950/30 p-3 rounded-lg border border-emerald-900/50 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 flex-shrink-0"/> {authNotice}</p>}
+            <button type="submit" disabled={authBusy} className="w-full bg-emerald-500 text-neutral-950 font-black py-4 rounded-xl mt-4 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:bg-emerald-400 active:scale-95 transition-all text-lg disabled:opacity-60 disabled:active:scale-100">{authBusy ? '잠시만요…' : recoveryMode ? '비밀번호 바꾸기' : isLoginMode ? '로그인하기' : '가입하고 시작하기'}</button>
+            {isLoginMode && !recoveryMode && <button type="button" onClick={handlePasswordReset} disabled={authBusy} className="w-full text-xs font-bold text-neutral-500 hover:text-neutral-300 transition-colors">비밀번호를 잊으셨나요?</button>}
           </form>
+          {!recoveryMode && (
           <div className="mt-6 text-center space-y-4">
-            <button onClick={() => {setIsLoginMode(!isLoginMode); setAuthError('');}} className="text-sm font-bold text-neutral-500 hover:text-white transition-colors underline underline-offset-4">{isLoginMode ? '아직 계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}</button>
+            <button onClick={() => {setIsLoginMode(!isLoginMode); setAuthError(''); setAuthNotice('');}} className="text-sm font-bold text-neutral-500 hover:text-white transition-colors underline underline-offset-4">{isLoginMode ? '아직 계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}</button>
             <div className="flex items-center gap-4"><div className="h-[1px] flex-1 bg-neutral-800"></div><span className="text-xs text-neutral-600 font-bold">또는</span><div className="h-[1px] flex-1 bg-neutral-800"></div></div>
             <button onClick={handleGuestLogin} className="text-sm font-bold text-neutral-400 hover:text-emerald-400 transition-colors w-full p-3 rounded-xl border border-neutral-800 hover:bg-neutral-800/50">로그인 없이 게스트로 체험하기</button>
+            {currentUser?.email === 'guest@gymwork.com' && !isLoginMode && <p className="text-[11px] font-bold text-neutral-500">게스트로 쌓은 기록은 가입한 계정으로 그대로 옮겨져요.</p>}
           </div>
+          )}
+          </>)}
         </div>
       </div>
     );
@@ -2326,23 +2537,26 @@ export default function App() {
               <div className="absolute right-0 top-full mt-3 w-80 bg-neutral-900 rounded-[24px] shadow-[0_15px_50px_rgba(0,0,0,0.8)] border border-neutral-800 overflow-hidden z-50 animate-fade-in origin-top-right text-left">
                 <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-900/50">
                   <span className="font-black text-white text-sm">새로운 알림</span>
-                  {unreadCount > 0 && <button onClick={() => setUnreadCount(0)} className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-900/50 hover:bg-emerald-500/20 transition-colors">모두 읽음</button>}
+                  {cloudUser && <button onClick={() => { setIsNotiOpen(false); setIsFriendSearchModalOpen(true); }} className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-900/50 hover:bg-emerald-500/20 transition-colors">친구 관리</button>}
                 </div>
                 <div className="max-h-80 overflow-y-auto hide-scrollbar">
-                  {(currentUser?.pendingRequests || []).map((uid, idx) => (
-                    <div key={`req-${idx}`} className="p-4 border-b border-neutral-800 bg-purple-900/20 hover:bg-purple-900/30 transition-colors">
+                  {friendState.incoming.map(r => (
+                    <div key={`req-${r.requestId}`} className="p-4 border-b border-neutral-800 bg-purple-900/20 hover:bg-purple-900/30 transition-colors">
                       <div className="text-xs font-black text-purple-400 mb-2 flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> 친구 요청 도착!</div>
-                      <div className="text-sm font-bold text-neutral-300 leading-relaxed mb-3">익명의 헬창({uid})님이 친구를 맺고 싶어합니다.</div>
-                      <div className="flex gap-2"><button onClick={() => acceptFriend(uid)} className="flex-1 bg-purple-500 text-white text-xs font-black py-2 rounded-lg hover:bg-purple-600 transition-colors">수락하기</button></div>
+                      <div className="text-sm font-bold text-neutral-300 leading-relaxed mb-3"><span className="text-white font-black">{profilesById[r.from]?.name || '짐스피릿 유저'}</span>님이 친구를 맺고 싶어해요.</div>
+                      <div className="flex gap-2">
+                        <button onClick={() => declineFriend(r.requestId)} className="flex-1 bg-neutral-800 text-neutral-300 text-xs font-black py-2 rounded-lg hover:bg-neutral-700 transition-colors">거절</button>
+                        <button onClick={() => acceptFriend(r.requestId)} className="flex-[2] bg-purple-500 text-white text-xs font-black py-2 rounded-lg hover:bg-purple-600 transition-colors">수락하기</button>
+                      </div>
                     </div>
                   ))}
-                  {unreadCount > 0 && (
-                     <div className={`p-4 border-b border-neutral-800 bg-blue-900/20 hover:bg-blue-900/30 transition-colors`}>
-                       <div className="text-xs font-black text-blue-400 mb-1 flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5"/> 주간 랭킹 업데이트!</div>
-                       <div className="text-xs font-bold text-neutral-300 leading-relaxed">이번 주 상위 10%에 진입했습니다. 랭킹 탭을 확인해보세요.</div>
-                     </div>
+                  {!cloudUser && (
+                    <button onClick={() => { setIsNotiOpen(false); goToSignup(); }} className="w-full p-4 text-left border-b border-neutral-800 hover:bg-neutral-800/50 transition-colors">
+                      <div className="text-xs font-black text-emerald-400 mb-1">게스트 모드</div>
+                      <div className="text-xs font-bold text-neutral-400 leading-relaxed">회원가입하면 친구 요청과 응원 알림을 받을 수 있어요.</div>
+                    </button>
                   )}
-                  {unreadCount === 0 && (!currentUser?.pendingRequests || currentUser?.pendingRequests.length === 0) && (<div className="p-8 text-center text-neutral-500 font-bold text-sm">새로운 알림이 없습니다.</div>)}
+                  {cloudUser && unreadCount === 0 && (<div className="p-8 text-center text-neutral-500 font-bold text-sm">새로운 알림이 없습니다.</div>)}
                 </div>
               </div>
             )}
@@ -2859,15 +3073,15 @@ export default function App() {
           const mon = new Date(weekInfo.monday), sun = new Date(mon); sun.setDate(sun.getDate() + 6);
           const left = Math.ceil((new Date(sun.getFullYear(), sun.getMonth(), sun.getDate() + 1) - new Date()) / 86400000);
           const me = {
-            id: currentUser?.email || 'guest', name: currentUser?.profile?.nickname || '나',
+            id: cloudUser?.id || 'guest', name: currentUser?.profile?.nickname || '나',
             volume: getWeeklyVolumeData(weekInfo.monday).total, lift: getTotalLift3(), avatarColor: 'bg-neutral-800', fav: '전신', isMe: true, profile: currentUser?.profile,
           };
           return (
             <RankingTab
-              users={MOCK_RANKING}
+              users={rankProfiles.filter(u => u.id !== cloudUser?.id)}
               me={me}
-              friends={currentUser?.friends || []}
-              sentRequests={currentUser?.sentRequests || []}
+              friends={friendState.friends}
+              sentRequests={friendState.sent}
               cheers={cheersData}
               weekLabel={`${mon.getMonth() + 1}.${mon.getDate()} – ${sun.getMonth() + 1}.${sun.getDate()}`}
               daysLeft={left <= 1 ? '오늘 자정' : `${left}일`}
@@ -2875,6 +3089,10 @@ export default function App() {
               onSteal={stealRoutine}
               onFriend={sendFriendRequest}
               onFindFriends={() => setIsFriendSearchModalOpen(true)}
+              onInvite={inviteFriends}
+              guest={!cloudUser}
+              onLogin={goToSignup}
+              loading={rankLoading}
               Avatar3={FullBodyAvatar}
             />
           );
@@ -2892,7 +3110,18 @@ export default function App() {
                     </div>
                  </div>
                  <div className="text-center">
-                    <h2 className="text-2xl font-black text-neutral-900 flex items-center justify-center gap-2">{String(activeUser?.profile?.nickname || '짐스피릿 유저')} <div className="bg-[#e8edff] text-[#4768ff] text-[10px] font-black px-2 py-0.5 rounded-md">{getUserLevel()}</div></h2>
+                    {editingNick !== null ? (
+                      <form onSubmit={e => { e.preventDefault(); const n = editingNick.trim().slice(0, 12); if (n) { updateProfile({ nickname: n }); showToast('닉네임을 바꿨어요.'); } setEditingNick(null); }} className="flex items-center justify-center gap-2">
+                        <input autoFocus value={editingNick} maxLength={12} onChange={e => setEditingNick(e.target.value)} className="w-40 text-center text-lg font-black text-neutral-900 bg-neutral-100 rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#4768ff]" />
+                        <button type="submit" className="px-3 py-2 rounded-xl bg-[#4768ff] text-white text-xs font-black">저장</button>
+                        <button type="button" onClick={() => setEditingNick(null)} className="px-3 py-2 rounded-xl bg-neutral-100 text-neutral-500 text-xs font-black">취소</button>
+                      </form>
+                    ) : (
+                      <h2 className="text-2xl font-black text-neutral-900 flex items-center justify-center gap-2">{String(activeUser?.profile?.nickname || '짐스피릿 유저')}
+                        <button onClick={() => setEditingNick(String(activeUser?.profile?.nickname || ''))} aria-label="닉네임 수정" className="p-1 rounded-lg text-neutral-300 hover:text-[#4768ff] hover:bg-neutral-100 transition-colors"><Edit3 className="w-4 h-4" /></button>
+                        <div className="bg-[#e8edff] text-[#4768ff] text-[10px] font-black px-2 py-0.5 rounded-md">{getUserLevel()}</div></h2>
+                    )}
+                    {!cloudUser && <button onClick={goToSignup} className="mt-2 text-[11px] font-black text-[#4768ff] bg-[#eef2ff] px-3 py-1.5 rounded-lg">게스트 모드 · 회원가입하면 기록이 안전하게 저장돼요</button>}
                     <p className="text-sm font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5"><Activity className="w-4 h-4 text-emerald-500"/> 3대 운동 <span className="text-neutral-900 text-base font-black">{getTotalLift3()}kg</span></p>
                  </div>
                </div>
