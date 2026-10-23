@@ -785,6 +785,7 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [maxTime, setMaxTime] = useState(90);
   const [alarmRinging, setAlarmRinging] = useState(false);
+  const [overtimeSec, setOvertimeSec] = useState(null); // 휴식이 끝난 뒤 지난 시간(초). null이면 초과 아님
   const [isAlarmSettingsOpen, setIsAlarmSettingsOpen] = useState(false);
   const alarmStopRef = useRef(null);
   const timerRef = useRef(null);
@@ -921,6 +922,7 @@ export default function App() {
         alarmStopRef.current = playAlarm(timerSettings, () => { setAlarmRinging(false); alarmStopRef.current = null; });
       } catch(e) { console.error("오디오 알림 실패", e); }
       showToast("⏱️ 휴식 종료! 다음 세트를 준비하세요.");
+      setOvertimeSec(0);
     }
     // 끝나기 3초 전부터 카운트다운
     if (isTimerActive && timeLeft > 0 && timeLeft <= 3 && timerSettings.countdown) {
@@ -928,6 +930,14 @@ export default function App() {
     }
     return () => clearInterval(timerRef.current);
   }, [isTimerActive, timeLeft]);
+
+  // 휴식 초과 시간: 다음 세트를 시작(세트 완료·휴식 다시 시작)하거나 닫을 때까지 1초씩 센다
+  const overtimeOn = overtimeSec !== null;
+  useEffect(() => {
+    if (!overtimeOn) return undefined;
+    const t = setInterval(() => setOvertimeSec(prev => (prev === null ? null : prev >= 1800 ? null : prev + 1)), 1000);
+    return () => clearInterval(t);
+  }, [overtimeOn]);
 
   // 사진 표지: 흐린 사진을 배경으로 깔고, 선명한 사진은 오른쪽에 두어 왼쪽 글자와 겹치지 않게 한다. 사진이 없으면 3D 일러스트
   const LegendArt = ({ id }) => (DEFAULT_COVER_PHOTOS[id]
@@ -955,7 +965,7 @@ export default function App() {
     setAlarmRinging(true);
     alarmStopRef.current = playAlarm({ ...timerSettings, ...patch, repeat: 1, vibrate: false }, () => { setAlarmRinging(false); alarmStopRef.current = null; });
   };
-  const startRest = (sec) => { unlockAudio(); stopAlarm(); setTimeLeft(sec); setMaxTime(sec); setIsTimerActive(true); };
+  const startRest = (sec) => { unlockAudio(); stopAlarm(); setOvertimeSec(null); setTimeLeft(sec); setMaxTime(sec); setIsTimerActive(true); };
   // 세트 볼륨 = 실제 부하 × 횟수 (맨몸 종목은 체중 포함, 어시스트는 체중에서 도움 무게를 뺀 값)
   const bodyWeightKg = parseFloat(activeUser?.bodyStats?.weight) || 0;
   const setVolume = (ex, s) => setLoad(String(getExId(ex)), toolOfEx(ex), s.weight, bodyWeightKg) * (parseInt(s.reps, 10) || 0);
@@ -1183,6 +1193,7 @@ export default function App() {
     });
     setIsTimerActive(false);
     setTimeLeft(0);
+    setOvertimeSec(null);
     setShowCelebration(true);
   };
 
@@ -1191,6 +1202,7 @@ export default function App() {
     setSession([]);
     setIsTimerActive(false);
     setTimeLeft(0);
+    setOvertimeSec(null);
     setCurrentScreen('home');
   };
 
@@ -2464,30 +2476,63 @@ export default function App() {
           <button onClick={triggerSaveWorkout} className={`w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 h-14 transition-all active:scale-[0.98] text-lg ${session.length > 0 ? 'bg-emerald-400 text-black hover:bg-emerald-300 shadow-[0_0_28px_rgba(16,185,129,0.6)]' : 'bg-neutral-900 text-neutral-600 border border-neutral-800 cursor-not-allowed'}`}><Save className="w-5 h-5 stroke-[3]"/> 훈련 완료 및 저장</button>
         </div>
 
-        <div className={`fixed bottom-0 left-0 right-0 bg-[#03060a]/95 backdrop-blur-xl border-t border-emerald-400/40 p-5 rounded-t-[32px] shadow-[0_-10px_40px_rgba(16,185,129,0.18)] transform transition-transform duration-500 z-40 ${isTimerActive || timeLeft > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className={`fixed bottom-0 left-0 right-0 bg-[#03060a]/95 backdrop-blur-xl border-t p-5 rounded-t-[32px] transform transition-transform duration-500 z-40 ${overtimeOn ? 'ot-border' : 'border-emerald-400/40 shadow-[0_-10px_40px_rgba(16,185,129,0.18)]'} ${isTimerActive || timeLeft > 0 || overtimeOn ? 'translate-y-0' : 'translate-y-full'}`}>
+          <style>{`
+            @keyframes otFlash { 0%,100% { color: #fb7185; text-shadow: 0 0 14px rgba(251,113,133,.95); } 50% { color: #fde047; text-shadow: 0 0 20px rgba(250,204,21,1); } }
+            @keyframes otBorder { 0%,100% { border-color: rgba(251,113,133,.95); box-shadow: 0 -10px 44px rgba(251,113,133,.4); } 50% { border-color: rgba(250,204,21,.95); box-shadow: 0 -10px 44px rgba(250,204,21,.4); } }
+            @keyframes otFill { 0%,100% { background: rgba(251,113,133,.16); border-color: rgba(251,113,133,.7); } 50% { background: rgba(250,204,21,.16); border-color: rgba(250,204,21,.7); } }
+            .ot-text { animation: otFlash .7s ease-in-out infinite; }
+            .ot-border { animation: otBorder .7s ease-in-out infinite; }
+            .ot-fill { animation: otFill .7s ease-in-out infinite; }
+          `}</style>
           <div className="max-w-md mx-auto relative">
             <div className="absolute -top-5 left-0 right-0 h-1.5 bg-neutral-800 rounded-t-3xl overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-emerald-400 to-yellow-300 transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{ width: `${(timeLeft / maxTime) * 100}%` }} />
+              {overtimeOn
+                ? <div className="h-full w-full ot-fill" />
+                : <div className="h-full bg-gradient-to-r from-emerald-400 to-yellow-300 transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{ width: `${(timeLeft / maxTime) * 100}%` }} />}
             </div>
+            {overtimeOn ? (
+              <div className="ot-fill border rounded-xl px-3 py-2 mb-3 flex items-center justify-between">
+                <span className="text-sm font-black ot-text">⚡ 휴식 끝! 얼른 다음 세트 시작하세요</span>
+                <span className="text-[11px] font-bold text-neutral-400">세트 ✓ 하면 꺼져요</span>
+              </div>
+            ) : (
             <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-3">
               <button onClick={() => setIsAlarmSettingsOpen(true)} className="px-3 py-1.5 bg-yellow-400/10 hover:bg-yellow-400/20 text-xs font-black text-yellow-300 rounded-lg flex-shrink-0 transition-colors border border-yellow-400/40 flex items-center gap-1"><Bell className="w-3.5 h-3.5" /> {(ALARM_SOUNDS.find(a => a.id === timerSettings.sound) || ALARM_SOUNDS[0]).label}</button>
               {[30, 60, 90, 120, 180].map(sec => (
                 <button key={`preset-${sec}`} onClick={() => startRest(sec)} className="px-3 py-1.5 bg-black hover:bg-emerald-400/10 text-xs font-bold text-emerald-300 rounded-lg flex-shrink-0 transition-colors border border-emerald-500/30">{sec >= 60 ? `${sec/60}분` : `${sec}초`}</button>
               ))}
             </div>
+            )}
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 bg-black rounded-2xl flex items-center justify-center border ${isTimerActive ? 'border-yellow-300/60 shadow-[0_0_18px_rgba(250,204,21,0.45)]' : 'border-emerald-500/20'}`}><Flame className={`w-7 h-7 ${isTimerActive ? 'text-yellow-300 animate-pulse' : 'text-neutral-600'}`} /></div>
+                <div className={`w-14 h-14 bg-black rounded-2xl flex items-center justify-center border ${overtimeOn ? 'ot-fill' : isTimerActive ? 'border-yellow-300/60 shadow-[0_0_18px_rgba(250,204,21,0.45)]' : 'border-emerald-500/20'}`}><Flame className={`w-7 h-7 ${overtimeOn ? 'text-rose-400 animate-pulse' : isTimerActive ? 'text-yellow-300 animate-pulse' : 'text-neutral-600'}`} /></div>
                 <div>
-                  <div className="text-xs text-emerald-400/70 font-bold mb-0.5 tracking-widest">REST TIMER</div>
-                  <div className="text-3xl font-black font-mono text-yellow-300 tracking-tight [text-shadow:0_0_12px_rgba(250,204,21,0.8)]">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
+                  {overtimeOn ? (
+                    <>
+                      <div className="text-xs font-black mb-0.5 tracking-widest ot-text">휴식 초과</div>
+                      <div className="text-3xl font-black font-mono tracking-tight ot-text">+{Math.floor(overtimeSec / 60)}:{(overtimeSec % 60).toString().padStart(2, '0')}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs text-emerald-400/70 font-bold mb-0.5 tracking-widest">REST TIMER</div>
+                      <div className="text-3xl font-black font-mono text-yellow-300 tracking-tight [text-shadow:0_0_12px_rgba(250,204,21,0.8)]">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
+                    </>
+                  )}
                 </div>
               </div>
+              {overtimeOn ? (
+                <div className="flex gap-2">
+                  <button onClick={() => startRest(30)} className="h-12 px-3 rounded-2xl bg-black border border-emerald-500/30 font-black text-emerald-300 text-sm hover:bg-emerald-400/10 active:scale-95 transition-all">+30초 더 쉬기</button>
+                  <button onClick={() => { stopAlarm(); setOvertimeSec(null); }} aria-label="초과 타이머 닫기" className="w-12 h-12 rounded-2xl bg-black border border-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center active:scale-95 transition-all"><X className="w-5 h-5" /></button>
+                </div>
+              ) : (
               <div className="flex gap-2">
                 <button onClick={() => adjustTimer(-10)} className="w-12 h-12 rounded-2xl bg-black border border-emerald-500/30 font-black text-emerald-300 hover:bg-emerald-400/10 active:scale-95 transition-all">-10</button>
                 <button onClick={() => adjustTimer(30)} className="w-12 h-12 rounded-2xl bg-black border border-emerald-500/30 font-black text-emerald-300 hover:bg-emerald-400/10 active:scale-95 transition-all">+30</button>
                 <button onClick={() => { unlockAudio(); setIsTimerActive(!isTimerActive); }} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-yellow-300 text-black shadow-[0_0_20px_rgba(250,204,21,0.7)]' : 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.7)]'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
               </div>
+              )}
             </div>
           </div>
         </div>
