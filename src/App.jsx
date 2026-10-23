@@ -18,6 +18,7 @@ import { QuestCenter } from './QuestCenter.jsx';
 import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
 import { weightRule, platesFor, setLoad, nextWeight, formatPlates, sideWeight } from './weightRules.js';
+import { DEFAULT_TIMER_SETTINGS, ALARM_SOUNDS, REPEAT_OPTIONS, REST_OPTIONS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { FriendCenter } from './FriendCenter.jsx';
 import * as cloud from './cloud.js';
 import { FullBodyAvatar, AVATAR_SKIN_TONES, AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS } from './realAvatar.jsx';
@@ -783,6 +784,9 @@ export default function App() {
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [maxTime, setMaxTime] = useState(90);
+  const [alarmRinging, setAlarmRinging] = useState(false);
+  const [isAlarmSettingsOpen, setIsAlarmSettingsOpen] = useState(false);
+  const alarmStopRef = useRef(null);
   const timerRef = useRef(null);
 
   const [isFullCalendarOpen, setIsFullCalendarOpen] = useState(false);
@@ -912,15 +916,15 @@ export default function App() {
       setIsTimerActive(false);
       clearInterval(timerRef.current);
       try {
-         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-         const oscillator = audioCtx.createOscillator();
-         oscillator.type = 'sine';
-         oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-         oscillator.connect(audioCtx.destination);
-         oscillator.start();
-         oscillator.stop(audioCtx.currentTime + 0.3);
+        alarmStopRef.current?.();
+        setAlarmRinging(true);
+        alarmStopRef.current = playAlarm(timerSettings, () => { setAlarmRinging(false); alarmStopRef.current = null; });
       } catch(e) { console.error("오디오 알림 실패", e); }
       showToast("⏱️ 휴식 종료! 다음 세트를 준비하세요.");
+    }
+    // 끝나기 3초 전부터 카운트다운
+    if (isTimerActive && timeLeft > 0 && timeLeft <= 3 && timerSettings.countdown) {
+      try { playTick(timerSettings.volume, timeLeft === 1); } catch (e) {}
     }
     return () => clearInterval(timerRef.current);
   }, [isTimerActive, timeLeft]);
@@ -941,6 +945,17 @@ export default function App() {
   };
 
   const activeUser = currentUser;
+  // 휴식 알람 설정 (예전 회원은 기본값으로 시작)
+  const timerSettings = { ...DEFAULT_TIMER_SETTINGS, ...(activeUser?.timerSettings || {}) };
+  const updateTimerSettings = (patch) => setCurrentUser(prev => (prev ? { ...prev, timerSettings: { ...DEFAULT_TIMER_SETTINGS, ...(prev.timerSettings || {}), ...patch } } : prev));
+  const stopAlarm = () => { alarmStopRef.current?.(); alarmStopRef.current = null; setAlarmRinging(false); };
+  const previewAlarm = (patch) => {
+    unlockAudio();
+    stopAlarm();
+    setAlarmRinging(true);
+    alarmStopRef.current = playAlarm({ ...timerSettings, ...patch, repeat: 1, vibrate: false }, () => { setAlarmRinging(false); alarmStopRef.current = null; });
+  };
+  const startRest = (sec) => { unlockAudio(); stopAlarm(); setTimeLeft(sec); setMaxTime(sec); setIsTimerActive(true); };
   // 세트 볼륨 = 실제 부하 × 횟수 (맨몸 종목은 체중 포함, 어시스트는 체중에서 도움 무게를 뺀 값)
   const bodyWeightKg = parseFloat(activeUser?.bodyStats?.weight) || 0;
   const setVolume = (ex, s) => setLoad(String(getExId(ex)), toolOfEx(ex), s.weight, bodyWeightKg) * (parseInt(s.reps, 10) || 0);
@@ -1341,7 +1356,7 @@ export default function App() {
       }
       return ex;
     }));
-    if (justCompleted) { setMaxTime(90); setTimeLeft(90); setIsTimerActive(true); }
+    if (justCompleted) startRest(timerSettings.defaultRest);
   };
 
   const adjustTimer = (amount) => setTimeLeft(prev => Math.max(0, prev + amount));
@@ -1959,6 +1974,63 @@ export default function App() {
           friends={friendState.friends} sent={friendState.sent} incoming={friendState.incoming} profilesById={profilesById}
           onSearch={async (q) => (await cloud.searchProfiles(q, cloudUser?.id)).map(p => cloud.toRankUser(p))}
           onRequest={sendFriendRequest} onAccept={acceptFriend} onDecline={declineFriend} onRemove={removeFriendship} onInvite={inviteFriends} Avatar3={FullBodyAvatar} />
+        {alarmRinging && (
+          <button onClick={stopAlarm} className="fixed left-1/2 -translate-x-1/2 bottom-36 z-[95] px-5 py-3 rounded-full bg-rose-500 text-white font-black text-sm shadow-[0_10px_30px_rgba(244,63,94,0.5)] flex items-center gap-2 animate-bounce">
+            <Bell className="w-4 h-4" /> 알람 끄기
+          </button>
+        )}
+        {isAlarmSettingsOpen && (
+          <div className="fixed inset-0 bg-black/70 z-[90] flex flex-col justify-end animate-fade-in" onClick={() => { stopAlarm(); setIsAlarmSettingsOpen(false); }}>
+            <div className="bg-neutral-900 text-white w-full max-w-md mx-auto rounded-t-[32px] p-6 pb-10 border-t border-neutral-800 animate-slide-up max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-center mb-4"><div className="w-12 h-1.5 bg-neutral-700 rounded-full"></div></div>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-xl font-black flex items-center gap-2"><Bell className="w-5 h-5 text-emerald-400" /> 휴식 알람 설정</h3>
+                <button onClick={() => { stopAlarm(); setIsAlarmSettingsOpen(false); }} className="p-2 bg-neutral-800 rounded-full text-neutral-400"><X className="w-5 h-5" /></button>
+              </div>
+              <p className="text-xs font-bold text-neutral-500 mb-5">소리를 누르면 미리 들어볼 수 있어요.</p>
+
+              <p className="text-xs font-black text-neutral-400 mb-2">알람 소리</p>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {ALARM_SOUNDS.map(a => (
+                  <button key={a.id} onClick={() => { updateTimerSettings({ sound: a.id }); previewAlarm({ sound: a.id }); }}
+                    className={`text-left p-3 rounded-2xl border transition-all active:scale-[0.97] ${timerSettings.sound === a.id ? 'bg-emerald-500/15 border-emerald-500' : 'bg-neutral-950 border-neutral-800 hover:border-neutral-600'}`}>
+                    <div className="text-lg mb-0.5">{a.emoji}</div>
+                    <div className="text-sm font-black">{a.label}</div>
+                    <div className="text-[10px] font-bold text-neutral-500 leading-snug">{a.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] font-bold text-neutral-500 mb-5 leading-relaxed">음성 멘트는 기기에 내장된 음성으로 읽어 줘요. 실제 인물의 목소리는 아니에요. 아이폰은 무음 모드를 끄면 들려요.</p>
+
+              <p className="text-xs font-black text-neutral-400 mb-2">울리는 길이</p>
+              <div className="grid grid-cols-4 gap-2 mb-5">
+                {REPEAT_OPTIONS.map(o => (
+                  <button key={o.value} onClick={() => updateTimerSettings({ repeat: o.value })} className={`py-2.5 rounded-xl border text-center transition-all ${timerSettings.repeat === o.value ? 'bg-emerald-500 text-neutral-950 border-emerald-500' : 'bg-neutral-950 border-neutral-800 text-neutral-300'}`}>
+                    <div className="text-xs font-black">{o.label}</div>
+                    <div className={`text-[10px] font-bold ${timerSettings.repeat === o.value ? 'text-neutral-800' : 'text-neutral-500'}`}>{o.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-xs font-black text-neutral-400 mb-2">소리 크기 <span className="text-neutral-500">{Math.round(timerSettings.volume * 100)}%</span></p>
+              <input type="range" min="0.1" max="1" step="0.1" value={timerSettings.volume} onChange={e => updateTimerSettings({ volume: parseFloat(e.target.value) })} className="w-full accent-emerald-500 mb-5" />
+
+              <p className="text-xs font-black text-neutral-400 mb-2">세트 완료 후 기본 휴식 시간</p>
+              <div className="grid grid-cols-4 gap-2 mb-5">
+                {REST_OPTIONS.map(sec => (
+                  <button key={sec} onClick={() => updateTimerSettings({ defaultRest: sec })} className={`py-2.5 rounded-xl border text-xs font-black transition-all ${timerSettings.defaultRest === sec ? 'bg-emerald-500 text-neutral-950 border-emerald-500' : 'bg-neutral-950 border-neutral-800 text-neutral-300'}`}>{sec >= 60 ? `${sec / 60}분` : `${sec}초`}</button>
+                ))}
+              </div>
+
+              {[['countdown', '끝나기 3초 전 카운트다운', '3·2·1 짧은 신호음'], ['vibrate', '진동', '안드로이드 휴대폰에서 지원돼요']].map(([key, label, desc]) => (
+                <button key={key} onClick={() => updateTimerSettings({ [key]: !timerSettings[key] })} className="w-full flex items-center justify-between py-3 border-t border-neutral-800">
+                  <span className="text-left"><span className="block text-sm font-black">{label}</span><span className="block text-[11px] font-bold text-neutral-500">{desc}</span></span>
+                  <span className={`w-12 h-7 rounded-full p-1 transition-colors ${timerSettings[key] ? 'bg-emerald-500' : 'bg-neutral-700'}`}><span className={`block w-5 h-5 rounded-full bg-white transition-transform ${timerSettings[key] ? 'translate-x-5' : ''}`} /></span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {toastMessage && (
           <div className="fixed top-16 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-slide-down">
             <div className="bg-emerald-500 text-neutral-950 font-black px-6 py-3 rounded-full shadow-[0_10px_20px_rgba(16,185,129,0.3)] flex items-center gap-2 text-sm border border-emerald-400"><CheckCircle2 className="w-5 h-5"/> {toastMessage}</div>
@@ -2392,8 +2464,9 @@ export default function App() {
               <div className="h-full bg-emerald-500 transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(16,185,129,0.8)]" style={{ width: `${(timeLeft / maxTime) * 100}%` }} />
             </div>
             <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-3">
+              <button onClick={() => setIsAlarmSettingsOpen(true)} className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-black text-emerald-400 rounded-lg flex-shrink-0 transition-colors border border-emerald-900/60 flex items-center gap-1"><Bell className="w-3.5 h-3.5" /> {(ALARM_SOUNDS.find(a => a.id === timerSettings.sound) || ALARM_SOUNDS[0]).label}</button>
               {[30, 60, 90, 120, 180].map(sec => (
-                <button key={`preset-${sec}`} onClick={() => { setTimeLeft(sec); setMaxTime(sec); setIsTimerActive(true); }} className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-neutral-300 rounded-lg flex-shrink-0 transition-colors">{sec >= 60 ? `${sec/60}분` : `${sec}초`}</button>
+                <button key={`preset-${sec}`} onClick={() => startRest(sec)} className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-neutral-300 rounded-lg flex-shrink-0 transition-colors">{sec >= 60 ? `${sec/60}분` : `${sec}초`}</button>
               ))}
             </div>
             <div className="flex justify-between items-center">
@@ -2407,7 +2480,7 @@ export default function App() {
               <div className="flex gap-2">
                 <button onClick={() => adjustTimer(-10)} className="w-12 h-12 rounded-2xl bg-neutral-800 font-black text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all">-10</button>
                 <button onClick={() => adjustTimer(30)} className="w-12 h-12 rounded-2xl bg-neutral-800 font-black text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all">+30</button>
-                <button onClick={() => setIsTimerActive(!isTimerActive)} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-amber-500 text-neutral-950' : 'bg-emerald-500 text-neutral-950'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
+                <button onClick={() => { unlockAudio(); setIsTimerActive(!isTimerActive); }} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-amber-500 text-neutral-950' : 'bg-emerald-500 text-neutral-950'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
               </div>
             </div>
           </div>
