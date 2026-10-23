@@ -18,6 +18,7 @@ import { QuestCenter } from './QuestCenter.jsx';
 import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
 import { StopwatchDial } from './StopwatchDial.jsx';
+import { computeRecovery } from './recovery.js';
 import { weightRule, platesFor, setLoad, nextWeight, formatPlates, sideWeight } from './weightRules.js';
 import { DEFAULT_TIMER_SETTINGS, ALARM_SOUNDS, REPEAT_OPTIONS, REST_OPTIONS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { FriendCenter } from './FriendCenter.jsx';
@@ -721,13 +722,8 @@ const ExerciseMuscleMap = ({ exercise, className = 'w-full h-full' }) => {
 };
 
 const AnimeMuscleBodySVG = ({ recoveryData, onMuscleClick }) => {
-  const getRecoveryPercent = (hoursLeft) => {
-    if (!hoursLeft || hoursLeft <= 0) return 100;
-    if (hoursLeft === 6) return 85;
-    if (hoursLeft === 18) return 50;
-    if (hoursLeft === 36) return 25;
-    return Math.round(Math.max(0, 100 - (hoursLeft / 48) * 100));
-  };
+  const getRecoveryPercent = (group) => recoveryData[group]?.percent ?? 100;
+
 
   const getFillColor = (perc) => {
     if (perc <= 30) return '#ef4f4f'; // 피로 (붉게 충혈된 근육)
@@ -745,7 +741,7 @@ const AnimeMuscleBodySVG = ({ recoveryData, onMuscleClick }) => {
     { id: '하체', title: '하체', side: 'right', y: 300, target: [226, 296] }
   ];
 
-  const fillFor = (group) => getFillColor(getRecoveryPercent(recoveryData[group]?.hoursLeft || 0));
+  const fillFor = (group) => getFillColor(getRecoveryPercent(group));
 
   const renderHalf = () => (
     <>
@@ -810,7 +806,7 @@ const AnimeMuscleBodySVG = ({ recoveryData, onMuscleClick }) => {
       </svg>
       {/* 라벨은 SVG 밖에 겹쳐 그린다: 지시선 끝(x=110 / x=290)에 맞춰 좌우 대칭 */}
       {partsInfo.map(part => {
-        const perc = getRecoveryPercent(recoveryData[part.id]?.hoursLeft || 0);
+        const perc = getRecoveryPercent(part.id);
         const pos = part.side === 'left' ? { right: `${(290 / 400) * 100}%` } : { left: `${(290 / 400) * 100}%` };
         return (
           <button key={`label-${part.id}`} onClick={() => onMuscleClick(part.id)} style={{ ...pos, top: `${(part.y / 450) * 100}%` }}
@@ -1001,6 +997,14 @@ export default function App() {
     }
     return () => clearInterval(timerRef.current);
   }, [isTimerActive, timeLeft]);
+
+  // 분석 탭의 회복도는 시간이 지나며 바뀌므로 1분마다 다시 그린다
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    if (activeTab !== 'analysis') return undefined;
+    const t = setInterval(() => setNowTick(n => n + 1), 60000);
+    return () => clearInterval(t);
+  }, [activeTab]);
 
   // 휴식 초과 시간: 다음 세트를 시작(세트 완료·휴식 다시 시작)하거나 닫을 때까지 1초씩 센다
   const overtimeOn = overtimeSec !== null;
@@ -1273,7 +1277,8 @@ export default function App() {
     const dateKey = String(currentDate);
     setCurrentUser(prev => {
       const existingWorkouts = prev.workouts || {};
-      const updatedUser = { ...prev, workouts: { ...existingWorkouts, [dateKey]: cleanSession } };
+      const workoutTimes = dateKey === formatDate(new Date()) ? { ...(prev.workoutTimes || {}), [dateKey]: new Date().toISOString() } : (prev.workoutTimes || {});
+      const updatedUser = { ...prev, workouts: { ...existingWorkouts, [dateKey]: cleanSession }, workoutTimes };
       try {
         const db = JSON.parse(localStorage.getItem('gymwork_pro_users_v21')) || {};
         db[updatedUser.email] = updatedUser;
@@ -1574,6 +1579,7 @@ export default function App() {
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     const monday = new Date(d.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
     const sunday = new Date(monday);
     sunday.setDate(sunday.getDate() + 6);
     const firstDayOfMonth = new Date(monday.getFullYear(), monday.getMonth(), 1);
@@ -1599,17 +1605,11 @@ export default function App() {
        if(Array.isArray(sessionData)) {
           sessionData.forEach(ex => {
             if (!ex || !ex.sets) return;
-            const targetStr = getExTarget(ex);
-            let targetGroup = '가슴';
-            if(targetStr.includes('등')) targetGroup = '등';
-            else if(targetStr.includes('하체')) targetGroup = '하체';
-            else if(targetStr.includes('어깨')) targetGroup = '어깨';
-            else if(targetStr.includes('팔')) targetGroup = '팔';
-            else if(targetStr.includes('복근')) targetGroup = '복근';
+            const targetGroup = getExTarget(ex).split('(')[0];
             ex.sets.forEach(set => {
                if(set.completed && set.reps) {
                   const v = setVolume(ex, set);
-                  if (!isNaN(v)) { volumes[i] += v; total += v; muscleShare[targetGroup] = (muscleShare[targetGroup] || 0) + v; }
+                  if (!isNaN(v)) { volumes[i] += v; total += v; if (muscleShare[targetGroup] !== undefined) muscleShare[targetGroup] += v; }
                }
             });
           });
@@ -1733,31 +1733,15 @@ export default function App() {
     return best;
   };
 
-  const getMuscleRecoveryStatus = () => {
-    const targets = ['가슴', '등', '하체', '어깨', '팔', '복근'];
-    const status = {};
-    targets.forEach(t => status[t] = { daysAgo: 999, text: '완전 회복 (100%)', hoursLeft: 0, color: 'text-emerald-500' });
-    if(!activeUser || !safeWorkouts) return status;
-    const today = new Date(); today.setHours(0,0,0,0);
-    for(let i=0; i<=7; i++) {
-       const d = new Date(today); d.setDate(d.getDate() - i);
-       const sessionData = safeWorkouts[formatDate(d)];
-       if(Array.isArray(sessionData)) {
-          sessionData.forEach(ex => {
-             const exTarget = getExTarget(ex);
-             targets.forEach(t => {
-                if(exTarget.includes(t) && status[t].daysAgo === 999) {
-                   status[t].daysAgo = i;
-                   if(i === 0) { status[t].text = '오늘 (피로함 · 36h 남음)'; status[t].hoursLeft = 36; status[t].color = 'text-rose-500'; }
-                   else if(i === 1) { status[t].text = '1일전 (피로함 · 18h 남음)'; status[t].hoursLeft = 18; status[t].color = 'text-rose-500'; }
-                   else if(i === 2) { status[t].text = '2일전 (회복 중 · 6h 남음)'; status[t].hoursLeft = 6; status[t].color = 'text-amber-500'; }
-                }
-             });
-          });
-       }
-    }
-    return status;
-  };
+  // 부위별 회복도: 운동이 끝난 시각과 그 운동의 세트 수·무게 강도·RPE로 계산 (recovery.js)
+  const getMuscleRecoveryStatus = () => computeRecovery({
+    workouts: safeWorkouts,
+    workoutTimes: activeUser?.workoutTimes || {},
+    now: new Date(),
+    idOf: (ex) => String(getExId(ex)),
+    musclesOf: (ex) => getExerciseMuscles(EXERCISE_OPTIONS.find(e => e.id === String(getExId(ex))) || ex.exercise || ex),
+    bestOf: (id) => getTop1RM(id),
+  });
 
   const getTop1RM = (exerciseId) => {
     let max1RM = 0;
@@ -3303,6 +3287,26 @@ export default function App() {
                       <AnimeMuscleBodySVG recoveryData={recoveryData} onMuscleClick={handleMuscleClick} />
                     </div>
                   </div>
+                  {(() => {
+                    const tired = Object.entries(recoveryData).filter(([, v]) => v.percent < 100).sort((x, y) => x[1].percent - y[1].percent);
+                    return (
+                      <div className="mt-4 space-y-2">
+                        {tired.length === 0 ? (
+                          <p className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5">모든 부위가 완전히 회복됐어요. 어떤 운동이든 좋아요!</p>
+                        ) : tired.map(([g, v]) => (
+                          <button key={g} onClick={() => handleMuscleClick(g)} className="w-full flex items-center gap-3 bg-neutral-50 border border-neutral-100 rounded-xl px-3 py-2.5 text-left active:scale-[0.99] transition-transform">
+                            <span className="w-10 text-sm font-black text-neutral-900">{g}</span>
+                            <span className="flex-1 h-2 rounded-full bg-neutral-200 overflow-hidden"><span className={`block h-full rounded-full ${v.percent < 50 ? 'bg-rose-500' : v.percent < 90 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${v.percent}%` }} /></span>
+                            <span className="text-right">
+                              <span className={`block text-xs font-black ${v.color}`}>{v.percent}%{v.hoursLeft > 0 ? ` · ${v.hoursLeft}시간 남음` : ''}</span>
+                              {v.lastAt && <span className="block text-[10px] font-bold text-neutral-400">{v.text.split(' 운동')[0]} 운동</span>}
+                            </span>
+                          </button>
+                        ))}
+                        <p className="text-[10px] font-bold text-neutral-400 leading-relaxed px-1">운동을 마친 시각부터 지난 시간과, 그날의 세트 수·무게 강도(내 최고 기록 대비)·RPE로 계산해요. 큰 근육(하체·등·가슴)일수록 회복이 오래 걸려요.</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -3891,7 +3895,7 @@ export default function App() {
 
       {muscleConfirmModal && (() => {
         const muscleStatus = getMuscleRecoveryStatus()[muscleConfirmModal.group];
-        const isRecovered = !muscleStatus || muscleStatus.hoursLeft <= 0;
+        const isRecovered = !muscleStatus || muscleStatus.percent >= 90;
         const confirmTitle = muscleConfirmModal.sub ? `${muscleConfirmModal.group} · ${muscleConfirmModal.sub.key}` : muscleConfirmModal.group;
         const previewExercises = getMuscleExercises(muscleConfirmModal).slice(0, 4);
         return (
