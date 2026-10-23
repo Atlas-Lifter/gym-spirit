@@ -1811,7 +1811,7 @@ export default function App() {
                   <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl pointer-events-none ${photoCardTheme === 'neon' ? 'bg-emerald-500/20' : photoCardTheme === 'clean' ? 'bg-blue-500/10' : 'bg-purple-500/30'}`}></div>
                   <div className="flex justify-between items-start relative z-10">
                      <div>
-                       <div className="text-[11px] font-black uppercase tracking-widest opacity-60">Gymwork Pro</div>
+                       <div className="text-[11px] font-black uppercase tracking-widest opacity-60">GYM SPIRIT</div>
                        <h3 className="text-2xl font-black tracking-tight mt-0.5">오운완 인증🔥</h3>
                        <p className="text-xs font-bold opacity-70">{photoCardData.date}</p>
                      </div>
@@ -1864,7 +1864,7 @@ export default function App() {
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-t-[32px]"></div>
           <div className="text-center mb-8 mt-4">
              <div className="w-16 h-16 bg-neutral-950 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-neutral-800 shadow-inner"><Dumbbell className="w-8 h-8 text-emerald-400" /></div>
-             <h1 className="text-3xl font-black text-white tracking-tight">Gymwork <span className="text-emerald-400">Pro</span></h1>
+             <h1 className="text-3xl font-black text-white tracking-tight">GYM <span className="text-emerald-400">SPIRIT</span></h1>
              <p className="text-neutral-500 font-bold mt-2 text-sm">가장 완벽한 운동 일지</p>
           </div>
           <form onSubmit={handleAuth} className="space-y-5">
@@ -2892,7 +2892,7 @@ export default function App() {
                     </div>
                  </div>
                  <div className="text-center">
-                    <h2 className="text-2xl font-black text-neutral-900 flex items-center justify-center gap-2">{String(activeUser?.profile?.nickname || '짐워크유저')} <div className="bg-[#e8edff] text-[#4768ff] text-[10px] font-black px-2 py-0.5 rounded-md">{getUserLevel()}</div></h2>
+                    <h2 className="text-2xl font-black text-neutral-900 flex items-center justify-center gap-2">{String(activeUser?.profile?.nickname || '짐스피릿 유저')} <div className="bg-[#e8edff] text-[#4768ff] text-[10px] font-black px-2 py-0.5 rounded-md">{getUserLevel()}</div></h2>
                     <p className="text-sm font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5"><Activity className="w-4 h-4 text-emerald-500"/> 3대 운동 <span className="text-neutral-900 text-base font-black">{getTotalLift3()}kg</span></p>
                  </div>
                </div>

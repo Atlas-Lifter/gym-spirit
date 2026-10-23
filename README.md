@@ -1,4 +1,4 @@
-# Gymwork Pro
+# GYM SPIRIT
 
 React + Vite로 만든 헬스 기록 앱.
 
