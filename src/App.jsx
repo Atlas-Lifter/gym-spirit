@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import {
   CalendarDays, ChevronLeft, ChevronRight, User, Plus, Check, Play,
   Pause, Save, LogOut, X, Dumbbell,
@@ -413,12 +413,60 @@ const toolOfEx = (exItem) => {
   return EXERCISE_OPTIONS.find(e => e.id === id)?.tool || exItem?.exercise?.tool || exItem?.tool;
 };
 
-// 종목 썸네일: 해부도 위에 주동근(진한 빨강)과 협응근(연한 빨강)을 표시한다
-const SmartExerciseThumbnail = ({ exerciseId, target, size = "w-14 h-14", showShadow = true }) => {
-  const exercise = EXERCISE_OPTIONS.find(e => e.id === exerciseId) || { id: exerciseId, name: '', target: target || '전신' };
+// 동작 그림 썸네일에서 사람과 기구가 꽉 차게 보이도록 바닥선을 뺀 그림 영역으로 잘라낸다 (종목별로 한 번만 계산)
+const MOTION_CROP_CACHE = new Map();
+const motionFrameOf = (guide) => {
+  const first = guide.steps[0][0];
+  return (guide.steps.find(st => st[0] !== first) || guide.steps[0])[0];
+};
+const ExerciseMotionThumb = ({ exerciseId, size = 'w-14 h-14', showShadow = false }) => {
+  const ref = useRef(null);
+  const guide = EXERCISE_GUIDES[exerciseId];
+  useLayoutEffect(() => {
+    const svg = ref.current?.querySelector('svg');
+    if (!svg) return;
+    let vb = MOTION_CROP_CACHE.get(exerciseId);
+    if (!vb) {
+      let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+      Array.from(svg.children).slice(1).forEach(el => {
+        try {
+          const b = el.getBBox();
+          if (!b.width && !b.height) return;
+          x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y); x2 = Math.max(x2, b.x + b.width); y2 = Math.max(y2, b.y + b.height);
+        } catch (e) {}
+      });
+      if (!isFinite(x1)) return;
+      // getBBox는 굵은 선(팔다리) 두께를 빼고 재므로 여백을 넉넉히
+      const side = Math.max(x2 - x1, y2 - y1) * 1.12 + 28;
+      vb = `${(x1 + x2) / 2 - side / 2} ${(y1 + y2) / 2 - side / 2} ${side} ${side}`;
+      MOTION_CROP_CACHE.set(exerciseId, vb);
+    }
+    svg.setAttribute('viewBox', vb);
+  }, [exerciseId]);
+  if (!guide || !PATTERNS[guide.pt]) return null;
+  const pattern = { ...PATTERNS[guide.pt], ...(guide.eq ? { equip: guide.eq } : {}) };
+  const ex = EXERCISE_OPTIONS.find(e => e.id === exerciseId);
+  const muscles = ex ? getExerciseMuscles(ex) : { p: [], s: [] };
   return (
+    <div ref={ref} className={`${size} bg-[#f3f4f7] rounded-xl flex items-center justify-center overflow-hidden border border-neutral-200 flex-shrink-0 ${showShadow ? 'shadow-md' : ''}`}>
+      <PoseFigure pattern={pattern} frame={motionFrameOf(guide)} p={muscles.p} s={muscles.s} className="w-full h-full" />
+    </div>
+  );
+};
+
+// 종목 썸네일: 실제 동작(사람·기구) 그림을 먼저, 그 옆에 해부도로 주동근(진한 빨강)·협응근(연한 빨강)을 보여준다
+const SmartExerciseThumbnail = ({ exerciseId, target, size = "w-14 h-14", showShadow = true, motion = true }) => {
+  const exercise = EXERCISE_OPTIONS.find(e => e.id === exerciseId) || { id: exerciseId, name: '', target: target || '전신' };
+  const muscleBox = (
     <div className={`${size} bg-[#f3f4f7] rounded-xl flex items-center justify-center overflow-hidden border border-neutral-200 flex-shrink-0 ${showShadow ? 'shadow-md' : ''}`}>
       <ExerciseMuscleMap exercise={exercise} />
+    </div>
+  );
+  if (!motion || !EXERCISE_GUIDES[exerciseId]) return muscleBox;
+  return (
+    <div className="flex gap-1 flex-shrink-0">
+      <ExerciseMotionThumb exerciseId={exerciseId} size={size} showShadow={showShadow} />
+      {muscleBox}
     </div>
   );
 };
@@ -1970,7 +2018,7 @@ export default function App() {
           <div className="fixed inset-0 bg-black/70 z-[96] flex flex-col justify-end animate-fade-in" onClick={() => setGuideExerciseId(null)}>
             <div className="bg-white text-neutral-900 w-full max-w-lg mx-auto h-[92vh] rounded-t-[36px] flex flex-col shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-slide-up overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-neutral-100">
-                <SmartExerciseThumbnail exerciseId={ex.id} size="w-14 h-14" showShadow={false} />
+                <SmartExerciseThumbnail exerciseId={ex.id} size="w-14 h-14" showShadow={false} motion={false} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-black text-[#4768ff] mb-0.5">운동 설명서</p>
                   <h2 className="text-xl font-black tracking-tight truncate">{ex.name}</h2>
