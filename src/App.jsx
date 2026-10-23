@@ -17,7 +17,6 @@ import { PosingGuideSection } from './PosingGuide.jsx';
 import { QuestCenter } from './QuestCenter.jsx';
 import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
-import { FireFlame } from './FireFlame.jsx';
 import { weightRule, platesFor, setLoad, nextWeight, formatPlates, sideWeight } from './weightRules.js';
 import { DEFAULT_TIMER_SETTINGS, ALARM_SOUNDS, REPEAT_OPTIONS, REST_OPTIONS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { FriendCenter } from './FriendCenter.jsx';
@@ -2478,7 +2477,7 @@ export default function App() {
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 bg-black rounded-2xl flex items-center justify-center border ${isTimerActive ? (timeLeft <= 5 ? 'border-orange-400/80 shadow-[0_0_26px_rgba(255,120,0,0.6)]' : 'border-yellow-300/60 shadow-[0_0_18px_rgba(250,204,21,0.45)]') : 'border-emerald-500/20'} transition-shadow duration-500`}><FireFlame mode={!isTimerActive ? 'ember' : timeLeft <= 5 ? 'roar' : 'burning'} className="w-11 h-11" /></div>
+                <div className={`w-14 h-14 bg-black rounded-2xl flex items-center justify-center border ${isTimerActive ? 'border-yellow-300/60 shadow-[0_0_18px_rgba(250,204,21,0.45)]' : 'border-emerald-500/20'}`}><Flame className={`w-7 h-7 ${isTimerActive ? 'text-yellow-300 animate-pulse' : 'text-neutral-600'}`} /></div>
                 <div>
                   <div className="text-xs text-emerald-400/70 font-bold mb-0.5 tracking-widest">REST TIMER</div>
                   <div className="text-3xl font-black font-mono text-yellow-300 tracking-tight [text-shadow:0_0_12px_rgba(250,204,21,0.8)]">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
