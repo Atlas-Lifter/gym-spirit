@@ -24,7 +24,21 @@ const e1rm = (w, r) => (r === 1 ? w : w * (1 + r / 30));
 export const MAX_LEVEL = 100;
 export const AWAKEN_NAME = '각성';
 export const xpForLevel = (n) => Math.round(100 * (n - 1) + 13.3 * (n - 1) ** 2);
-const TITLES = [[100, 'GYM SPIRIT 레전드'], [85, '전설의 철인'], [70, '짐 마스터'], [50, '철인'], [35, '아이언 워리어'], [20, '근성장 장인'], [10, '짐 레귤러'], [5, '운동 습관러'], [1, '헬린이']];
+// 칭호 단계 (로드맵 팝업에도 쓴다). goal은 그 단계에서 해 볼 만한 목표
+export const TITLE_STAGES = [
+  { level: 1, title: '헬린이', icon: '🐣', goal: '운동 기록 첫 세트 완료하기 · 일일 퀘스트에 익숙해지기' },
+  { level: 5, title: '운동 습관러', icon: '🌱', goal: '주 3회 운동을 2주 연속 지키기' },
+  { level: 10, title: '짐 레귤러', icon: '🏃', goal: '가슴·등·하체·어깨·팔 5부위를 한 주에 모두 훈련' },
+  { level: 20, title: '근성장 장인', icon: '💪', goal: '주간 60세트 달성 · 식단 기록 습관 만들기' },
+  { level: 35, title: '아이언 워리어', icon: '⚔️', goal: '3대 300kg 도전 · 개인 신기록 꾸준히 갱신' },
+  { level: 50, title: '철인', icon: '🦾', goal: '30일 연속 출석 · 누적 볼륨 10만kg' },
+  { level: 70, title: '짐 마스터', icon: '🏆', goal: '3대 400kg · 모든 업적 골드 이상' },
+  { level: 85, title: '전설의 철인', icon: '🔥', goal: '누적 3,000세트 · 꺼지지 않는 연속 출석' },
+  { level: 100, title: 'GYM SPIRIT 레전드', icon: '👑', goal: '1년간 매일 쌓은 꾸준함의 증명 · 각성 도전' },
+];
+// 매일 운동·식단 퀘스트를 꾸준히 했을 때 하루 평균 XP (1년 ≈ 15만 XP)
+export const DILIGENT_XP_PER_DAY = 420;
+const TITLES = TITLE_STAGES.slice().reverse().map(st => [st.level, st.title]);
 // 각성 횟수별 색 (LV 배지)
 export const AWAKEN_STYLE = [
   'from-amber-300 to-orange-500 shadow-[0_8px_24px_rgba(251,146,60,0.45)]',

@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Trophy, Check, Gift, ChevronDown, Lock, Flame, Sparkles } from 'lucide-react';
-import { summarize, dailyQuests, weeklyQuests, achievements, levelInfo, timeLeft, TIER_STYLE, TIER_XP, dateKey, MAX_LEVEL, AWAKEN_NAME, AWAKEN_STYLE } from './questSystem.js';
+import { summarize, dailyQuests, weeklyQuests, achievements, levelInfo, timeLeft, TIER_STYLE, TIER_XP, dateKey, MAX_LEVEL, AWAKEN_NAME, AWAKEN_STYLE, TITLE_STAGES, xpForLevel, DILIGENT_XP_PER_DAY } from './questSystem.js';
 
 const WEEK = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -54,6 +55,70 @@ const QuestRow = ({ q, claimed, onClaim }) => {
   );
 };
 
+const fmtDays = (d) => d <= 0 ? '' : d < 14 ? `약 ${d}일` : d < 60 ? `약 ${Math.round(d / 7)}주` : `약 ${Math.round(d / 30)}개월`;
+
+// 칭호 로드맵: 전체 단계, 내 위치, 단계별 필요 레벨·XP·예상 기간
+const TitleRoadmap = ({ open, onClose, lv, xpInRun, awaken }) => {
+  const curRef = useRef(null);
+  useEffect(() => { if (open) setTimeout(() => curRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250); }, [open]);
+  if (!open) return null;
+  const curIdx = TITLE_STAGES.reduce((acc, st, i) => (lv.level >= st.level ? i : acc), 0);
+  return createPortal(
+    <div className="fixed inset-0 z-[95] bg-black/60 backdrop-blur-sm flex flex-col justify-end animate-fade-in" onClick={onClose}>
+      <div className="bg-gradient-to-b from-[#1e1b4b] via-[#241f5c] to-[#140f2e] text-white w-full max-w-md mx-auto rounded-t-[32px] max-h-[88vh] flex flex-col animate-slide-up" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-center pt-3 pb-1"><div className="w-12 h-1.5 bg-white/20 rounded-full" /></div>
+        <div className="px-6 pt-2 pb-4 flex items-start justify-between">
+          <div>
+            <p className="text-[11px] font-black text-amber-300">칭호 로드맵</p>
+            <h3 className="text-xl font-black">LV.{lv.level} · {lv.title}{awaken > 0 && <span className="ml-2 text-xs text-amber-300">{AWAKEN_NAME} {awaken}회</span>}</h3>
+            <p className="text-[11px] font-bold text-white/50 mt-1">운동·식단 퀘스트를 매일 꾸준히 하면 약 1년에 LV.{MAX_LEVEL}이에요</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-full bg-white/10 text-white/70 text-sm font-black">✕</button>
+        </div>
+        <div className="overflow-y-auto px-6 pb-8">
+          <div className="relative">
+            <div className="absolute left-[22px] top-4 bottom-4 w-0.5 bg-white/10" />
+            {TITLE_STAGES.map((st, i) => {
+              const done = i < curIdx, cur = i === curIdx, next = TITLE_STAGES[i + 1];
+              const needXp = xpForLevel(st.level);
+              const remainDays = Math.ceil(Math.max(0, needXp - xpInRun) / DILIGENT_XP_PER_DAY);
+              const stagePct = cur && next ? Math.min(100, Math.max(0, ((xpInRun - needXp) / (xpForLevel(next.level) - needXp)) * 100)) : 0;
+              return (
+                <div key={st.level} ref={cur ? curRef : null} className={`relative flex gap-3 py-2.5 ${!done && !cur ? 'opacity-60' : ''}`}>
+                  <div className={`relative z-10 w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center text-xl ${cur ? 'bg-gradient-to-br from-amber-300 to-orange-500 shadow-[0_0_20px_rgba(251,191,36,0.6)]' : done ? 'bg-emerald-400/20 border border-emerald-300/50' : 'bg-white/5 border border-white/10'}`}>{st.icon}</div>
+                  <div className={`flex-1 min-w-0 rounded-2xl p-3 ${cur ? 'bg-white/10 border border-amber-300/50' : 'bg-white/[0.03] border border-white/5'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-black text-sm">{st.title}</span>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${cur ? 'bg-amber-300 text-[#312e81]' : done ? 'bg-emerald-400/20 text-emerald-300' : 'bg-white/10 text-white/60'}`}>{cur ? '지금 여기' : done ? '달성 ✓' : '🔒 잠김'}</span>
+                    </div>
+                    <div className="text-[11px] font-bold text-white/60 mt-1">LV.{st.level} 이상 · 누적 {needXp.toLocaleString()} XP{!done && !cur && remainDays > 0 ? ` · 꾸준히 하면 ${fmtDays(remainDays)} 뒤` : ''}</div>
+                    <div className="text-[11px] font-bold text-white/80 mt-1.5">🎯 {st.goal}</div>
+                    {cur && next && (
+                      <div className="mt-2">
+                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-300 to-pink-400 rounded-full" style={{ width: `${Math.max(3, stagePct)}%` }} /></div>
+                        <div className="text-[10px] font-bold text-white/50 mt-1">다음 칭호 '{next.title}'까지 {(xpForLevel(next.level) - xpInRun).toLocaleString()} XP</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {/* 마지막: 각성 */}
+            <div className="relative flex gap-3 py-2.5">
+              <div className="relative z-10 w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center text-xl bg-gradient-to-br from-yellow-200 via-amber-400 to-rose-500 shadow-[0_0_18px_rgba(250,204,21,0.5)]">⚡</div>
+              <div className="flex-1 rounded-2xl p-3 bg-gradient-to-r from-amber-300/15 to-rose-400/10 border border-amber-300/40">
+                <div className="font-black text-sm">{AWAKEN_NAME} <span className="text-amber-300">(현재 {awaken}회)</span></div>
+                <div className="text-[11px] font-bold text-white/70 mt-1 leading-relaxed">LV.{MAX_LEVEL}에 오르면 {AWAKEN_NAME}할 수 있어요. 레벨이 1부터 다시 시작되고 ★{AWAKEN_NAME} 횟수와 새 배지 색이 생겨요. 업적·기록은 그대로 남아요.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+};
+
 export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onClaim, onAwaken }) => {
   const [tab, setTab] = useState('daily');
   const [openAch, setOpenAch] = useState(null);
@@ -69,6 +134,7 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
   const awaken = questState?.awaken || 0;
   const lv = levelInfo(xp, questState?.awakenBase || 0);
   const [awakenAsk, setAwakenAsk] = useState(false);
+  const [roadmapOpen, setRoadmapOpen] = useState(false);
   const left = timeLeft(now);
   const todayKey = dateKey(now);
 
@@ -104,6 +170,7 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
     <div className="mb-6">
       <h3 className="text-sm font-black text-neutral-900 mb-3 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-500" /> 퀘스트 & 업적</h3>
 
+      <TitleRoadmap open={roadmapOpen} onClose={() => setRoadmapOpen(false)} lv={lv} xpInRun={lv.xp} awaken={awaken} />
       {/* 레벨 카드 */}
       <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#1e1b4b] via-[#312e81] to-[#4c1d95] text-white p-5 shadow-lg mb-3">
         <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 blur-2xl" />
@@ -115,7 +182,7 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[11px] font-bold text-white/60">나의 칭호{awaken > 0 && <span className="ml-1.5 text-amber-300 font-black">· {AWAKEN_NAME} {awaken}회</span>}</div>
-            <div className="text-lg font-black leading-tight">{lv.title}</div>
+            <button onClick={() => setRoadmapOpen(true)} className="text-lg font-black leading-tight flex items-center gap-1 hover:text-amber-200 transition-colors active:scale-95">{lv.title}<span className="text-[10px] font-black text-amber-300 bg-white/10 px-1.5 py-0.5 rounded-md ml-1">로드맵 ›</span></button>
             <div className="mt-2 h-2.5 bg-white/15 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-300 to-pink-400 rounded-full transition-all duration-700" style={{ width: `${Math.max(3, lv.pct)}%` }} /></div>
             <div className="flex justify-between text-[10px] font-bold text-white/60 mt-1"><span>누적 {xp.toLocaleString()} XP</span><span>{lv.max ? `최고 레벨 ${MAX_LEVEL} 달성!` : `다음 레벨까지 ${(lv.need - lv.into).toLocaleString()} XP`}</span></div>
           </div>
