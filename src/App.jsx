@@ -17,7 +17,7 @@ import { PosingGuideSection } from './PosingGuide.jsx';
 import { QuestCenter } from './QuestCenter.jsx';
 import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
-import { weightRule, platesFor, setLoad, nextWeight } from './weightRules.js';
+import { weightRule, platesFor, setLoad, nextWeight, formatPlates, sideWeight } from './weightRules.js';
 import { FriendCenter } from './FriendCenter.jsx';
 import * as cloud from './cloud.js';
 import { FullBodyAvatar, AVATAR_SKIN_TONES, AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS } from './realAvatar.jsx';
@@ -2365,8 +2365,8 @@ export default function App() {
                             )}
                             {plateCalc.length > 0 && (
                               <button onClick={() => setPlateVisualizerModal({ weight: set.weight, plates: plateCalc, rule: exRule })} className="flex gap-1 justify-end items-center opacity-70 hover:opacity-100 transition-opacity">
-                                <span className="text-[9px] font-bold text-emerald-400">{exRule.plates === 'both' ? '양쪽 각' : '한쪽'}</span>
-                                {plateCalc.map((p, i) => <span key={`plate-${i}`} className="text-[10px] font-black bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded shadow-sm">{p}</span>)}
+                                <span className="text-[10px] font-bold text-emerald-400">{exRule.plates === 'both' ? `한쪽 ${sideWeight(plateCalc)}kg` : `원판 ${sideWeight(plateCalc)}kg`}</span>
+                                <span className="text-[10px] font-black bg-neutral-800 text-neutral-200 px-1.5 py-0.5 rounded shadow-sm">{formatPlates(plateCalc)}</span>
                               </button>
                             )}
                           </div>
@@ -2496,7 +2496,8 @@ export default function App() {
                   );
                 })()}
               </div>
-              <p className="text-[11px] font-bold text-neutral-500 mb-2">{(plateVisualizerModal.rule || { plates: 'both' }).plates === 'both' ? '한쪽에 꽂을 원판 (반대쪽도 똑같이)' : '꽂을 원판'}</p>
+              <p className="text-sm font-black text-emerald-400 mb-1">{(plateVisualizerModal.rule || { plates: 'both' }).plates === 'both' ? '한쪽' : '원판'} {sideWeight(plateVisualizerModal.plates)}kg = {formatPlates(plateVisualizerModal.plates)}</p>
+              <p className="text-[11px] font-bold text-neutral-500 mb-3">{(plateVisualizerModal.rule || { plates: 'both' }).plates === 'both' ? '반대쪽에도 똑같이 꽂아요' : '한쪽 끝에만 꽂아요'}</p>
               <div className="flex gap-2 justify-center flex-wrap">
                 {plateVisualizerModal.plates.map((p, idx) => (<span key={`txt-p-${idx}`} className="text-xs font-black bg-neutral-800 px-3 py-1 rounded-lg border border-neutral-700">{p}kg</span>))}
               </div>

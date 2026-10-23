@@ -73,3 +73,13 @@ export const nextWeight = (rule, weight) => {
   if (rule.step < 0) return String(Math.max(0, w + rule.step));
   return String(Math.round((w > 0 ? w + rule.step : (rule.bar || rule.step)) * 100) / 100);
 };
+
+// 원판 표기: [20, 20, 10] → '20×2 + 10'
+export const formatPlates = (plates) => {
+  const groups = [];
+  plates.forEach(p => { const g = groups[groups.length - 1]; if (g && g.p === p) g.n++; else groups.push({ p, n: 1 }); });
+  return groups.map(g => (g.n > 1 ? `${g.p}×${g.n}` : `${g.p}`)).join(' + ');
+};
+
+// 한쪽에 꽂는 원판 무게 합계
+export const sideWeight = (plates) => Math.round(plates.reduce((a, b) => a + b, 0) * 100) / 100;
