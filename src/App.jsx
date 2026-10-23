@@ -2546,7 +2546,7 @@ export default function App() {
                        <SmartExerciseThumbnail exerciseId={exIdStr} target={exTargetStr} tool={exToolStr} showShadow={false} size="w-14 h-14" />
                        <div className="min-w-0">
                          <button onClick={() => { setSwapTargetExerciseId(ex.id); setIsAddExerciseModalOpen(true); }} className="text-left active:scale-95 transition-transform group flex items-center gap-1.5 max-w-full">
-                           <h2 className="text-lg leading-tight font-black text-white group-hover:text-emerald-300 transition-colors [text-shadow:0_0_10px_rgba(16,185,129,0.35)]">{exNameStr}</h2>
+                           <h2 className="text-lg leading-tight font-black text-white break-keep group-hover:text-emerald-300 transition-colors [text-shadow:0_0_10px_rgba(16,185,129,0.35)]">{exNameStr}</h2>
                            <Settings className="w-4 h-4 text-neutral-500 group-hover:text-emerald-400 transition-colors" />
                          </button>
                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -2789,13 +2789,13 @@ export default function App() {
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50">
                 {EXERCISE_OPTIONS.filter(ex => (exCategoryFilter === '전체' || String(ex.target).includes(exCategoryFilter)) && String(ex.name).includes(exSearchQuery)).map((ex) => (
-                  <div key={ex.id} onClick={() => swapTargetExerciseId ? swapExercise(ex) : addExerciseFromModal(ex)} className="flex items-center gap-4 bg-white p-3.5 rounded-2xl border border-neutral-100 hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer group active:scale-95">
-                    <SmartExerciseThumbnail exerciseId={ex.id} target={String(ex.target)} tool={String(ex.tool)} size="w-16 h-16" />
-                    <div>
-                      <h3 className="font-black text-neutral-900 text-lg group-hover:text-[#4768ff] transition-colors">{String(ex.name)}</h3>
-                      <p className="text-xs font-bold text-neutral-400 mt-0.5">{String(ex.target)} · {String(ex.tool)}</p>
+                  <div key={ex.id} onClick={() => swapTargetExerciseId ? swapExercise(ex) : addExerciseFromModal(ex)} className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-neutral-100 hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer group active:scale-95">
+                    <SmartExerciseThumbnail exerciseId={ex.id} target={String(ex.target)} tool={String(ex.tool)} size="w-14 h-14" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-black text-neutral-900 text-base leading-snug break-keep group-hover:text-[#4768ff] transition-colors">{String(ex.name)}</h3>
+                      <p className="text-[11px] font-bold text-neutral-400 mt-0.5 break-keep">{String(ex.target)} · {String(ex.tool)}</p>
+                      <button onClick={(e) => { e.stopPropagation(); setGuideExerciseId(ex.id); }} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-black text-[#4768ff] bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-lg transition-colors active:scale-95"><BookOpen className="w-3 h-3"/> 설명</button>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); setGuideExerciseId(ex.id); }} className="ml-auto flex items-center gap-1 text-xs font-black text-[#4768ff] bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg transition-colors active:scale-95 flex-shrink-0"><BookOpen className="w-3.5 h-3.5"/> 설명</button>
                     <button className="p-2 bg-neutral-50 rounded-full group-hover:bg-blue-100 text-neutral-400 group-hover:text-blue-600 transition-colors flex-shrink-0"><Plus className="w-5 h-5"/></button>
                   </div>
                 ))}
