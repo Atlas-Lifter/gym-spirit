@@ -391,6 +391,14 @@ const getExId = (exItem) => {
   return '';
 };
 
+// 세트 종류: 저장 값은 예전 그대로 W(워밍업)·-(메인)·D(드랍), 화면에는 한글로
+const SET_TYPE_LABEL = { W: '워밍업', '-': '메인', D: '드랍' };
+const SET_TYPE_STYLE = {
+  W: 'text-sky-300 bg-sky-400/10 border-sky-400/40',
+  '-': 'text-yellow-300 bg-yellow-400/10 border-yellow-400/50 shadow-[0_0_8px_rgba(250,204,21,0.35)]',
+  D: 'text-rose-400 bg-rose-500/10 border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.3)]',
+};
+
 // 비상구 표지판 모양 아이콘 (운동 화면 최소화 버튼)
 const EmergencyExitIcon = ({ className = 'w-7 h-7' }) => (
   <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
@@ -2567,7 +2575,7 @@ export default function App() {
                   </div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-12 gap-2 text-center text-[10px] font-black text-emerald-400/60 tracking-widest mb-1 px-1">
-                      <div className="col-span-1">SET</div><div className="col-span-3">{exRule.label}</div><div className="col-span-3">REPS</div><div className="col-span-3">RPE</div><div className="col-span-2">DONE</div>
+                      <div className="col-span-2">세트 ↻</div><div className="col-span-3">{exRule.label}</div><div className="col-span-3">REPS</div><div className="col-span-2">RPE</div><div className="col-span-2">DONE</div>
                     </div>
                     {ex.sets.map((set, setIndex) => {
                       const plateCalc = platesFor(exRule, set.weight);
@@ -2577,10 +2585,13 @@ export default function App() {
                       return (
                         <div key={set.id} className="relative group/set">
                           <div className={`grid grid-cols-12 gap-2 items-center transition-all duration-300 ${set.completed ? 'opacity-50' : 'opacity-100'} ${isDropSet ? 'bg-rose-950/20 border border-rose-900/50 p-2 -mx-2 rounded-xl' : ''}`}>
-                            <button onClick={() => cycleSetType(ex.id, set.id)} className={`col-span-1 font-black text-[10px] w-7 h-7 mx-auto rounded-lg flex items-center justify-center transition-colors shadow-sm ${set.type === 'W' ? 'text-neutral-400 bg-neutral-900 border border-neutral-700' : set.type === 'D' ? 'text-rose-400 bg-rose-950 border border-rose-500/50' : 'text-yellow-300 bg-yellow-400/10 border border-yellow-400/50 shadow-[0_0_8px_rgba(250,204,21,0.35)]'}`}>{String(set.type)}</button>
+                            <button onClick={() => cycleSetType(ex.id, set.id)} title="누르면 워밍업 → 메인 → 드랍으로 바뀌어요" className={`col-span-2 h-[50px] rounded-xl flex flex-col items-center justify-center leading-none transition-colors active:scale-95 border ${SET_TYPE_STYLE[set.type] || SET_TYPE_STYLE['-']}`}>
+                              <span className="text-lg font-black tabular-nums">{ex.sets.slice(0, setIndex + 1).filter(st => (st.type || '-') === (set.type || '-')).length}</span>
+                              <span className="text-[9px] font-black mt-1 tracking-tight">{SET_TYPE_LABEL[set.type] || '메인'}</span>
+                            </button>
                             <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
                             <div className="col-span-3"><input type="number" placeholder="0" value={set.reps} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
-                            <div className="col-span-3"><input type="number" placeholder="-" min="1" max="10" value={set.rpe} onChange={(e) => updateSet(ex.id, set.id, 'rpe', e.target.value)} className={`w-full text-center font-bold text-sm rounded-xl py-3 outline-none border transition-colors ${getRpeColor(set.rpe)}`} /></div>
+                            <div className="col-span-2"><input type="number" placeholder="-" min="1" max="10" value={set.rpe} onChange={(e) => updateSet(ex.id, set.id, 'rpe', e.target.value)} className={`w-full text-center font-bold text-sm rounded-xl py-3 outline-none border transition-colors ${getRpeColor(set.rpe)}`} /></div>
                             <div className="col-span-2 flex justify-center relative">
                                <button onClick={() => toggleSetComplete(ex.id, set.id)} className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-75 z-10 relative ${set.completed ? 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'bg-black text-emerald-500/40 hover:text-emerald-300 hover:shadow-[0_0_12px_rgba(16,185,129,0.4)] border border-emerald-500/30'}`}><Check className="w-6 h-6 stroke-[3]" /></button>
                                <button onClick={() => removeSet(ex.id, set.id)} className="absolute -right-8 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-rose-500 transition-all opacity-0 group-hover/set:opacity-100 bg-neutral-900 rounded-full shadow-md"><X className="w-4 h-4"/></button>
