@@ -391,6 +391,17 @@ const getExId = (exItem) => {
   return '';
 };
 
+// 비상구 표지판 모양 아이콘 (운동 화면 최소화 버튼)
+const EmergencyExitIcon = ({ className = 'w-7 h-7' }) => (
+  <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
+    <rect x="1" y="4" width="30" height="24" rx="5" fill="#10b981" />
+    <rect x="20" y="8" width="8" height="16" rx="1" fill="#ecfdf5" />
+    <rect x="22.2" y="10.2" width="3.6" height="13.8" fill="#047857" />
+    <circle cx="11.5" cy="9.6" r="2.3" fill="#ecfdf5" />
+    <path d="M11 12.6 L12.8 18.4 M8.2 14.6 L11.3 12.9 L14.8 15 M12.8 18.4 L16 21.4 L15.6 25 M12.8 18.4 L9.8 21.4 L6.6 22.2" fill="none" stroke="#ecfdf5" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 // 종목의 중량 기준(바벨·덤벨·머신·맨몸). 종목표의 기구 정보를 우선 쓴다
 const ruleOfEx = (exItem) => {
   const id = String(getExId(exItem));
@@ -785,6 +796,8 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [maxTime, setMaxTime] = useState(90);
   const [alarmRinging, setAlarmRinging] = useState(false);
+  const [workoutMinimized, setWorkoutMinimized] = useState(false); // 운동 중에 잠깐 다른 화면을 보는 중
+  const [pendingWorkoutStart, setPendingWorkoutStart] = useState(null); // 진행 중인 운동이 있을 때 새 운동 시작을 확인
   const [overtimeSec, setOvertimeSec] = useState(null); // 휴식이 끝난 뒤 지난 시간(초). null이면 초과 아님
   const [isAlarmSettingsOpen, setIsAlarmSettingsOpen] = useState(false);
   const alarmStopRef = useRef(null);
@@ -865,7 +878,7 @@ export default function App() {
   };
 
   // 다른 회원이 가장 최근에 저장한 운동을 오늘 운동으로 불러온다
-  const stealRoutine = (user) => {
+  const stealRoutine = (user) => guardNewWorkout(() => {
     const items = Array.isArray(user.routine?.items) ? user.routine.items : [];
     if (!items.length) { showToast('가져올 운동 기록이 없어요.'); return; }
     const stamp = Date.now();
@@ -882,7 +895,7 @@ export default function App() {
     setIsFriendSearchModalOpen(false);
     setCurrentScreen('workout');
     showToast(`${user.name}님의 루틴을 성공적으로 가져왔습니다!`);
-  };
+  });
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -902,13 +915,14 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentScreen === 'workout') {
+    if (currentScreen === 'workout') setWorkoutMinimized(false);
+    if (currentScreen === 'workout' || workoutMinimized) {
       sessionTimerRef.current = setInterval(() => setWorkoutDurationSec(prev => prev + 1), 1000);
     } else {
       clearInterval(sessionTimerRef.current);
     }
     return () => clearInterval(sessionTimerRef.current);
-  }, [currentScreen]);
+  }, [currentScreen, workoutMinimized]);
 
   useEffect(() => {
     if (isTimerActive && timeLeft > 0) {
@@ -1197,8 +1211,32 @@ export default function App() {
     setShowCelebration(true);
   };
 
+  // 운동을 잠깐 내려두고 다른 화면으로 (기록·시간·휴식 타이머는 계속 돈다)
+  const minimizeWorkout = () => {
+    if (session.length === 0) { exitWorkout(); return; }
+    setWorkoutMinimized(true);
+    setCurrentScreen('home');
+    showToast('운동을 잠깐 내려놨어요. 아래 바를 누르면 이어서 할 수 있어요.');
+  };
+  const resumeWorkout = () => { setCurrentScreen('workout'); };
+  // 진행 중인 운동이 있으면 덮어쓰기 전에 물어본다
+  const guardNewWorkout = (start) => {
+    if (workoutMinimized && session.length > 0) { setPendingWorkoutStart(() => start); return; }
+    start();
+  };
+  const discardAndStart = () => {
+    const start = pendingWorkoutStart;
+    setPendingWorkoutStart(null);
+    stopAlarm();
+    setIsTimerActive(false); setTimeLeft(0); setOvertimeSec(null);
+    setSession([]); setWorkoutDurationSec(0); setWorkoutMinimized(false);
+    start?.();
+  };
+
   const exitWorkout = () => {
     setIsExitConfirmOpen(false);
+    setWorkoutMinimized(false);
+    setWorkoutDurationSec(0);
     setSession([]);
     setIsTimerActive(false);
     setTimeLeft(0);
@@ -1215,7 +1253,7 @@ export default function App() {
     showToast("오운완! 오늘의 훈련이 홈 화면에 저장되었습니다. 🔥");
   };
 
-  const loadSpecificWorkout = (dateStr) => {
+  const loadSpecificWorkout = (dateStr) => guardNewWorkout(() => {
     if (!activeUser || !safeWorkouts || !safeWorkouts[dateStr]) return;
     const copiedSession = safeWorkouts[dateStr].map(ex => {
       const exId = getExId(ex);
@@ -1229,9 +1267,9 @@ export default function App() {
     setWorkoutDurationSec(0);
     setCurrentScreen('workout');
     showToast(`${dateStr} 루틴을 성공적으로 복사했습니다!`);
-  };
+  });
 
-  const loadProgramWorkout = (programId) => {
+  const loadProgramWorkout = (programId) => guardNewWorkout(() => {
     const prog = PROGRAMS.find(p => p.id === String(programId));
     if (!prog) return;
     const mappedSession = prog.workouts.map((rec, i) => {
@@ -1244,9 +1282,9 @@ export default function App() {
     setWorkoutDurationSec(0);
     setCurrentScreen('workout');
     showToast(`'${prog.title}' 프로그램을 시작합니다. 화이팅!`);
-  };
+  });
 
-  const loadLegendRoutine = (routine) => {
+  const loadLegendRoutine = (routine) => guardNewWorkout(() => {
     const mappedSession = routine.workouts.map((rec, i) => {
       const exOption = EXERCISE_OPTIONS.find(e => e.id === rec.exerciseId) || EXERCISE_OPTIONS[0];
       return { id: `leg-${Date.now()}-${i}`, exercise: exOption,
@@ -1258,7 +1296,7 @@ export default function App() {
     setSelectedLegendModal(null);
     setCurrentScreen('workout');
     showToast(`전설의 루틴 [${routine.title}]을(를) 시작합니다!`);
-  };
+  });
 
   const handleMuscleClick = (part) => {
     let searchTarget = '';
@@ -1284,7 +1322,7 @@ export default function App() {
     return EXERCISE_OPTIONS.filter(ex => sub ? sub.match(String(ex.target), ex) : String(ex.target).includes(group));
   };
 
-  const startMuscleRoutine = () => {
+  const startMuscleRoutine = () => guardNewWorkout(() => {
     if(!muscleConfirmModal) return;
     const routineLabel = muscleConfirmModal.sub ? `${muscleConfirmModal.group} ${muscleConfirmModal.sub.key}` : muscleConfirmModal.group;
     const recommended = getMuscleExercises(muscleConfirmModal).slice(0, 4);
@@ -1299,7 +1337,7 @@ export default function App() {
     setMuscleConfirmModal(null);
     setCurrentScreen('workout');
     showToast(`${routineLabel} 집중 추천 루틴이 세팅되었습니다!`);
-  };
+  });
 
   const addExerciseFromModal = (exOption) => {
     setSession([...session, { id: Date.now().toString(), exercise: exOption,
@@ -2043,6 +2081,58 @@ export default function App() {
             </div>
           </div>
         )}
+        {isExitConfirmOpen && (
+          <div className="fixed inset-0 bg-black/80 z-[85] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setIsExitConfirmOpen(false)}>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 max-w-sm w-full text-white shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-black mb-2">운동을 끝내고 나갈까요?</h3>
+              <p className="text-sm font-bold text-neutral-400 mb-6 leading-relaxed">저장하지 않고 끝내면 이번 운동 기록이 사라져요. 기록을 남기려면 '훈련 완료 및 저장'을 눌러 주세요.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setIsExitConfirmOpen(false)} className="flex-1 py-3.5 bg-neutral-800 text-neutral-300 font-black rounded-xl hover:bg-neutral-700 transition-colors active:scale-95">계속 운동하기</button>
+                <button onClick={exitWorkout} className="flex-1 py-3.5 bg-rose-500 text-white font-black rounded-xl hover:bg-rose-400 transition-colors active:scale-95">기록 버리고 나가기</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {workoutMinimized && currentScreen !== 'workout' && (() => {
+          const allSets = session.reduce((n, ex) => n + (ex.sets || []).length, 0);
+          const doneSets = session.reduce((n, ex) => n + (ex.sets || []).filter(st => st.completed).length, 0);
+          const curEx = session.find(ex => (ex.sets || []).some(st => !st.completed)) || session[session.length - 1];
+          const mm = `${Math.floor(workoutDurationSec / 60)}:${(workoutDurationSec % 60).toString().padStart(2, '0')}`;
+          return (
+            <div className={`fixed left-3 right-3 z-[45] max-w-md mx-auto ${currentScreen === 'home' ? 'bottom-[92px]' : 'bottom-4'} animate-slide-up`}>
+              <style>{`@keyframes miniFlash { 0%,100% { color: #fb7185; } 50% { color: #fde047; } } .mini-ot { animation: miniFlash .7s ease-in-out infinite; }`}</style>
+              <div className="flex items-center gap-2 bg-[#03060a]/95 backdrop-blur-md border border-emerald-400/50 rounded-2xl pl-2.5 pr-1.5 py-2 shadow-[0_0_24px_rgba(16,185,129,0.35)]">
+                <button onClick={resumeWorkout} className="flex-1 min-w-0 flex items-center gap-2.5 text-left active:scale-[0.98] transition-transform">
+                  <span className="relative w-10 h-10 flex-shrink-0 rounded-xl bg-black border border-emerald-400/50 flex items-center justify-center"><Dumbbell className="w-5 h-5 text-emerald-300" /><span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" /><span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400" /></span>
+                  <span className="min-w-0">
+                    <span className="block text-[10px] font-black text-emerald-400 tracking-widest">운동 중 · {mm}</span>
+                    <span className="block text-sm font-black text-white truncate">{curEx ? getExName(curEx) : '운동'} <span className="text-neutral-400 font-bold">· {doneSets}/{allSets}세트</span></span>
+                  </span>
+                </button>
+                {overtimeOn ? (
+                  <span className="text-xs font-black font-mono mini-ot flex-shrink-0">+{Math.floor(overtimeSec / 60)}:{(overtimeSec % 60).toString().padStart(2, '0')}</span>
+                ) : (isTimerActive || timeLeft > 0) ? (
+                  <span className="text-xs font-black font-mono text-yellow-300 flex-shrink-0">휴식 {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+                ) : null}
+                <button onClick={resumeWorkout} className="px-3 py-2 rounded-xl bg-emerald-400 text-black font-black text-xs flex-shrink-0 shadow-[0_0_14px_rgba(16,185,129,0.6)] active:scale-95 transition-transform">복귀</button>
+                <button onClick={() => setIsExitConfirmOpen(true)} aria-label="운동 끝내기" className="p-1.5 text-neutral-500 hover:text-white flex-shrink-0"><X className="w-4 h-4" /></button>
+              </div>
+            </div>
+          );
+        })()}
+        {pendingWorkoutStart && (
+          <div className="fixed inset-0 bg-black/70 z-[86] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setPendingWorkoutStart(null)}>
+            <div className="bg-[#060b10] border border-emerald-500/40 rounded-[32px] p-6 max-w-sm w-full text-white shadow-[0_0_30px_rgba(16,185,129,0.25)] animate-scale-up" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-black mb-2">진행 중인 운동이 있어요</h3>
+              <p className="text-sm font-bold text-neutral-400 mb-6 leading-relaxed">새 운동을 시작하면 지금 기록 중인 운동({session.length}종목)은 저장되지 않고 사라져요.</p>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => { setPendingWorkoutStart(null); resumeWorkout(); }} className="w-full py-3.5 bg-emerald-400 text-black font-black rounded-xl active:scale-95 transition-transform shadow-[0_0_18px_rgba(16,185,129,0.5)]">진행 중인 운동으로 돌아가기</button>
+                <button onClick={discardAndStart} className="w-full py-3.5 bg-black border border-rose-500/50 text-rose-400 font-black rounded-xl active:scale-95 transition-transform">지금 운동 버리고 새로 시작</button>
+              </div>
+            </div>
+          </div>
+        )}
         {toastMessage && (
           <div className="fixed top-16 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-slide-down">
             <div className="bg-emerald-500 text-neutral-950 font-black px-6 py-3 rounded-full shadow-[0_10px_20px_rgba(16,185,129,0.3)] flex items-center gap-2 text-sm border border-emerald-400"><CheckCircle2 className="w-5 h-5"/> {toastMessage}</div>
@@ -2358,30 +2448,13 @@ export default function App() {
         <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(16,185,129,0.14), transparent 70%), radial-gradient(ellipse 70% 30% at 50% 100%, rgba(250,204,21,0.08), transparent 70%), linear-gradient(rgba(16,185,129,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.07) 1px, transparent 1px)', backgroundSize: '100% 100%, 100% 100%, 32px 32px, 32px 32px' }} />
         <header className="bg-[#03060a]/85 backdrop-blur-md px-4 py-4 sticky top-0 z-20 flex justify-between items-center">
           <div className="absolute left-0 right-0 -bottom-px h-[2px] bg-gradient-to-r from-emerald-400 via-yellow-300 to-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.9)]" />
-          <button onClick={() => {
-            const hasProgress = session.some(ex => (ex.sets || []).some(s => s.completed));
-            if (hasProgress) { setIsExitConfirmOpen(true); return; }
-            exitWorkout();
-          }} className="text-emerald-300/80 hover:text-emerald-200 flex items-center gap-1 bg-emerald-500/5 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-bold transition-colors"><ChevronLeft className="w-5 h-5"/> 나가기</button>
+          <button onClick={minimizeWorkout} aria-label="운동 잠깐 나가기 (최소화)" title="잠깐 나가기 · 운동은 계속 기록돼요" className="p-1 rounded-xl bg-emerald-500/5 border border-emerald-500/30 hover:bg-emerald-500/15 active:scale-90 transition-all shadow-[0_0_12px_rgba(16,185,129,0.35)]"><EmergencyExitIcon className="w-9 h-9" /></button>
           <div className="flex items-center gap-3">
             {currentSessionVolume > 0 && (<div className="text-sm font-black text-yellow-300 tracking-tight bg-yellow-400/10 px-2 py-1 rounded-lg border border-yellow-400/40 shadow-[0_0_12px_rgba(250,204,21,0.35)] animate-fade-in">{currentSessionVolume.toLocaleString()} <span className="text-[10px]">kg</span></div>)}
             <div className="font-black text-base text-emerald-300 tracking-wider flex items-center gap-1.5 bg-black px-3 py-1 rounded-xl border border-emerald-400/50 shadow-[0_0_14px_rgba(16,185,129,0.45)] [text-shadow:0_0_8px_rgba(16,185,129,0.8)]"><Clock className="w-4 h-4 animate-pulse"/> {formattedWorkoutTime}</div>
           </div>
           <button onClick={() => { navigator.clipboard?.writeText(window.location.href)?.catch(() => {}); showToast("운동 루틴 링크가 클립보드에 복사되었습니다!"); }} className="text-xs font-bold text-yellow-300 bg-yellow-400/10 px-3 py-1.5 rounded-lg border border-yellow-400/40 active:scale-95">공유</button>
         </header>
-
-        {isExitConfirmOpen && (
-          <div className="fixed inset-0 bg-black/80 z-[85] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setIsExitConfirmOpen(false)}>
-            <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 max-w-sm w-full text-white shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-black mb-2">저장하지 않고 나갈까요?</h3>
-              <p className="text-sm font-bold text-neutral-400 mb-6 leading-relaxed">완료한 세트가 있습니다. 지금 나가면 이번 운동 기록이 사라집니다.</p>
-              <div className="flex gap-3">
-                <button onClick={() => setIsExitConfirmOpen(false)} className="flex-1 py-3.5 bg-neutral-800 text-neutral-300 font-black rounded-xl hover:bg-neutral-700 transition-colors active:scale-95">계속 운동하기</button>
-                <button onClick={exitWorkout} className="flex-1 py-3.5 bg-rose-500 text-white font-black rounded-xl hover:bg-rose-400 transition-colors active:scale-95">기록 버리고 나가기</button>
-              </div>
-            </div>
-          </div>
-        )}
 
         <main className="max-w-md mx-auto w-full p-4 space-y-6 flex-1 mt-2 relative z-10">
           {session.length === 0 ? (
@@ -2759,7 +2832,7 @@ export default function App() {
 
               <div className="flex justify-between items-end mb-5">
                 <h2 className="text-2xl font-black text-neutral-900 tracking-tight">내 루틴</h2>
-                <button onClick={() => { setSession([]); setCurrentDate(formatDate(new Date())); setCurrentScreen('workout'); }} className="text-sm font-bold text-neutral-500 hover:text-neutral-900 transition-colors flex items-center gap-1 active:scale-95"><Plus className="w-4 h-4 stroke-[3]"/> 새 루틴</button>
+                <button onClick={() => guardNewWorkout(() => { setSession([]); setWorkoutDurationSec(0); setCurrentDate(formatDate(new Date())); setCurrentScreen('workout'); })} className="text-sm font-bold text-neutral-500 hover:text-neutral-900 transition-colors flex items-center gap-1 active:scale-95"><Plus className="w-4 h-4 stroke-[3]"/> 새 루틴</button>
               </div>
 
               <div className="space-y-4">
@@ -2786,7 +2859,7 @@ export default function App() {
                           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-neutral-100"><Dumbbell className="w-8 h-8 text-neutral-300" /></div>
                           <p className="text-sm font-bold text-neutral-500 mb-1">이 날짜에 기록된 루틴이 없습니다.</p>
                           <p className="text-xs font-bold text-neutral-400 mb-6">하단의 버튼을 눌러 바로 훈련을 시작해보세요!</p>
-                          <button onClick={() => { setSession([]); setCurrentScreen('workout'); }} className="bg-[#4768ff] text-white font-black px-6 py-3 rounded-xl shadow-[0_5px_15px_rgba(71,104,255,0.3)] hover:bg-blue-600 active:scale-95 transition-all">빈 운동 시작하기</button>
+                          <button onClick={() => guardNewWorkout(() => { setSession([]); setWorkoutDurationSec(0); setCurrentScreen('workout'); })} className="bg-[#4768ff] text-white font-black px-6 py-3 rounded-xl shadow-[0_5px_15px_rgba(71,104,255,0.3)] hover:bg-blue-600 active:scale-95 transition-all">빈 운동 시작하기</button>
                         </div>
                       )}
 
@@ -3395,7 +3468,7 @@ export default function App() {
               <div className="flex-1 flex flex-col items-center justify-center p-10 opacity-50 bg-neutral-50"><History className="w-16 h-16 mb-4 text-neutral-400"/><p className="font-bold text-neutral-500 text-center">아직 저장된 과거 기록이 없습니다.</p></div>
             )}
             <div className="px-5 pt-4 pb-6 bg-white mt-auto border-t border-neutral-100 flex gap-3">
-              <button onClick={() => { setSession([]); setCurrentScreen('workout'); setIsRoutineLoaderOpen(false); }} className="flex-1 bg-[#4b4e54] text-white font-black py-4 rounded-xl hover:bg-neutral-700 transition-colors text-lg active:scale-95">빈 운동 시작</button>
+              <button onClick={() => { setIsRoutineLoaderOpen(false); guardNewWorkout(() => { setSession([]); setWorkoutDurationSec(0); setCurrentScreen('workout'); }); }} className="flex-1 bg-[#4b4e54] text-white font-black py-4 rounded-xl hover:bg-neutral-700 transition-colors text-lg active:scale-95">빈 운동 시작</button>
               <button onClick={() => { if(selectedPastDate){ loadSpecificWorkout(selectedPastDate); setIsRoutineLoaderOpen(false); }}} className={`flex-1 font-black py-4 rounded-xl transition-all text-lg active:scale-95 ${selectedPastDate ? 'bg-[#4768ff] text-white shadow-[0_10px_25px_rgba(71,104,255,0.3)]' : 'bg-neutral-100 text-neutral-400'}`} disabled={!selectedPastDate}>불러오기</button>
             </div>
           </div>
