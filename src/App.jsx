@@ -2900,54 +2900,53 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111111] text-neutral-100 pb-[80px] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-white text-neutral-900 pb-[80px] flex flex-col relative overflow-hidden">
       {globalOverlays}
-      <header className="px-5 py-5 flex justify-between items-center sticky top-0 z-10 bg-[#111111]">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setIsFullCalendarOpen(true)} className="flex items-center gap-2 active:scale-95 transition-transform group">
-            <div className="w-11 h-11 bg-rose-500 rounded-full flex flex-col items-center justify-center text-white font-black shadow-[0_0_15px_rgba(244,63,94,0.3)]">
-              <span className="text-xs -mb-1">{currentDate.split('-')[1]}월</span>
-              <span className="text-lg leading-tight">{new Date(currentDate).getDate()}</span>
-            </div>
-            <span className="text-2xl font-black text-white group-hover:text-rose-400 transition-colors tracking-tight flex items-center gap-0.5">
-              {currentDate === formatDate(new Date()) ? '오늘' : `${currentDate.split('-')[1]}월 ${currentDate.split('-')[2]}일`} <ChevronRight className="w-5 h-5 rotate-90 text-neutral-500"/>
-            </span>
-          </button>
-        </div>
-        <div className="flex gap-4 items-center relative">
-          <button onClick={() => setIsFullCalendarOpen(true)} className="relative active:scale-90 transition-transform">
-            <CalendarDays className="w-7 h-7 text-neutral-400 hover:text-white transition-colors" />
-            {pastWorkoutDates.length > 0 && <div className="absolute -top-1.5 -right-2 bg-rose-400/20 text-rose-400 border border-rose-400/50 text-[10px] font-black px-1.5 py-0.5 rounded-md backdrop-blur-sm">{pastWorkoutDates.length}</div>}
+      <header className="px-5 pt-5 pb-3 flex justify-between items-center sticky top-0 z-10 bg-white/95 backdrop-blur-md">
+        {(() => {
+          const d = new Date(currentDate);
+          const isToday = currentDate === formatDate(new Date());
+          return (
+            <button onClick={() => setIsFullCalendarOpen(true)} className="flex items-center gap-1.5 active:scale-[0.98] transition-transform text-left">
+              <span className="text-[22px] font-black tracking-tight text-neutral-900">{d.getMonth() + 1}월 {d.getDate()}일 {['일', '월', '화', '수', '목', '금', '토'][d.getDay()]}요일</span>
+              {isToday && <span className="text-[11px] font-black text-white bg-neutral-900 px-2 py-0.5 rounded-full">오늘</span>}
+              <ChevronRight className="w-5 h-5 rotate-90 text-neutral-400" />
+            </button>
+          );
+        })()}
+        <div className="flex gap-2 items-center relative">
+          <button onClick={() => setIsFullCalendarOpen(true)} aria-label="달력" className="w-10 h-10 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center active:scale-90 transition-all">
+            <CalendarDays className="w-5 h-5 text-neutral-700" />
           </button>
           <div className="relative">
-            <button onClick={() => setIsNotiOpen(!isNotiOpen)} className="relative active:scale-90 transition-transform">
-              <Bell className={`w-7 h-7 transition-colors ${isNotiOpen ? 'text-white' : 'text-neutral-400'}`} />
-              {unreadCount > 0 && <div className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm ring-2 ring-[#111111]">{unreadCount}</div>}
+            <button onClick={() => setIsNotiOpen(!isNotiOpen)} aria-label="알림" className={`relative w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-all ${isNotiOpen ? 'bg-neutral-900' : 'bg-neutral-100 hover:bg-neutral-200'}`}>
+              <Bell className={`w-5 h-5 ${isNotiOpen ? 'text-white' : 'text-neutral-700'}`} />
+              {unreadCount > 0 && <div className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ring-2 ring-white">{unreadCount}</div>}
             </button>
             {isNotiOpen && (
-              <div className="absolute right-0 top-full mt-3 w-80 bg-neutral-900 rounded-[24px] shadow-[0_15px_50px_rgba(0,0,0,0.8)] border border-neutral-800 overflow-hidden z-50 animate-fade-in origin-top-right text-left">
-                <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-900/50">
-                  <span className="font-black text-white text-sm">새로운 알림</span>
-                  {cloudUser && <button onClick={() => { setIsNotiOpen(false); setIsFriendSearchModalOpen(true); }} className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-900/50 hover:bg-emerald-500/20 transition-colors">친구 관리</button>}
+              <div className="absolute right-0 top-full mt-3 w-80 bg-white rounded-[24px] shadow-[0_16px_48px_rgba(0,0,0,0.16)] border border-neutral-100 overflow-hidden z-50 animate-fade-in origin-top-right text-left">
+                <div className="p-4 border-b border-neutral-100 flex justify-between items-center">
+                  <span className="font-black text-neutral-900 text-sm">알림</span>
+                  {cloudUser && <button onClick={() => { setIsNotiOpen(false); setIsFriendSearchModalOpen(true); }} className="text-[11px] font-black text-[#4768ff] bg-[#eef2ff] px-2.5 py-1 rounded-lg hover:bg-[#e0e7ff] transition-colors">친구 관리</button>}
                 </div>
                 <div className="max-h-80 overflow-y-auto hide-scrollbar">
                   {friendState.incoming.map(r => (
-                    <div key={`req-${r.requestId}`} className="p-4 border-b border-neutral-800 bg-purple-900/20 hover:bg-purple-900/30 transition-colors">
-                      <div className="text-xs font-black text-purple-400 mb-2 flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> 친구 요청 도착!</div>
-                      <div className="text-sm font-bold text-neutral-300 leading-relaxed mb-3"><span className="text-white font-black">{profilesById[r.from]?.name || '짐스피릿 유저'}</span>님이 친구를 맺고 싶어해요.</div>
+                    <div key={`req-${r.requestId}`} className="p-4 border-b border-neutral-100">
+                      <div className="text-xs font-black text-[#4768ff] mb-1.5 flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> 친구 요청</div>
+                      <div className="text-sm font-bold text-neutral-600 leading-relaxed mb-3"><span className="text-neutral-900 font-black">{profilesById[r.from]?.name || '짐스피릿 유저'}</span>님이 친구를 맺고 싶어해요.</div>
                       <div className="flex gap-2">
-                        <button onClick={() => declineFriend(r.requestId)} className="flex-1 bg-neutral-800 text-neutral-300 text-xs font-black py-2 rounded-lg hover:bg-neutral-700 transition-colors">거절</button>
-                        <button onClick={() => acceptFriend(r.requestId)} className="flex-[2] bg-purple-500 text-white text-xs font-black py-2 rounded-lg hover:bg-purple-600 transition-colors">수락하기</button>
+                        <button onClick={() => declineFriend(r.requestId)} className="flex-1 bg-neutral-100 text-neutral-600 text-xs font-black py-2 rounded-lg hover:bg-neutral-200 transition-colors">거절</button>
+                        <button onClick={() => acceptFriend(r.requestId)} className="flex-[2] bg-[#4768ff] text-white text-xs font-black py-2 rounded-lg hover:bg-[#3b5bdb] transition-colors">수락하기</button>
                       </div>
                     </div>
                   ))}
                   {!cloudUser && (
-                    <button onClick={() => { setIsNotiOpen(false); goToSignup(); }} className="w-full p-4 text-left border-b border-neutral-800 hover:bg-neutral-800/50 transition-colors">
-                      <div className="text-xs font-black text-emerald-400 mb-1">게스트 모드</div>
-                      <div className="text-xs font-bold text-neutral-400 leading-relaxed">회원가입하면 친구 요청과 응원 알림을 받을 수 있어요.</div>
+                    <button onClick={() => { setIsNotiOpen(false); goToSignup(); }} className="w-full p-4 text-left border-b border-neutral-100 hover:bg-neutral-50 transition-colors">
+                      <div className="text-xs font-black text-[#4768ff] mb-1">게스트 모드</div>
+                      <div className="text-xs font-bold text-neutral-500 leading-relaxed">회원가입하면 친구 요청과 응원 알림을 받을 수 있어요.</div>
                     </button>
                   )}
-                  {cloudUser && unreadCount === 0 && (<div className="p-8 text-center text-neutral-500 font-bold text-sm">새로운 알림이 없습니다.</div>)}
+                  {cloudUser && unreadCount === 0 && (<div className="p-8 text-center text-neutral-400 font-bold text-sm">새로운 알림이 없어요</div>)}
                 </div>
               </div>
             )}
@@ -2958,25 +2957,25 @@ export default function App() {
       <div className="flex-1 overflow-y-auto hide-scrollbar">
         {activeTab === 'workout' && (
           <div className="flex flex-col h-full animate-fade-in">
-            <div className="flex justify-between px-6 mb-6 mt-2">
+            <div className="flex justify-between px-4 pb-4 pt-1 border-b border-neutral-100">
               {weekDays.map((d, index) => {
                 const dateStr = formatDate(d);
                 const isSelected = dateStr === currentDate;
                 const hasWorkout = Array.isArray(safeWorkouts[dateStr]) && safeWorkouts[dateStr].length > 0;
                 const dayNames = ['일','월','화','수','목','금','토'];
                 return (
-                  <button key={`wd-${index}`} onClick={() => setCurrentDate(dateStr)} className="flex flex-col items-center gap-2 group active:scale-90 transition-transform">
-                    <span className={`text-[11px] font-bold ${d.getDay()===0 ? 'text-rose-500' : d.getDay()===6 ? 'text-blue-500' : 'text-neutral-500'}`}>{dayNames[d.getDay()]}</span>
-                    <div className={`w-11 h-11 rounded-full flex flex-col items-center justify-center font-black text-lg relative transition-all ${isSelected ? 'bg-white text-neutral-900 shadow-[0_5px_15px_rgba(255,255,255,0.2)] scale-110' : 'text-neutral-400 hover:bg-neutral-800 border border-neutral-800'}`}>
+                  <button key={`wd-${index}`} onClick={() => setCurrentDate(dateStr)} className="flex flex-col items-center gap-1.5 w-11 active:scale-90 transition-transform">
+                    <span className={`text-[11px] font-bold ${d.getDay()===0 ? 'text-rose-400' : d.getDay()===6 ? 'text-blue-400' : 'text-neutral-400'}`}>{dayNames[d.getDay()]}</span>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[17px] font-black transition-all ${isSelected ? 'bg-neutral-900 text-white' : dateStr === formatDate(new Date()) ? 'text-[#4768ff] bg-[#eef2ff]' : 'text-neutral-800 hover:bg-neutral-100'}`}>
                       {d.getDate()}
-                      {hasWorkout && <div className={`w-1.5 h-1.5 rounded-full absolute -bottom-2 ${isSelected ? 'bg-emerald-500' : 'bg-emerald-500/50'}`} />}
                     </div>
+                    <div className={`w-1 h-1 rounded-full -mt-1 ${hasWorkout ? 'bg-[#4768ff]' : 'bg-transparent'}`} />
                   </button>
                 );
               })}
             </div>
 
-            <div className="flex-1 bg-neutral-50 rounded-t-[40px] text-neutral-900 p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] pb-32 min-h-[60vh]">
+            <div className="flex-1 bg-neutral-50 text-neutral-900 p-5 pb-32 min-h-[60vh]">
               <div className="flex gap-3 mb-8 mt-2">
                 <div onClick={() => setCurrentScreen('diet')} className="flex-1 bg-white p-4 rounded-[24px] border border-neutral-100 flex items-center gap-3 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer active:scale-95 group">
                   <div className="bg-neutral-50 p-2.5 rounded-xl shadow-inner border border-neutral-100 group-hover:scale-110 group-hover:bg-emerald-50 transition-all"><Utensils className="w-5 h-5 text-emerald-600" /></div>
@@ -3590,8 +3589,8 @@ export default function App() {
                <div className="flex justify-center pt-3 pb-2 bg-white"><div className="w-12 h-1.5 bg-neutral-200 rounded-full"></div></div>
                <div className="px-6 flex justify-between items-start mb-4 border-b border-neutral-100 pb-5 bg-white">
                  <div>
-                   <h2 className="text-2xl font-black tracking-tight">{selectedDayDetailModal} 훈련</h2>
-                   <p className="text-sm font-bold text-neutral-500 mt-2">{sessionData.length}개 종목 수행</p>
+                   <h2 className="text-2xl font-black tracking-tight">{(() => { const d = new Date(selectedDayDetailModal); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${['일','월','화','수','목','금','토'][d.getDay()]})`; })()}</h2>
+                   <p className="text-sm font-bold text-neutral-400 mt-1">{sessionData.length > 0 ? `운동 기록 · ${sessionData.length}개 종목` : '운동 기록 없음'}</p>
                  </div>
                  <button onClick={() => setSelectedDayDetailModal(null)} className="p-2 bg-neutral-100 rounded-full hover:bg-neutral-200 transition-colors active:scale-90"><X className="w-5 h-5 text-neutral-500"/></button>
                </div>
@@ -3603,7 +3602,7 @@ export default function App() {
                  </div>
                  <div className="space-y-4">
                     {sessionData.length === 0 ? (
-                      <div className="text-center py-20 text-neutral-400 font-bold flex flex-col items-center"><Dumbbell className="w-12 h-12 mb-3 opacity-50"/>이 날은 기록된 운동이 없습니다.</div>
+                      <div className="text-center py-20 text-neutral-400 font-bold flex flex-col items-center"><Dumbbell className="w-12 h-12 mb-3 opacity-50"/>이 날은 기록된 운동이 없어요</div>
                     ) : (
                       sessionData.map((ex, idx) => (
                         <div key={`d-ex-${idx}`} className="bg-white p-4 rounded-2xl border border-neutral-100 flex justify-between items-center shadow-sm hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer group">
@@ -3621,7 +3620,7 @@ export default function App() {
                </div>
                {sessionData.length > 0 && (
                  <div className="p-5 bg-white border-t border-neutral-100 shadow-[0_-5px_15px_rgba(0,0,0,0.02)] flex gap-2">
-                   <button onClick={() => openPhotoCard(selectedDayDetailModal)} className="flex-1 bg-neutral-900 text-white font-black py-4 rounded-xl shadow-md hover:bg-neutral-800 active:scale-95 transition-all text-base flex items-center justify-center gap-2"><Camera className="w-5 h-5 text-emerald-400"/> 인증카드</button>
+                   <button onClick={() => openPhotoCard(selectedDayDetailModal)} className="flex-1 bg-neutral-900 text-white font-black py-4 rounded-xl shadow-md hover:bg-neutral-800 active:scale-95 transition-all text-base flex items-center justify-center gap-2"><Camera className="w-5 h-5"/> 인증카드</button>
                    <button onClick={() => { loadSpecificWorkout(selectedDayDetailModal); setSelectedDayDetailModal(null); }} className="flex-[2] bg-[#4768ff] text-white font-black py-4 rounded-xl shadow-[0_10px_25px_rgba(71,104,255,0.3)] hover:bg-blue-600 active:scale-95 transition-all text-base">이 루틴 불러와서 운동하기</button>
                  </div>
                )}
@@ -3719,42 +3718,56 @@ export default function App() {
         </div>
       )}
 
-      {isFullCalendarOpen && (
-        <div className="fixed inset-0 bg-black/80 z-[80] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity" onClick={() => setIsFullCalendarOpen(false)}>
-          <div className="bg-neutral-900 rounded-[40px] p-8 max-w-sm w-full shadow-2xl border border-neutral-800 text-white relative" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex items-center gap-2">
-                <button onClick={() => setCalendarYear(prev => prev - 1)} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-white transition-colors"><ChevronLeft className="w-4 h-4"/></button>
-                <span className="text-lg font-black tracking-tight">{calendarYear}년</span>
-                <button onClick={() => setCalendarYear(prev => prev + 1)} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-white transition-colors"><ChevronRight className="w-4 h-4"/></button>
-                <div className="w-[1px] h-4 bg-neutral-700 mx-1"></div>
-                <button onClick={() => { if(calendarMonth === 0) { setCalendarMonth(11); setCalendarYear(prev => prev - 1); } else { setCalendarMonth(prev => prev - 1); } }} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-white transition-colors"><ChevronLeft className="w-4 h-4"/></button>
-                <span className="text-lg font-black tracking-tight">{calendarMonth + 1}월</span>
-                <button onClick={() => { if(calendarMonth === 11) { setCalendarMonth(0); setCalendarYear(prev => prev + 1); } else { setCalendarMonth(prev => prev + 1); } }} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-white transition-colors"><ChevronRight className="w-4 h-4"/></button>
+      {isFullCalendarOpen && (() => {
+        const todayStr = formatDate(new Date());
+        const monthPrefix = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-`;
+        const monthWorkoutDays = Object.keys(safeWorkouts).filter(k => k.startsWith(monthPrefix) && Array.isArray(safeWorkouts[k]) && safeWorkouts[k].length > 0).length;
+        const moveMonth = (delta) => {
+          const m = calendarMonth + delta;
+          if (m < 0) { setCalendarMonth(11); setCalendarYear(prev => prev - 1); }
+          else if (m > 11) { setCalendarMonth(0); setCalendarYear(prev => prev + 1); }
+          else setCalendarMonth(m);
+        };
+        return (
+          <div className="fixed inset-0 bg-black/40 z-[80] flex items-center justify-center p-4 backdrop-blur-[2px] animate-fade-in" onClick={() => setIsFullCalendarOpen(false)}>
+            <div className="bg-white rounded-[28px] p-5 max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.2)] text-neutral-900 relative" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-1">
+                <div className="flex items-center gap-1">
+                  <button onClick={() => moveMonth(-1)} aria-label="이전 달" className="w-9 h-9 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-500 active:scale-90 transition-all"><ChevronLeft className="w-5 h-5"/></button>
+                  <span className="text-lg font-black tracking-tight min-w-[104px] text-center">{calendarYear}년 {calendarMonth + 1}월</span>
+                  <button onClick={() => moveMonth(1)} aria-label="다음 달" className="w-9 h-9 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-500 active:scale-90 transition-all"><ChevronRight className="w-5 h-5"/></button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => { const today = new Date(); setCalendarYear(today.getFullYear()); setCalendarMonth(today.getMonth()); setCurrentDate(todayStr); setIsFullCalendarOpen(false); }} className="text-xs font-black text-neutral-700 bg-neutral-100 px-3 h-8 rounded-full hover:bg-neutral-200 transition-colors">오늘</button>
+                  <button onClick={() => setIsFullCalendarOpen(false)} aria-label="닫기" className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center active:scale-90 transition-all"><X className="w-4 h-4 text-neutral-500"/></button>
+                </div>
               </div>
-              <button onClick={() => setIsFullCalendarOpen(false)} className="p-2.5 bg-neutral-800 rounded-full hover:bg-neutral-700 active:scale-90 transition-transform"><X className="w-5 h-5"/></button>
-            </div>
-            <div className="flex justify-between items-center mb-4">
-              <button onClick={() => { const today = new Date(); setCalendarYear(today.getFullYear()); setCalendarMonth(today.getMonth()); setCurrentDate(formatDate(today)); setIsFullCalendarOpen(false); }} className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-900/50 hover:bg-emerald-500/20 transition-colors">오늘 날짜로 이동</button>
-            </div>
-            <div className="grid grid-cols-7 gap-y-6 gap-x-2 text-center text-sm">
-              {['일','월','화','수','목','금','토'].map((d,i) => <div key={`dw-${d}`} className={`font-black mb-2 ${i===0 ? 'text-rose-500' : i===6 ? 'text-blue-500' : 'text-neutral-500'}`}>{d}</div>)}
-              {getMonthDays(calendarYear, calendarMonth).map((d, i) => {
-                if (!d) return <div key={`empty-${i}`} />;
-                const dateStr = formatDate(d);
-                const isSelected = dateStr === currentDate;
-                const hasWorkout = Array.isArray(safeWorkouts[dateStr]) && safeWorkouts[dateStr].length > 0;
-                return (
-                  <button key={`day-${i}`} onClick={() => { setCurrentDate(dateStr); setIsFullCalendarOpen(false); }} className={`w-12 h-12 mx-auto rounded-2xl flex items-center justify-center font-black relative transition-all active:scale-95 ${isSelected ? 'bg-emerald-500 text-neutral-900 shadow-[0_0_20px_rgba(16,185,129,0.5)] scale-110' : 'text-neutral-200 hover:bg-neutral-800'}`}>
-                    {d.getDate()}
-                    {hasWorkout && <div className={`w-1.5 h-1.5 rounded-full absolute bottom-1.5 ${isSelected ? 'bg-neutral-900' : 'bg-emerald-500'}`} />}
-                  </button>
-                );
-              })}
+              <div className="text-xs font-bold text-neutral-400 px-2 mb-4">이번 달 <span className="text-[#4768ff] font-black">{monthWorkoutDays}일</span> 운동했어요</div>
+              <div className="grid grid-cols-7 gap-y-1 text-center">
+                {['일','월','화','수','목','금','토'].map((d,i) => <div key={`dw-${d}`} className={`text-[11px] font-bold pb-2 ${i===0 ? 'text-rose-400' : i===6 ? 'text-blue-400' : 'text-neutral-400'}`}>{d}</div>)}
+                {getMonthDays(calendarYear, calendarMonth).map((d, i) => {
+                  if (!d) return <div key={`empty-${i}`} />;
+                  const dateStr = formatDate(d);
+                  const isSelected = dateStr === currentDate;
+                  const isToday = dateStr === todayStr;
+                  const hasWorkout = Array.isArray(safeWorkouts[dateStr]) && safeWorkouts[dateStr].length > 0;
+                  return (
+                    <button key={`day-${i}`} onClick={() => { setCurrentDate(dateStr); setIsFullCalendarOpen(false); }} className="flex flex-col items-center gap-0.5 py-0.5 active:scale-90 transition-transform">
+                      <span className={`w-10 h-10 rounded-full flex items-center justify-center text-[15px] font-bold transition-colors ${isSelected ? 'bg-neutral-900 text-white font-black' : isToday ? 'bg-[#eef2ff] text-[#4768ff] font-black' : d.getDay() === 0 ? 'text-rose-400 hover:bg-neutral-100' : 'text-neutral-800 hover:bg-neutral-100'}`}>{d.getDate()}</span>
+                      <span className={`w-1 h-1 rounded-full ${hasWorkout ? 'bg-[#4768ff]' : 'bg-transparent'}`} />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-neutral-100 px-1 text-[11px] font-bold text-neutral-400">
+                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#4768ff]" />운동한 날</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#eef2ff] ring-1 ring-[#c7d2fe]" />오늘</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-neutral-900" />선택한 날</span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {selectedProgramModal && (
         <div className="fixed inset-0 bg-black/70 z-[70] flex flex-col justify-end animate-fade-in" onClick={() => setSelectedProgramModal(null)}>
