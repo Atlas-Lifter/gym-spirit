@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.DS_Store
+.env
+.env.*
+# 표지 원본(고해상도) - 앱은 public/covers 의 줄인 파일만 사용
+cover-sources/
