@@ -20,6 +20,7 @@ import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
 import { StopwatchDial } from './StopwatchDial.jsx';
 import { computeRecovery } from './recovery.js';
+import { estimateFromLifts } from './strengthRatios.js';
 import { weightRule, platesFor, setLoad, nextWeight, formatPlates, sideWeight } from './weightRules.js';
 import { DEFAULT_TIMER_SETTINGS, ALARM_SOUNDS, REPEAT_OPTIONS, REST_OPTIONS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { FriendCenter } from './FriendCenter.jsx';
@@ -1500,7 +1501,11 @@ export default function App() {
   // 이 무게를 최대 몇 번 들 수 있는지(Epley 역산) 구하고, 남은 반복 수를 RPE로 바꾼다 (RPE = 10 - 남은 반복)
   const exOneRM = (ex) => {
     const id = String(getExId(ex));
-    return ['sq', 'bp', 'dl'].includes(id) ? getEffective1RM(id) : getTop1RM(id);
+    if (['sq', 'bp', 'dl'].includes(id)) return getEffective1RM(id);
+    // 내 기록이 있으면 그 기록, 없으면 3대 수준으로 추정 (strengthRatios.js)
+    const own = getTop1RM(id);
+    if (own > 0) return own;
+    return estimateFromLifts(id, { sq: getEffective1RM('sq'), bp: getEffective1RM('bp'), dl: getEffective1RM('dl') })?.rm || 0;
   };
   const suggestRpe = (ex, set, oneRM = exOneRM(ex)) => {
     const rule = ruleOfEx(ex);
