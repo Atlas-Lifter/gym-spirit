@@ -3220,7 +3220,7 @@ export default function App() {
                        <div className="text-3xl font-black text-neutral-900">{getTotalLift3()} <span className="text-base text-neutral-400 font-bold">kg</span></div>
                      </div>
                      <div className="flex flex-col gap-2">
-                       <button onClick={() => { setManualRmInputs(activeUser?.manual1RM || { sq: getTop1RM('sq'), bp: getTop1RM('bp'), dl: getTop1RM('dl') }); setIsManualRmModalOpen(true); }} className="flex items-center gap-1.5 justify-center text-xs font-black text-neutral-600 bg-neutral-100 px-3 py-1.5 rounded-xl border border-neutral-200 hover:bg-neutral-200 transition-colors"><Edit3 className="w-3 h-3"/> 수동 기록</button>
+                       <button onClick={() => { setManualRmInputs(Object.fromEntries(['sq', 'bp', 'dl'].map(k => { const v = parseFloat((activeUser?.manual1RM || {})[k]) || getTop1RM(k); return [k, v > 0 ? String(v) : '']; }))); setIsManualRmModalOpen(true); }} className="flex items-center gap-1.5 justify-center text-xs font-black text-neutral-600 bg-neutral-100 px-3 py-1.5 rounded-xl border border-neutral-200 hover:bg-neutral-200 transition-colors"><Edit3 className="w-3 h-3"/> 수동 기록</button>
                        <button onClick={() => setIsOneRmCalculatorOpen(true)} className="flex items-center justify-center gap-1.5 text-[11px] font-black text-[#4768ff] bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 hover:bg-blue-100 transition-colors"><Calculator className="w-3 h-3"/> 계산기</button>
                      </div>
                    </div>
@@ -3902,7 +3902,7 @@ export default function App() {
                 <div key={key} className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 flex justify-between items-center">
                   <span className={`font-black ${color} text-sm`}>{label}</span>
                   <div className="flex items-center gap-1">
-                    <input type="number" value={manualRmInputs[key]} onChange={e=>setManualRmInputs({...manualRmInputs, [key]: e.target.value})} className="w-20 text-right font-black text-xl bg-transparent border-b border-neutral-700 focus:border-[#4768ff] outline-none transition-colors" placeholder="-"/>
+                    <input type="number" inputMode="decimal" placeholder="0" value={manualRmInputs[key]} onFocus={e => e.target.select()} onChange={e=>setManualRmInputs({...manualRmInputs, [key]: e.target.value})} className="w-20 text-right font-black text-xl bg-transparent border-b border-neutral-700 focus:border-[#4768ff] outline-none transition-colors" placeholder="-"/>
                     <span className="text-neutral-500 font-bold text-sm">kg</span>
                   </div>
                 </div>
