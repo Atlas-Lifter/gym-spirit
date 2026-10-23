@@ -1980,20 +1980,20 @@ export default function App() {
           </button>
         )}
         {isAlarmSettingsOpen && (
-          <div className="fixed inset-0 bg-black/50 z-[90] flex flex-col justify-end animate-fade-in" onClick={() => { stopAlarm(); setIsAlarmSettingsOpen(false); }}>
-            <div className="bg-white text-neutral-900 w-full max-w-md mx-auto rounded-t-[32px] p-6 pb-10 border-t border-emerald-100 animate-slide-up max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="flex justify-center mb-4"><div className="w-12 h-1.5 bg-neutral-200 rounded-full"></div></div>
+          <div className="fixed inset-0 bg-black/70 z-[90] flex flex-col justify-end animate-fade-in" onClick={() => { stopAlarm(); setIsAlarmSettingsOpen(false); }}>
+            <div className="bg-neutral-900 text-white w-full max-w-md mx-auto rounded-t-[32px] p-6 pb-10 border-t border-neutral-800 animate-slide-up max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-center mb-4"><div className="w-12 h-1.5 bg-neutral-700 rounded-full"></div></div>
               <div className="flex items-center justify-between mb-1">
-                <h3 className="text-xl font-black flex items-center gap-2"><Bell className="w-5 h-5 text-emerald-500" /> 휴식 알람 설정</h3>
-                <button onClick={() => { stopAlarm(); setIsAlarmSettingsOpen(false); }} className="p-2 bg-neutral-100 rounded-full text-neutral-400"><X className="w-5 h-5" /></button>
+                <h3 className="text-xl font-black flex items-center gap-2"><Bell className="w-5 h-5 text-emerald-400" /> 휴식 알람 설정</h3>
+                <button onClick={() => { stopAlarm(); setIsAlarmSettingsOpen(false); }} className="p-2 bg-neutral-800 rounded-full text-neutral-400"><X className="w-5 h-5" /></button>
               </div>
               <p className="text-xs font-bold text-neutral-500 mb-5">소리를 누르면 미리 들어볼 수 있어요.</p>
 
-              <p className="text-xs font-black text-neutral-500 mb-2">알람 소리</p>
+              <p className="text-xs font-black text-neutral-400 mb-2">알람 소리</p>
               <div className="grid grid-cols-2 gap-2 mb-2">
                 {ALARM_SOUNDS.map(a => (
                   <button key={a.id} onClick={() => { updateTimerSettings({ sound: a.id }); previewAlarm({ sound: a.id }); }}
-                    className={`text-left p-3 rounded-2xl border transition-all active:scale-[0.97] ${timerSettings.sound === a.id ? 'bg-emerald-50 border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.25)]' : 'bg-neutral-50 border-neutral-100 hover:border-emerald-200'}`}>
+                    className={`text-left p-3 rounded-2xl border transition-all active:scale-[0.97] ${timerSettings.sound === a.id ? 'bg-emerald-500/15 border-emerald-500' : 'bg-neutral-950 border-neutral-800 hover:border-neutral-600'}`}>
                     <div className="text-lg mb-0.5">{a.emoji}</div>
                     <div className="text-sm font-black">{a.label}</div>
                     <div className="text-[10px] font-bold text-neutral-500 leading-snug">{a.desc}</div>
@@ -2002,30 +2002,30 @@ export default function App() {
               </div>
               <p className="text-[10px] font-bold text-neutral-500 mb-5 leading-relaxed">음성 멘트는 기기에 내장된 음성으로 읽어 줘요. 실제 인물의 목소리는 아니에요. 아이폰은 무음 모드를 끄면 들려요.</p>
 
-              <p className="text-xs font-black text-neutral-500 mb-2">울리는 길이</p>
+              <p className="text-xs font-black text-neutral-400 mb-2">울리는 길이</p>
               <div className="grid grid-cols-4 gap-2 mb-5">
                 {REPEAT_OPTIONS.map(o => (
-                  <button key={o.value} onClick={() => updateTimerSettings({ repeat: o.value })} className={`py-2.5 rounded-xl border text-center transition-all ${timerSettings.repeat === o.value ? 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_14px_rgba(16,185,129,0.35)]' : 'bg-neutral-50 border-neutral-100 text-neutral-600'}`}>
+                  <button key={o.value} onClick={() => updateTimerSettings({ repeat: o.value })} className={`py-2.5 rounded-xl border text-center transition-all ${timerSettings.repeat === o.value ? 'bg-emerald-500 text-neutral-950 border-emerald-500' : 'bg-neutral-950 border-neutral-800 text-neutral-300'}`}>
                     <div className="text-xs font-black">{o.label}</div>
-                    <div className={`text-[10px] font-bold ${timerSettings.repeat === o.value ? 'text-emerald-50' : 'text-neutral-400'}`}>{o.desc}</div>
+                    <div className={`text-[10px] font-bold ${timerSettings.repeat === o.value ? 'text-neutral-800' : 'text-neutral-500'}`}>{o.desc}</div>
                   </button>
                 ))}
               </div>
 
-              <p className="text-xs font-black text-neutral-500 mb-2">소리 크기 <span className="text-neutral-500">{Math.round(timerSettings.volume * 100)}%</span></p>
+              <p className="text-xs font-black text-neutral-400 mb-2">소리 크기 <span className="text-neutral-500">{Math.round(timerSettings.volume * 100)}%</span></p>
               <input type="range" min="0.1" max="1" step="0.1" value={timerSettings.volume} onChange={e => updateTimerSettings({ volume: parseFloat(e.target.value) })} className="w-full accent-emerald-500 mb-5" />
 
-              <p className="text-xs font-black text-neutral-500 mb-2">세트 완료 후 기본 휴식 시간</p>
+              <p className="text-xs font-black text-neutral-400 mb-2">세트 완료 후 기본 휴식 시간</p>
               <div className="grid grid-cols-4 gap-2 mb-5">
                 {REST_OPTIONS.map(sec => (
-                  <button key={sec} onClick={() => updateTimerSettings({ defaultRest: sec })} className={`py-2.5 rounded-xl border text-xs font-black transition-all ${timerSettings.defaultRest === sec ? 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_14px_rgba(16,185,129,0.35)]' : 'bg-neutral-50 border-neutral-100 text-neutral-600'}`}>{sec >= 60 ? `${sec / 60}분` : `${sec}초`}</button>
+                  <button key={sec} onClick={() => updateTimerSettings({ defaultRest: sec })} className={`py-2.5 rounded-xl border text-xs font-black transition-all ${timerSettings.defaultRest === sec ? 'bg-emerald-500 text-neutral-950 border-emerald-500' : 'bg-neutral-950 border-neutral-800 text-neutral-300'}`}>{sec >= 60 ? `${sec / 60}분` : `${sec}초`}</button>
                 ))}
               </div>
 
               {[['countdown', '끝나기 3초 전 카운트다운', '3·2·1 짧은 신호음'], ['vibrate', '진동', '안드로이드 휴대폰에서 지원돼요']].map(([key, label, desc]) => (
-                <button key={key} onClick={() => updateTimerSettings({ [key]: !timerSettings[key] })} className="w-full flex items-center justify-between py-3 border-t border-neutral-100">
+                <button key={key} onClick={() => updateTimerSettings({ [key]: !timerSettings[key] })} className="w-full flex items-center justify-between py-3 border-t border-neutral-800">
                   <span className="text-left"><span className="block text-sm font-black">{label}</span><span className="block text-[11px] font-bold text-neutral-500">{desc}</span></span>
-                  <span className={`w-12 h-7 rounded-full p-1 transition-colors ${timerSettings[key] ? 'bg-emerald-500' : 'bg-neutral-200'}`}><span className={`block w-5 h-5 rounded-full bg-white transition-transform ${timerSettings[key] ? 'translate-x-5' : ''}`} /></span>
+                  <span className={`w-12 h-7 rounded-full p-1 transition-colors ${timerSettings[key] ? 'bg-emerald-500' : 'bg-neutral-700'}`}><span className={`block w-5 h-5 rounded-full bg-white transition-transform ${timerSettings[key] ? 'translate-x-5' : ''}`} /></span>
                 </button>
               ))}
             </div>
@@ -2333,49 +2333,46 @@ export default function App() {
       }, 0), 0);
     const getRpeColor = (rpeStr) => {
       const r = parseInt(rpeStr, 10);
-      if (isNaN(r)) return 'bg-neutral-50 text-neutral-400 focus:border-emerald-400 focus:bg-white border-neutral-200';
-      if (r >= 9) return 'bg-rose-50 text-rose-600 focus:border-rose-400 border-rose-200 shadow-[0_0_10px_rgba(225,29,72,0.12)]';
-      if (r >= 7) return 'bg-amber-50 text-amber-600 focus:border-amber-400 border-amber-200 shadow-[0_0_10px_rgba(217,119,6,0.12)]';
-      return 'bg-emerald-50 text-emerald-600 focus:border-emerald-400 border-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.15)]';
+      if (isNaN(r)) return 'bg-neutral-900/50 text-neutral-400 focus:border-neutral-500 border-neutral-800';
+      if (r >= 9) return 'bg-rose-950/40 text-rose-400 focus:border-rose-500 border-rose-900/50 shadow-[0_0_10px_rgba(225,29,72,0.2)]';
+      if (r >= 7) return 'bg-amber-950/40 text-amber-400 focus:border-amber-500 border-amber-900/50 shadow-[0_0_10px_rgba(217,119,6,0.2)]';
+      return 'bg-emerald-950/40 text-emerald-400 focus:border-emerald-500 border-emerald-900/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]';
     };
 
     return (
-      <div className="min-h-screen bg-[#f4faf7] text-neutral-900 pb-32 flex flex-col relative animate-fade-in">
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 pb-32 flex flex-col relative animate-fade-in">
         {globalOverlays}
-        {/* 트론 느낌의 은은한 에메랄드 격자 */}
-        <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'linear-gradient(rgba(16,185,129,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px', WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.35) 70%, transparent 100%)', maskImage: 'linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.35) 70%, transparent 100%)' }} />
-        <header className="bg-white/85 backdrop-blur-md border-b border-emerald-100 px-4 py-4 sticky top-0 z-20 flex justify-between items-center shadow-[0_4px_20px_rgba(16,185,129,0.06)]">
-          <div className="absolute left-0 right-0 -bottom-px h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-80 shadow-[0_0_10px_rgba(16,185,129,0.7)]" />
+        <header className="bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 px-4 py-4 sticky top-0 z-20 flex justify-between items-center">
           <button onClick={() => {
             const hasProgress = session.some(ex => (ex.sets || []).some(s => s.completed));
             if (hasProgress) { setIsExitConfirmOpen(true); return; }
             exitWorkout();
-          }} className="text-neutral-500 hover:text-neutral-900 flex items-center gap-1 bg-neutral-100 px-3 py-1.5 rounded-xl font-bold transition-colors"><ChevronLeft className="w-5 h-5"/> 나가기</button>
+          }} className="text-neutral-400 hover:text-white flex items-center gap-1 bg-neutral-800/50 px-3 py-1.5 rounded-xl font-bold transition-colors"><ChevronLeft className="w-5 h-5"/> 나가기</button>
           <div className="flex items-center gap-3">
-            {currentSessionVolume > 0 && (<div className="text-sm font-black text-amber-600 tracking-tight bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 animate-fade-in">{currentSessionVolume.toLocaleString()} <span className="text-[10px]">kg</span></div>)}
-            <div className="font-black text-base text-emerald-600 tracking-wider flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.25)]"><Clock className="w-4 h-4 animate-pulse"/> {formattedWorkoutTime}</div>
+            {currentSessionVolume > 0 && (<div className="text-sm font-black text-amber-400 tracking-tight bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-900/50 animate-fade-in">{currentSessionVolume.toLocaleString()} <span className="text-[10px]">kg</span></div>)}
+            <div className="font-black text-base text-emerald-400 tracking-wider flex items-center gap-1.5 bg-neutral-900 px-3 py-1 rounded-xl border border-neutral-800"><Clock className="w-4 h-4 animate-pulse"/> {formattedWorkoutTime}</div>
           </div>
-          <button onClick={() => { navigator.clipboard?.writeText(window.location.href)?.catch(() => {}); showToast("운동 루틴 링크가 클립보드에 복사되었습니다!"); }} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 active:scale-95">공유</button>
+          <button onClick={() => { navigator.clipboard?.writeText(window.location.href)?.catch(() => {}); showToast("운동 루틴 링크가 클립보드에 복사되었습니다!"); }} className="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-900/50 active:scale-95">공유</button>
         </header>
 
         {isExitConfirmOpen && (
-          <div className="fixed inset-0 bg-black/50 z-[85] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setIsExitConfirmOpen(false)}>
-            <div className="bg-white border border-emerald-100 rounded-[32px] p-6 max-w-sm w-full text-neutral-900 shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/80 z-[85] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setIsExitConfirmOpen(false)}>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 max-w-sm w-full text-white shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-black mb-2">저장하지 않고 나갈까요?</h3>
-              <p className="text-sm font-bold text-neutral-500 mb-6 leading-relaxed">완료한 세트가 있습니다. 지금 나가면 이번 운동 기록이 사라집니다.</p>
+              <p className="text-sm font-bold text-neutral-400 mb-6 leading-relaxed">완료한 세트가 있습니다. 지금 나가면 이번 운동 기록이 사라집니다.</p>
               <div className="flex gap-3">
-                <button onClick={() => setIsExitConfirmOpen(false)} className="flex-1 py-3.5 bg-emerald-500 text-white font-black rounded-xl hover:bg-emerald-400 transition-colors active:scale-95 shadow-[0_6px_18px_rgba(16,185,129,0.35)]">계속 운동하기</button>
+                <button onClick={() => setIsExitConfirmOpen(false)} className="flex-1 py-3.5 bg-neutral-800 text-neutral-300 font-black rounded-xl hover:bg-neutral-700 transition-colors active:scale-95">계속 운동하기</button>
                 <button onClick={exitWorkout} className="flex-1 py-3.5 bg-rose-500 text-white font-black rounded-xl hover:bg-rose-400 transition-colors active:scale-95">기록 버리고 나가기</button>
               </div>
             </div>
           </div>
         )}
 
-        <main className="max-w-md mx-auto w-full p-4 space-y-6 flex-1 mt-2 relative z-10">
+        <main className="max-w-md mx-auto w-full p-4 space-y-6 flex-1 mt-2">
           {session.length === 0 ? (
-            <div className="text-center py-24 flex flex-col items-center">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-5 border border-emerald-200 shadow-[0_0_24px_rgba(16,185,129,0.25)]"><Dumbbell className="w-10 h-10 text-emerald-500" /></div>
-              <p className="font-black text-neutral-800 text-xl mb-2">운동을 시작해볼까요?</p>
+            <div className="text-center py-24 opacity-60 flex flex-col items-center">
+              <div className="w-20 h-20 bg-neutral-900 rounded-full flex items-center justify-center mb-5 border border-neutral-800 shadow-inner"><Dumbbell className="w-10 h-10 text-neutral-600" /></div>
+              <p className="font-black text-neutral-300 text-xl mb-2">운동을 시작해볼까요?</p>
               <p className="font-medium text-neutral-500 text-sm">하단의 버튼을 눌러 종목을 추가하세요.</p>
             </div>
           ) : (
@@ -2387,34 +2384,33 @@ export default function App() {
               const exToolStr = ex.exercise && ex.exercise.tool ? String(ex.exercise.tool) : '바벨';
               const exRule = ruleOfEx(ex);
               return (
-                <div key={ex.id} className="bg-white rounded-[28px] p-5 border border-emerald-100 shadow-[0_10px_30px_rgba(16,185,129,0.08)] relative overflow-hidden">
-                  <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_rgba(16,185,129,0.9)]" />
-                  <div className="flex justify-between items-start gap-2 mb-5 border-b border-neutral-100 pb-4">
+                <div key={ex.id} className="bg-neutral-900 rounded-[28px] p-5 border border-neutral-800 shadow-xl relative">
+                  <div className="flex justify-between items-start gap-2 mb-5 border-b border-neutral-800 pb-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                        <SmartExerciseThumbnail exerciseId={exIdStr} target={exTargetStr} tool={exToolStr} showShadow={false} size="w-14 h-14" />
                        <div className="min-w-0">
                          <button onClick={() => { setSwapTargetExerciseId(ex.id); setIsAddExerciseModalOpen(true); }} className="text-left active:scale-95 transition-transform group flex items-center gap-1.5 max-w-full">
-                           <h2 className="text-lg leading-tight font-black text-neutral-900 group-hover:text-emerald-600 transition-colors">{exNameStr}</h2>
-                           <Settings className="w-4 h-4 text-neutral-300 group-hover:text-emerald-500 transition-colors" />
+                           <h2 className="text-lg leading-tight font-black text-white group-hover:text-emerald-400 transition-colors">{exNameStr}</h2>
+                           <Settings className="w-4 h-4 text-neutral-500 group-hover:text-emerald-400 transition-colors" />
                          </button>
                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                           <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">{exTargetStr}</span>
-                           <span className="text-[11px] font-bold text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200 whitespace-nowrap">⚖️ {exRule.hint}</span>
-                           <button onClick={() => setGuideExerciseId(exIdStr)} className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 hover:bg-blue-100 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"><BookOpen className="w-3 h-3"/> 설명</button>
-                           <button onClick={() => setSubstituteModalEx(ex)} className="text-[11px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 hover:bg-amber-100 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap" title="기구 대기 시 대체 운동 추천"><Zap className="w-3 h-3 fill-amber-400"/> 대체</button>
-                           {max1RM > 0 && <span className="text-[11px] font-bold text-neutral-400 flex items-center gap-1"><Target className="w-3 h-3"/> 1RM <span className="text-neutral-900 bg-neutral-100 px-1.5 py-0.5 rounded">{max1RM}kg</span></span>}
+                           <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-900">{exTargetStr}</span>
+                           <span className="text-[11px] font-bold text-neutral-300 bg-neutral-800 px-2 py-0.5 rounded-md border border-neutral-700 whitespace-nowrap">⚖️ {exRule.hint}</span>
+                           <button onClick={() => setGuideExerciseId(exIdStr)} className="text-[11px] font-black text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-900/60 hover:bg-blue-500/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"><BookOpen className="w-3 h-3"/> 설명</button>
+                           <button onClick={() => setSubstituteModalEx(ex)} className="text-[11px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-900/60 hover:bg-amber-500/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap" title="기구 대기 시 대체 운동 추천"><Zap className="w-3 h-3 fill-amber-400"/> 대체</button>
+                           {max1RM > 0 && <span className="text-[11px] font-bold text-neutral-400 flex items-center gap-1"><Target className="w-3 h-3"/> 1RM <span className="text-white bg-neutral-800 px-1.5 py-0.5 rounded">{max1RM}kg</span></span>}
                            {checkOverloadRecommendation(exIdStr) && (
-                             <button onClick={() => applyProgressiveOverload(ex.id)} className="text-[10px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300 hover:bg-amber-200 transition-all flex items-center gap-1 active:scale-95"><Flame className="w-3 h-3 text-amber-500 animate-bounce"/> 지난주 완수! +2.5kg 증량</button>
+                             <button onClick={() => applyProgressiveOverload(ex.id)} className="text-[10px] font-black text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/50 hover:bg-amber-500/30 transition-all flex items-center gap-1 active:scale-95"><Flame className="w-3 h-3 text-amber-400 animate-bounce"/> 지난주 완수! +2.5kg 증량</button>
                            )}
                          </div>
                        </div>
                     </div>
                     <div className="flex items-center flex-shrink-0">
-                      <button onClick={() => setExerciseOptionsModal(ex.id)} className="text-neutral-400 hover:text-neutral-900 transition-colors p-2 rounded-full hover:bg-neutral-100 active:scale-90"><MoreVertical className="w-6 h-6"/></button>
+                      <button onClick={() => setExerciseOptionsModal(ex.id)} className="text-neutral-500 hover:text-white transition-colors p-2 rounded-full hover:bg-neutral-800 active:scale-90"><MoreVertical className="w-6 h-6"/></button>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="grid grid-cols-12 gap-2 text-center text-[10px] font-black text-emerald-600/70 tracking-wider mb-1 px-1">
+                    <div className="grid grid-cols-12 gap-2 text-center text-[10px] font-black text-neutral-500 mb-1 px-1">
                       <div className="col-span-1">SET</div><div className="col-span-3">{exRule.label}</div><div className="col-span-3">REPS</div><div className="col-span-3">RPE</div><div className="col-span-2">DONE</div>
                     </div>
                     {ex.sets.map((set, setIndex) => {
@@ -2424,25 +2420,25 @@ export default function App() {
                       const prevSet = getPreviousRecord(exIdStr, setIndex);
                       return (
                         <div key={set.id} className="relative group/set">
-                          <div className={`grid grid-cols-12 gap-2 items-center transition-all duration-300 ${set.completed ? 'opacity-50' : 'opacity-100'} ${isDropSet ? 'bg-rose-50 border border-rose-200 p-2 -mx-2 rounded-xl' : ''}`}>
-                            <button onClick={() => cycleSetType(ex.id, set.id)} className={`col-span-1 font-black text-[10px] w-7 h-7 mx-auto rounded-lg flex items-center justify-center transition-colors shadow-sm ${set.type === 'W' ? 'text-neutral-500 bg-neutral-100 border border-neutral-200' : set.type === 'D' ? 'text-rose-600 bg-rose-50 border border-rose-200' : 'text-emerald-600 bg-emerald-50 border border-emerald-200'}`}>{String(set.type)}</button>
-                            <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-neutral-50 text-neutral-900 text-center font-black rounded-xl py-3 outline-none border border-neutral-200 focus:border-emerald-400 focus:bg-white focus:shadow-[0_0_0_4px_rgba(16,185,129,0.12)] transition-all text-lg placeholder:text-neutral-300" /></div>
-                            <div className="col-span-3"><input type="number" placeholder="0" value={set.reps} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-neutral-50 text-neutral-900 text-center font-black rounded-xl py-3 outline-none border border-neutral-200 focus:border-emerald-400 focus:bg-white focus:shadow-[0_0_0_4px_rgba(16,185,129,0.12)] transition-all text-lg placeholder:text-neutral-300" /></div>
+                          <div className={`grid grid-cols-12 gap-2 items-center transition-all duration-300 ${set.completed ? 'opacity-50' : 'opacity-100'} ${isDropSet ? 'bg-rose-950/20 border border-rose-900/50 p-2 -mx-2 rounded-xl' : ''}`}>
+                            <button onClick={() => cycleSetType(ex.id, set.id)} className={`col-span-1 font-black text-[10px] w-7 h-7 mx-auto rounded-lg flex items-center justify-center transition-colors shadow-sm ${set.type === 'W' ? 'text-neutral-400 bg-neutral-800' : set.type === 'D' ? 'text-rose-400 bg-rose-950 border border-rose-900/50' : 'text-emerald-400 bg-emerald-950 border border-emerald-900/50'}`}>{String(set.type)}</button>
+                            <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-neutral-950 text-center font-black rounded-xl py-3 outline-none border border-neutral-800 focus:border-emerald-500 transition-colors shadow-inner text-lg" /></div>
+                            <div className="col-span-3"><input type="number" placeholder="0" value={set.reps} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-neutral-950 text-center font-black rounded-xl py-3 outline-none border border-neutral-800 focus:border-emerald-500 transition-colors shadow-inner text-lg" /></div>
                             <div className="col-span-3"><input type="number" placeholder="-" min="1" max="10" value={set.rpe} onChange={(e) => updateSet(ex.id, set.id, 'rpe', e.target.value)} className={`w-full text-center font-bold text-sm rounded-xl py-3 outline-none border transition-colors ${getRpeColor(set.rpe)}`} /></div>
                             <div className="col-span-2 flex justify-center relative">
-                               <button onClick={() => toggleSetComplete(ex.id, set.id)} className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-75 z-10 relative ${set.completed ? 'bg-emerald-500 text-white shadow-[0_0_18px_rgba(16,185,129,0.6)]' : 'bg-neutral-100 text-neutral-300 hover:bg-emerald-50 hover:text-emerald-500 border border-neutral-200'}`}><Check className="w-6 h-6 stroke-[3]" /></button>
-                               <button onClick={() => removeSet(ex.id, set.id)} className="absolute -right-8 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-rose-500 transition-all opacity-0 group-hover/set:opacity-100 bg-white border border-neutral-200 rounded-full shadow-md"><X className="w-4 h-4"/></button>
+                               <button onClick={() => toggleSetComplete(ex.id, set.id)} className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-75 z-10 relative ${set.completed ? 'bg-emerald-500 text-neutral-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-neutral-800 text-neutral-500 hover:bg-neutral-700 border border-neutral-700'}`}><Check className="w-6 h-6 stroke-[3]" /></button>
+                               <button onClick={() => removeSet(ex.id, set.id)} className="absolute -right-8 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-rose-500 transition-all opacity-0 group-hover/set:opacity-100 bg-neutral-900 rounded-full shadow-md"><X className="w-4 h-4"/></button>
                             </div>
                           </div>
                           <div className="flex justify-between items-center px-8 mt-2 mb-4 h-4">
-                            <span className="text-[10px] text-neutral-400 font-bold">{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}</span>
+                            <span className="text-[10px] text-neutral-500 font-bold">{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}</span>
                             {realLoad !== null && realLoad !== (parseFloat(set.weight) || 0) && (
-                              <span className="text-[10px] font-bold text-sky-600">실제 부하 {realLoad}kg {exRule.key === 'assist' ? '(체중 − 보조)' : '(체중 포함)'}</span>
+                              <span className="text-[10px] font-bold text-sky-300">실제 부하 {realLoad}kg {exRule.key === 'assist' ? '(체중 − 보조)' : '(체중 포함)'}</span>
                             )}
                             {plateCalc.length > 0 && (
                               <button onClick={() => setPlateVisualizerModal({ weight: set.weight, plates: plateCalc, rule: exRule })} className="flex gap-1 justify-end items-center opacity-70 hover:opacity-100 transition-opacity">
-                                <span className="text-[10px] font-bold text-emerald-600">{exRule.plates === 'both' ? `한쪽 ${sideWeight(plateCalc)}kg` : `원판 ${sideWeight(plateCalc)}kg`}</span>
-                                <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">{formatPlates(plateCalc)}</span>
+                                <span className="text-[10px] font-bold text-emerald-400">{exRule.plates === 'both' ? `한쪽 ${sideWeight(plateCalc)}kg` : `원판 ${sideWeight(plateCalc)}kg`}</span>
+                                <span className="text-[10px] font-black bg-neutral-800 text-neutral-200 px-1.5 py-0.5 rounded shadow-sm">{formatPlates(plateCalc)}</span>
                               </button>
                             )}
                           </div>
@@ -2450,7 +2446,7 @@ export default function App() {
                       );
                     })}
                   </div>
-                  <button onClick={() => addSet(ex.id)} className="w-full py-3.5 rounded-xl border-2 border-dashed border-emerald-200 text-emerald-600 font-black hover:border-emerald-400 hover:bg-emerald-50 transition-all active:scale-[0.98] mt-2">+ 세트 추가</button>
+                  <button onClick={() => addSet(ex.id)} className="w-full py-3.5 rounded-xl border-2 border-dashed border-neutral-800 text-neutral-400 font-black hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-50/5 transition-all active:scale-[0.98] mt-2">+ 세트 추가</button>
                 </div>
               );
             })
@@ -2458,54 +2454,54 @@ export default function App() {
         </main>
 
         <div className="max-w-md mx-auto w-full px-4 mb-6 relative z-10">
-          <button onClick={() => { setSwapTargetExerciseId(null); setIsAddExerciseModalOpen(true); }} className="w-full bg-white text-emerald-700 font-black py-4 rounded-2xl mb-4 h-14 hover:bg-emerald-50 transition-colors active:scale-[0.98] shadow-[0_6px_20px_rgba(16,185,129,0.12)] flex items-center justify-center gap-2 border border-emerald-200"><Plus className="w-5 h-5"/> 종목 추가하기</button>
-          <button onClick={triggerSaveWorkout} className={`w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 h-14 transition-all active:scale-[0.98] text-lg ${session.length > 0 ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-[0_10px_30px_rgba(16,185,129,0.45)]' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'}`}><Save className="w-5 h-5 stroke-[3]"/> 훈련 완료 및 저장</button>
+          <button onClick={() => { setSwapTargetExerciseId(null); setIsAddExerciseModalOpen(true); }} className="w-full bg-neutral-800 text-white font-black py-4 rounded-2xl mb-4 h-14 hover:bg-neutral-700 transition-colors active:scale-[0.98] shadow-lg flex items-center justify-center gap-2 border border-neutral-700"><Plus className="w-5 h-5"/> 종목 추가하기</button>
+          <button onClick={triggerSaveWorkout} className={`w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 h-14 transition-all active:scale-[0.98] text-lg ${session.length > 0 ? 'bg-emerald-500 text-neutral-950 hover:bg-emerald-400 shadow-[0_10px_30px_rgba(16,185,129,0.3)]' : 'bg-neutral-800 text-neutral-500 cursor-not-allowed opacity-50'}`}><Save className="w-5 h-5 stroke-[3]"/> 훈련 완료 및 저장</button>
         </div>
 
-        <div className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-emerald-100 p-5 rounded-t-[32px] shadow-[0_-10px_40px_rgba(16,185,129,0.15)] transform transition-transform duration-500 z-40 ${isTimerActive || timeLeft > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className={`fixed bottom-0 left-0 right-0 bg-neutral-900/95 backdrop-blur-xl border-t border-neutral-800 p-5 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.8)] transform transition-transform duration-500 z-40 ${isTimerActive || timeLeft > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
           <div className="max-w-md mx-auto relative">
-            <div className="absolute -top-5 left-0 right-0 h-1.5 bg-emerald-50 rounded-t-3xl overflow-hidden">
+            <div className="absolute -top-5 left-0 right-0 h-1.5 bg-neutral-800 rounded-t-3xl overflow-hidden">
               <div className="h-full bg-emerald-500 transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(16,185,129,0.8)]" style={{ width: `${(timeLeft / maxTime) * 100}%` }} />
             </div>
             <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-3">
-              <button onClick={() => setIsAlarmSettingsOpen(true)} className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-xs font-black text-emerald-700 rounded-lg flex-shrink-0 transition-colors border border-emerald-200 flex items-center gap-1"><Bell className="w-3.5 h-3.5" /> {(ALARM_SOUNDS.find(a => a.id === timerSettings.sound) || ALARM_SOUNDS[0]).label}</button>
+              <button onClick={() => setIsAlarmSettingsOpen(true)} className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-black text-emerald-400 rounded-lg flex-shrink-0 transition-colors border border-emerald-900/60 flex items-center gap-1"><Bell className="w-3.5 h-3.5" /> {(ALARM_SOUNDS.find(a => a.id === timerSettings.sound) || ALARM_SOUNDS[0]).label}</button>
               {[30, 60, 90, 120, 180].map(sec => (
-                <button key={`preset-${sec}`} onClick={() => startRest(sec)} className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-xs font-bold text-neutral-600 rounded-lg flex-shrink-0 transition-colors">{sec >= 60 ? `${sec/60}분` : `${sec}초`}</button>
+                <button key={`preset-${sec}`} onClick={() => startRest(sec)} className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-neutral-300 rounded-lg flex-shrink-0 transition-colors">{sec >= 60 ? `${sec/60}분` : `${sec}초`}</button>
               ))}
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${isTimerActive ? 'bg-emerald-50 border-emerald-200 shadow-[0_0_18px_rgba(16,185,129,0.35)]' : 'bg-neutral-50 border-neutral-200'}`}><Flame className={`w-7 h-7 ${isTimerActive ? 'text-emerald-500 animate-pulse' : 'text-neutral-300'}`} /></div>
+                <div className="w-14 h-14 bg-neutral-950 rounded-2xl flex items-center justify-center border border-neutral-800 shadow-inner"><Flame className={`w-7 h-7 ${isTimerActive ? 'text-emerald-400 animate-pulse' : 'text-neutral-500'}`} /></div>
                 <div>
-                  <div className="text-xs text-emerald-600/70 font-bold mb-0.5 tracking-wider">REST TIMER</div>
-                  <div className="text-3xl font-black font-mono text-neutral-900 tracking-tight">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
+                  <div className="text-xs text-neutral-400 font-bold mb-0.5 tracking-wider">REST TIMER</div>
+                  <div className="text-3xl font-black font-mono text-white tracking-tight">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => adjustTimer(-10)} className="w-12 h-12 rounded-2xl bg-neutral-100 font-black text-neutral-600 hover:bg-neutral-200 active:scale-95 transition-all">-10</button>
-                <button onClick={() => adjustTimer(30)} className="w-12 h-12 rounded-2xl bg-neutral-100 font-black text-neutral-600 hover:bg-neutral-200 active:scale-95 transition-all">+30</button>
-                <button onClick={() => { unlockAudio(); setIsTimerActive(!isTimerActive); }} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-amber-400 text-white shadow-[0_6px_18px_rgba(245,158,11,0.4)]' : 'bg-emerald-500 text-white shadow-[0_6px_18px_rgba(16,185,129,0.45)]'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
+                <button onClick={() => adjustTimer(-10)} className="w-12 h-12 rounded-2xl bg-neutral-800 font-black text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all">-10</button>
+                <button onClick={() => adjustTimer(30)} className="w-12 h-12 rounded-2xl bg-neutral-800 font-black text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all">+30</button>
+                <button onClick={() => { unlockAudio(); setIsTimerActive(!isTimerActive); }} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-amber-500 text-neutral-950' : 'bg-emerald-500 text-neutral-950'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
               </div>
             </div>
           </div>
         </div>
 
         {exerciseOptionsModal && (
-          <div className="fixed inset-0 bg-black/50 z-[60] flex items-end justify-center backdrop-blur-sm transition-opacity" onClick={() => setExerciseOptionsModal(null)}>
-            <div className="bg-white w-full max-w-md rounded-t-[32px] pb-10 pt-3 px-6 shadow-[0_-20px_50px_rgba(0,0,0,0.2)] border-t border-emerald-100 animate-slide-up" onClick={e => e.stopPropagation()}>
-              <div className="flex justify-center mb-6"><div className="w-12 h-1.5 bg-neutral-200 rounded-full"></div></div>
+          <div className="fixed inset-0 bg-black/80 z-[60] flex items-end justify-center backdrop-blur-sm transition-opacity" onClick={() => setExerciseOptionsModal(null)}>
+            <div className="bg-neutral-900 w-full max-w-md rounded-t-[32px] pb-10 pt-3 px-6 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] border-t border-neutral-800 animate-slide-up" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-center mb-6"><div className="w-12 h-1.5 bg-neutral-700 rounded-full"></div></div>
               <div className="space-y-3">
-                <button onClick={() => { setSwapTargetExerciseId(exerciseOptionsModal); setExerciseOptionsModal(null); setIsAddExerciseModalOpen(true); }} className="w-full flex items-center gap-3 p-4 bg-neutral-50 hover:bg-emerald-50 border border-neutral-100 rounded-2xl transition-colors text-left active:scale-95">
-                  <div className="bg-white border border-emerald-100 p-2.5 rounded-xl"><RotateCw className="w-5 h-5 text-emerald-500"/></div>
-                  <div><div className="font-black text-neutral-900">종목 변경하기</div><div className="text-xs font-bold text-neutral-400">다른 운동으로 대체합니다.</div></div>
+                <button onClick={() => { setSwapTargetExerciseId(exerciseOptionsModal); setExerciseOptionsModal(null); setIsAddExerciseModalOpen(true); }} className="w-full flex items-center gap-3 p-4 bg-neutral-800 hover:bg-neutral-700 rounded-2xl transition-colors text-left active:scale-95">
+                  <div className="bg-neutral-900 p-2.5 rounded-xl"><RotateCw className="w-5 h-5 text-neutral-400"/></div>
+                  <div><div className="font-black text-white">종목 변경하기</div><div className="text-xs font-bold text-neutral-400">다른 운동으로 대체합니다.</div></div>
                 </button>
-                <button onClick={() => { const targetEx = session.find(s => s.id === exerciseOptionsModal); setExerciseHistoryModal(targetEx ? targetEx.exercise : null); setExerciseOptionsModal(null); }} className="w-full flex items-center gap-3 p-4 bg-neutral-50 hover:bg-emerald-50 border border-neutral-100 rounded-2xl transition-colors text-left active:scale-95">
-                  <div className="bg-white border border-emerald-100 p-2.5 rounded-xl"><History className="w-5 h-5 text-emerald-500"/></div>
-                  <div><div className="font-black text-neutral-900">이 종목 기록 보기</div><div className="text-xs font-bold text-neutral-400">과거 최고 기록 및 수행 로그를 확인합니다.</div></div>
+                <button onClick={() => { const targetEx = session.find(s => s.id === exerciseOptionsModal); setExerciseHistoryModal(targetEx ? targetEx.exercise : null); setExerciseOptionsModal(null); }} className="w-full flex items-center gap-3 p-4 bg-neutral-800 hover:bg-neutral-700 rounded-2xl transition-colors text-left active:scale-95">
+                  <div className="bg-neutral-900 p-2.5 rounded-xl"><History className="w-5 h-5 text-neutral-400"/></div>
+                  <div><div className="font-black text-white">이 종목 기록 보기</div><div className="text-xs font-bold text-neutral-400">과거 최고 기록 및 수행 로그를 확인합니다.</div></div>
                 </button>
-                <button onClick={() => removeExercise(exerciseOptionsModal)} className="w-full flex items-center gap-3 p-4 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-2xl transition-colors text-left active:scale-95">
-                  <div className="bg-white p-2.5 rounded-xl border border-rose-100"><Trash2 className="w-5 h-5 text-rose-500"/></div>
-                  <div><div className="font-black text-rose-500">루틴에서 삭제</div></div>
+                <button onClick={() => removeExercise(exerciseOptionsModal)} className="w-full flex items-center gap-3 p-4 bg-rose-950/30 hover:bg-rose-900/40 border border-rose-900/50 rounded-2xl transition-colors text-left active:scale-95">
+                  <div className="bg-rose-950 p-2.5 rounded-xl"><Trash2 className="w-5 h-5 text-rose-400"/></div>
+                  <div><div className="font-black text-rose-400">루틴에서 삭제</div></div>
                 </button>
               </div>
             </div>
@@ -2516,20 +2512,20 @@ export default function App() {
           const logs = getExerciseLogsHistory(exerciseHistoryModal.id);
           const maxWeight = logs.reduce((m, l) => Math.max(m, ...l.sets.map(s=>parseFloat(s.weight)||0)), 0);
           return (
-            <div className="fixed inset-0 bg-black/50 z-[75] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setExerciseHistoryModal(null)}>
-              <div className="bg-white border border-emerald-100 rounded-[32px] p-6 max-w-sm w-full max-h-[80vh] flex flex-col text-neutral-900 shadow-2xl relative" onClick={e=>e.stopPropagation()}>
-                <button onClick={() => setExerciseHistoryModal(null)} className="absolute top-4 right-4 p-2 bg-neutral-100 rounded-full text-neutral-400"><X className="w-5 h-5"/></button>
+            <div className="fixed inset-0 bg-black/80 z-[75] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setExerciseHistoryModal(null)}>
+              <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 max-w-sm w-full max-h-[80vh] flex flex-col text-white shadow-2xl relative" onClick={e=>e.stopPropagation()}>
+                <button onClick={() => setExerciseHistoryModal(null)} className="absolute top-4 right-4 p-2 bg-neutral-800 rounded-full text-neutral-400"><X className="w-5 h-5"/></button>
                 <div className="flex items-center gap-3 mb-4">
                   <SmartExerciseThumbnail exerciseId={exerciseHistoryModal.id} target={exerciseHistoryModal.target} tool={exerciseHistoryModal.tool} size="w-12 h-12" showShadow={false}/>
-                  <div><h3 className="font-black text-xl">{exerciseHistoryModal.name}</h3><p className="text-xs text-emerald-600 font-bold">역대 최고: {maxWeight}kg</p></div>
+                  <div><h3 className="font-black text-xl">{exerciseHistoryModal.name}</h3><p className="text-xs text-emerald-400 font-bold">역대 최고: {maxWeight}kg</p></div>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1 hide-scrollbar">
                   {logs.length > 0 ? logs.map((log, i) => (
-                      <div key={`hist-log-${i}`} className="bg-neutral-50 p-3.5 rounded-2xl border border-neutral-100">
-                        <div className="text-xs font-black text-neutral-400 mb-2 flex justify-between"><span>{log.date}</span><span className="text-emerald-600 font-bold">{log.sets.length}세트</span></div>
+                      <div key={`hist-log-${i}`} className="bg-neutral-950 p-3.5 rounded-2xl border border-neutral-800">
+                        <div className="text-xs font-black text-neutral-400 mb-2 flex justify-between"><span>{log.date}</span><span className="text-emerald-500 font-bold">{log.sets.length}세트</span></div>
                         <div className="space-y-1">
                           {log.sets.map((s, j) => (
-                            <div key={`s-${j}`} className="text-xs text-neutral-600 font-mono flex justify-between"><span>세트 {j+1}: {s.weight}kg x {s.reps}회</span><span className="text-neutral-400">1RM {calculate1RM(s.weight, s.reps)}kg</span></div>
+                            <div key={`s-${j}`} className="text-xs text-neutral-300 font-mono flex justify-between"><span>세트 {j+1}: {s.weight}kg x {s.reps}회</span><span className="text-neutral-500">1RM {calculate1RM(s.weight, s.reps)}kg</span></div>
                           ))}
                         </div>
                       </div>
@@ -2541,17 +2537,17 @@ export default function App() {
         })()}
 
         {plateVisualizerModal && (
-          <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4 backdrop-blur-sm animate-scale-up" onClick={() => setPlateVisualizerModal(null)}>
-            <div className="bg-white border border-emerald-100 rounded-[32px] p-6 max-w-sm w-full text-center text-neutral-900 relative shadow-2xl" onClick={e=>e.stopPropagation()}>
-              <button onClick={() => setPlateVisualizerModal(null)} className="absolute top-4 right-4 p-2 bg-neutral-100 rounded-full text-neutral-400"><X className="w-5 h-5"/></button>
+          <div className="fixed inset-0 bg-black/80 z-[80] flex items-center justify-center p-4 backdrop-blur-sm animate-scale-up" onClick={() => setPlateVisualizerModal(null)}>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 max-w-sm w-full text-center text-white relative shadow-2xl" onClick={e=>e.stopPropagation()}>
+              <button onClick={() => setPlateVisualizerModal(null)} className="absolute top-4 right-4 p-2 bg-neutral-800 rounded-full text-neutral-400"><X className="w-5 h-5"/></button>
               <h3 className="text-2xl font-black mb-1">{plateVisualizerModal.weight} kg</h3>
               <p className="text-xs font-bold text-neutral-400 mb-6">{(() => {
                 const r = plateVisualizerModal.rule || { plates: 'both', bar: 20 };
                 if (r.plates === 'one') return '한쪽 끝에만 꽂을 원판';
                 return r.bar ? `${r.bar}kg 봉 + 양쪽에 똑같이 꽂을 원판` : '양쪽에 똑같이 꽂을 원판 (기구 무게 제외)';
               })()}</p>
-              <div className="bg-neutral-50 p-6 rounded-2xl border border-neutral-100 flex items-center justify-center min-h-[120px] mb-6 relative overflow-x-auto">
-                <div className="w-full h-3 bg-neutral-300 rounded-full absolute"></div>
+              <div className="bg-neutral-950 p-6 rounded-2xl border border-neutral-800 flex items-center justify-center min-h-[120px] mb-6 relative overflow-x-auto">
+                <div className="w-full h-3 bg-neutral-600 rounded-full absolute"></div>
                 {(() => {
                   const r = plateVisualizerModal.rule || { plates: 'both' };
                   const Plate = ({ p }) => {
@@ -2567,16 +2563,16 @@ export default function App() {
                   return (
                     <div className="flex items-center justify-between w-full z-10">
                       <div className="flex gap-1 items-center flex-row-reverse">{r.plates === 'both' && side.map((p, i) => <Plate key={`l-${i}`} p={p} />)}</div>
-                      <span className="text-[10px] font-black text-neutral-600 bg-white border border-neutral-200 px-2 py-0.5 rounded">{r.bar ? `봉 ${r.bar}kg` : r.plates === 'one' ? '고정 축' : '기구'}</span>
+                      <span className="text-[10px] font-black text-neutral-300 bg-neutral-800 px-2 py-0.5 rounded">{r.bar ? `봉 ${r.bar}kg` : r.plates === 'one' ? '고정 축' : '기구'}</span>
                       <div className="flex gap-1 items-center">{side.map((p, i) => <Plate key={`r-${i}`} p={p} />)}</div>
                     </div>
                   );
                 })()}
               </div>
-              <p className="text-sm font-black text-emerald-600 mb-1">{(plateVisualizerModal.rule || { plates: 'both' }).plates === 'both' ? '한쪽' : '원판'} {sideWeight(plateVisualizerModal.plates)}kg = {formatPlates(plateVisualizerModal.plates)}</p>
+              <p className="text-sm font-black text-emerald-400 mb-1">{(plateVisualizerModal.rule || { plates: 'both' }).plates === 'both' ? '한쪽' : '원판'} {sideWeight(plateVisualizerModal.plates)}kg = {formatPlates(plateVisualizerModal.plates)}</p>
               <p className="text-[11px] font-bold text-neutral-500 mb-3">{(plateVisualizerModal.rule || { plates: 'both' }).plates === 'both' ? '반대쪽에도 똑같이 꽂아요' : '한쪽 끝에만 꽂아요'}</p>
               <div className="flex gap-2 justify-center flex-wrap">
-                {plateVisualizerModal.plates.map((p, idx) => (<span key={`txt-p-${idx}`} className="text-xs font-black bg-neutral-100 text-neutral-700 px-3 py-1 rounded-lg border border-neutral-200">{p}kg</span>))}
+                {plateVisualizerModal.plates.map((p, idx) => (<span key={`txt-p-${idx}`} className="text-xs font-black bg-neutral-800 px-3 py-1 rounded-lg border border-neutral-700">{p}kg</span>))}
               </div>
             </div>
           </div>
