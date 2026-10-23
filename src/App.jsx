@@ -2340,19 +2340,22 @@ export default function App() {
     };
 
     return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100 pb-32 flex flex-col relative animate-fade-in">
+      <div className="min-h-screen bg-[#03060a] text-neutral-100 pb-32 flex flex-col relative animate-fade-in">
         {globalOverlays}
-        <header className="bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 px-4 py-4 sticky top-0 z-20 flex justify-between items-center">
+        {/* 트론 테마: 에메랄드 격자 + 위쪽 에메랄드·아래쪽 노란 광원 */}
+        <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(16,185,129,0.14), transparent 70%), radial-gradient(ellipse 70% 30% at 50% 100%, rgba(250,204,21,0.08), transparent 70%), linear-gradient(rgba(16,185,129,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.07) 1px, transparent 1px)', backgroundSize: '100% 100%, 100% 100%, 32px 32px, 32px 32px' }} />
+        <header className="bg-[#03060a]/85 backdrop-blur-md px-4 py-4 sticky top-0 z-20 flex justify-between items-center">
+          <div className="absolute left-0 right-0 -bottom-px h-[2px] bg-gradient-to-r from-emerald-400 via-yellow-300 to-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.9)]" />
           <button onClick={() => {
             const hasProgress = session.some(ex => (ex.sets || []).some(s => s.completed));
             if (hasProgress) { setIsExitConfirmOpen(true); return; }
             exitWorkout();
-          }} className="text-neutral-400 hover:text-white flex items-center gap-1 bg-neutral-800/50 px-3 py-1.5 rounded-xl font-bold transition-colors"><ChevronLeft className="w-5 h-5"/> 나가기</button>
+          }} className="text-emerald-300/80 hover:text-emerald-200 flex items-center gap-1 bg-emerald-500/5 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-bold transition-colors"><ChevronLeft className="w-5 h-5"/> 나가기</button>
           <div className="flex items-center gap-3">
-            {currentSessionVolume > 0 && (<div className="text-sm font-black text-amber-400 tracking-tight bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-900/50 animate-fade-in">{currentSessionVolume.toLocaleString()} <span className="text-[10px]">kg</span></div>)}
-            <div className="font-black text-base text-emerald-400 tracking-wider flex items-center gap-1.5 bg-neutral-900 px-3 py-1 rounded-xl border border-neutral-800"><Clock className="w-4 h-4 animate-pulse"/> {formattedWorkoutTime}</div>
+            {currentSessionVolume > 0 && (<div className="text-sm font-black text-yellow-300 tracking-tight bg-yellow-400/10 px-2 py-1 rounded-lg border border-yellow-400/40 shadow-[0_0_12px_rgba(250,204,21,0.35)] animate-fade-in">{currentSessionVolume.toLocaleString()} <span className="text-[10px]">kg</span></div>)}
+            <div className="font-black text-base text-emerald-300 tracking-wider flex items-center gap-1.5 bg-black px-3 py-1 rounded-xl border border-emerald-400/50 shadow-[0_0_14px_rgba(16,185,129,0.45)] [text-shadow:0_0_8px_rgba(16,185,129,0.8)]"><Clock className="w-4 h-4 animate-pulse"/> {formattedWorkoutTime}</div>
           </div>
-          <button onClick={() => { navigator.clipboard?.writeText(window.location.href)?.catch(() => {}); showToast("운동 루틴 링크가 클립보드에 복사되었습니다!"); }} className="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-900/50 active:scale-95">공유</button>
+          <button onClick={() => { navigator.clipboard?.writeText(window.location.href)?.catch(() => {}); showToast("운동 루틴 링크가 클립보드에 복사되었습니다!"); }} className="text-xs font-bold text-yellow-300 bg-yellow-400/10 px-3 py-1.5 rounded-lg border border-yellow-400/40 active:scale-95">공유</button>
         </header>
 
         {isExitConfirmOpen && (
@@ -2368,10 +2371,10 @@ export default function App() {
           </div>
         )}
 
-        <main className="max-w-md mx-auto w-full p-4 space-y-6 flex-1 mt-2">
+        <main className="max-w-md mx-auto w-full p-4 space-y-6 flex-1 mt-2 relative z-10">
           {session.length === 0 ? (
             <div className="text-center py-24 opacity-60 flex flex-col items-center">
-              <div className="w-20 h-20 bg-neutral-900 rounded-full flex items-center justify-center mb-5 border border-neutral-800 shadow-inner"><Dumbbell className="w-10 h-10 text-neutral-600" /></div>
+              <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mb-5 border border-emerald-400/50 shadow-[0_0_24px_rgba(16,185,129,0.4)]"><Dumbbell className="w-10 h-10 text-emerald-400" /></div>
               <p className="font-black text-neutral-300 text-xl mb-2">운동을 시작해볼까요?</p>
               <p className="font-medium text-neutral-500 text-sm">하단의 버튼을 눌러 종목을 추가하세요.</p>
             </div>
@@ -2384,18 +2387,21 @@ export default function App() {
               const exToolStr = ex.exercise && ex.exercise.tool ? String(ex.exercise.tool) : '바벨';
               const exRule = ruleOfEx(ex);
               return (
-                <div key={ex.id} className="bg-neutral-900 rounded-[28px] p-5 border border-neutral-800 shadow-xl relative">
-                  <div className="flex justify-between items-start gap-2 mb-5 border-b border-neutral-800 pb-4">
+                <div key={ex.id} className="bg-[#060b10]/95 rounded-[28px] p-5 border border-emerald-500/30 shadow-[0_0_28px_rgba(16,185,129,0.12),inset_0_0_24px_rgba(16,185,129,0.05)] relative overflow-hidden">
+                  <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-300 to-transparent shadow-[0_0_14px_rgba(16,185,129,1)]" />
+                  <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-yellow-300/80 rounded-tl-md shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
+                  <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-yellow-300/80 rounded-br-md shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
+                  <div className="flex justify-between items-start gap-2 mb-5 border-b border-emerald-500/15 pb-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                        <SmartExerciseThumbnail exerciseId={exIdStr} target={exTargetStr} tool={exToolStr} showShadow={false} size="w-14 h-14" />
                        <div className="min-w-0">
                          <button onClick={() => { setSwapTargetExerciseId(ex.id); setIsAddExerciseModalOpen(true); }} className="text-left active:scale-95 transition-transform group flex items-center gap-1.5 max-w-full">
-                           <h2 className="text-lg leading-tight font-black text-white group-hover:text-emerald-400 transition-colors">{exNameStr}</h2>
+                           <h2 className="text-lg leading-tight font-black text-white group-hover:text-emerald-300 transition-colors [text-shadow:0_0_10px_rgba(16,185,129,0.35)]">{exNameStr}</h2>
                            <Settings className="w-4 h-4 text-neutral-500 group-hover:text-emerald-400 transition-colors" />
                          </button>
                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                           <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-900">{exTargetStr}</span>
-                           <span className="text-[11px] font-bold text-neutral-300 bg-neutral-800 px-2 py-0.5 rounded-md border border-neutral-700 whitespace-nowrap">⚖️ {exRule.hint}</span>
+                           <span className="text-[11px] font-bold text-emerald-300 bg-emerald-400/10 px-2 py-0.5 rounded-md border border-emerald-400/40 shadow-[0_0_8px_rgba(16,185,129,0.25)]">{exTargetStr}</span>
+                           <span className="text-[11px] font-bold text-yellow-200/90 bg-yellow-400/5 px-2 py-0.5 rounded-md border border-yellow-400/30 whitespace-nowrap">⚖️ {exRule.hint}</span>
                            <button onClick={() => setGuideExerciseId(exIdStr)} className="text-[11px] font-black text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-900/60 hover:bg-blue-500/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"><BookOpen className="w-3 h-3"/> 설명</button>
                            <button onClick={() => setSubstituteModalEx(ex)} className="text-[11px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-900/60 hover:bg-amber-500/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap" title="기구 대기 시 대체 운동 추천"><Zap className="w-3 h-3 fill-amber-400"/> 대체</button>
                            {max1RM > 0 && <span className="text-[11px] font-bold text-neutral-400 flex items-center gap-1"><Target className="w-3 h-3"/> 1RM <span className="text-white bg-neutral-800 px-1.5 py-0.5 rounded">{max1RM}kg</span></span>}
@@ -2410,7 +2416,7 @@ export default function App() {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="grid grid-cols-12 gap-2 text-center text-[10px] font-black text-neutral-500 mb-1 px-1">
+                    <div className="grid grid-cols-12 gap-2 text-center text-[10px] font-black text-emerald-400/60 tracking-widest mb-1 px-1">
                       <div className="col-span-1">SET</div><div className="col-span-3">{exRule.label}</div><div className="col-span-3">REPS</div><div className="col-span-3">RPE</div><div className="col-span-2">DONE</div>
                     </div>
                     {ex.sets.map((set, setIndex) => {
@@ -2421,12 +2427,12 @@ export default function App() {
                       return (
                         <div key={set.id} className="relative group/set">
                           <div className={`grid grid-cols-12 gap-2 items-center transition-all duration-300 ${set.completed ? 'opacity-50' : 'opacity-100'} ${isDropSet ? 'bg-rose-950/20 border border-rose-900/50 p-2 -mx-2 rounded-xl' : ''}`}>
-                            <button onClick={() => cycleSetType(ex.id, set.id)} className={`col-span-1 font-black text-[10px] w-7 h-7 mx-auto rounded-lg flex items-center justify-center transition-colors shadow-sm ${set.type === 'W' ? 'text-neutral-400 bg-neutral-800' : set.type === 'D' ? 'text-rose-400 bg-rose-950 border border-rose-900/50' : 'text-emerald-400 bg-emerald-950 border border-emerald-900/50'}`}>{String(set.type)}</button>
-                            <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-neutral-950 text-center font-black rounded-xl py-3 outline-none border border-neutral-800 focus:border-emerald-500 transition-colors shadow-inner text-lg" /></div>
-                            <div className="col-span-3"><input type="number" placeholder="0" value={set.reps} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-neutral-950 text-center font-black rounded-xl py-3 outline-none border border-neutral-800 focus:border-emerald-500 transition-colors shadow-inner text-lg" /></div>
+                            <button onClick={() => cycleSetType(ex.id, set.id)} className={`col-span-1 font-black text-[10px] w-7 h-7 mx-auto rounded-lg flex items-center justify-center transition-colors shadow-sm ${set.type === 'W' ? 'text-neutral-400 bg-neutral-900 border border-neutral-700' : set.type === 'D' ? 'text-rose-400 bg-rose-950 border border-rose-500/50' : 'text-yellow-300 bg-yellow-400/10 border border-yellow-400/50 shadow-[0_0_8px_rgba(250,204,21,0.35)]'}`}>{String(set.type)}</button>
+                            <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
+                            <div className="col-span-3"><input type="number" placeholder="0" value={set.reps} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
                             <div className="col-span-3"><input type="number" placeholder="-" min="1" max="10" value={set.rpe} onChange={(e) => updateSet(ex.id, set.id, 'rpe', e.target.value)} className={`w-full text-center font-bold text-sm rounded-xl py-3 outline-none border transition-colors ${getRpeColor(set.rpe)}`} /></div>
                             <div className="col-span-2 flex justify-center relative">
-                               <button onClick={() => toggleSetComplete(ex.id, set.id)} className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-75 z-10 relative ${set.completed ? 'bg-emerald-500 text-neutral-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-neutral-800 text-neutral-500 hover:bg-neutral-700 border border-neutral-700'}`}><Check className="w-6 h-6 stroke-[3]" /></button>
+                               <button onClick={() => toggleSetComplete(ex.id, set.id)} className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-75 z-10 relative ${set.completed ? 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'bg-black text-emerald-500/40 hover:text-emerald-300 hover:shadow-[0_0_12px_rgba(16,185,129,0.4)] border border-emerald-500/30'}`}><Check className="w-6 h-6 stroke-[3]" /></button>
                                <button onClick={() => removeSet(ex.id, set.id)} className="absolute -right-8 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-rose-500 transition-all opacity-0 group-hover/set:opacity-100 bg-neutral-900 rounded-full shadow-md"><X className="w-4 h-4"/></button>
                             </div>
                           </div>
@@ -2437,8 +2443,8 @@ export default function App() {
                             )}
                             {plateCalc.length > 0 && (
                               <button onClick={() => setPlateVisualizerModal({ weight: set.weight, plates: plateCalc, rule: exRule })} className="flex gap-1 justify-end items-center opacity-70 hover:opacity-100 transition-opacity">
-                                <span className="text-[10px] font-bold text-emerald-400">{exRule.plates === 'both' ? `한쪽 ${sideWeight(plateCalc)}kg` : `원판 ${sideWeight(plateCalc)}kg`}</span>
-                                <span className="text-[10px] font-black bg-neutral-800 text-neutral-200 px-1.5 py-0.5 rounded shadow-sm">{formatPlates(plateCalc)}</span>
+                                <span className="text-[10px] font-bold text-yellow-300">{exRule.plates === 'both' ? `한쪽 ${sideWeight(plateCalc)}kg` : `원판 ${sideWeight(plateCalc)}kg`}</span>
+                                <span className="text-[10px] font-black bg-yellow-400/10 text-yellow-200 border border-yellow-400/40 px-1.5 py-0.5 rounded shadow-[0_0_8px_rgba(250,204,21,0.3)]">{formatPlates(plateCalc)}</span>
                               </button>
                             )}
                           </div>
@@ -2446,7 +2452,7 @@ export default function App() {
                       );
                     })}
                   </div>
-                  <button onClick={() => addSet(ex.id)} className="w-full py-3.5 rounded-xl border-2 border-dashed border-neutral-800 text-neutral-400 font-black hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-50/5 transition-all active:scale-[0.98] mt-2">+ 세트 추가</button>
+                  <button onClick={() => addSet(ex.id)} className="w-full py-3.5 rounded-xl border-2 border-dashed border-emerald-500/30 text-emerald-400 font-black hover:text-emerald-200 hover:border-emerald-300 hover:bg-emerald-400/5 transition-all active:scale-[0.98] mt-2">+ 세트 추가</button>
                 </div>
               );
             })
@@ -2454,33 +2460,33 @@ export default function App() {
         </main>
 
         <div className="max-w-md mx-auto w-full px-4 mb-6 relative z-10">
-          <button onClick={() => { setSwapTargetExerciseId(null); setIsAddExerciseModalOpen(true); }} className="w-full bg-neutral-800 text-white font-black py-4 rounded-2xl mb-4 h-14 hover:bg-neutral-700 transition-colors active:scale-[0.98] shadow-lg flex items-center justify-center gap-2 border border-neutral-700"><Plus className="w-5 h-5"/> 종목 추가하기</button>
-          <button onClick={triggerSaveWorkout} className={`w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 h-14 transition-all active:scale-[0.98] text-lg ${session.length > 0 ? 'bg-emerald-500 text-neutral-950 hover:bg-emerald-400 shadow-[0_10px_30px_rgba(16,185,129,0.3)]' : 'bg-neutral-800 text-neutral-500 cursor-not-allowed opacity-50'}`}><Save className="w-5 h-5 stroke-[3]"/> 훈련 완료 및 저장</button>
+          <button onClick={() => { setSwapTargetExerciseId(null); setIsAddExerciseModalOpen(true); }} className="w-full bg-black text-yellow-300 font-black py-4 rounded-2xl mb-4 h-14 hover:bg-yellow-400/5 transition-colors active:scale-[0.98] shadow-[0_0_18px_rgba(250,204,21,0.25)] flex items-center justify-center gap-2 border border-yellow-400/50"><Plus className="w-5 h-5"/> 종목 추가하기</button>
+          <button onClick={triggerSaveWorkout} className={`w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 h-14 transition-all active:scale-[0.98] text-lg ${session.length > 0 ? 'bg-emerald-400 text-black hover:bg-emerald-300 shadow-[0_0_28px_rgba(16,185,129,0.6)]' : 'bg-neutral-900 text-neutral-600 border border-neutral-800 cursor-not-allowed'}`}><Save className="w-5 h-5 stroke-[3]"/> 훈련 완료 및 저장</button>
         </div>
 
-        <div className={`fixed bottom-0 left-0 right-0 bg-neutral-900/95 backdrop-blur-xl border-t border-neutral-800 p-5 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.8)] transform transition-transform duration-500 z-40 ${isTimerActive || timeLeft > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className={`fixed bottom-0 left-0 right-0 bg-[#03060a]/95 backdrop-blur-xl border-t border-emerald-400/40 p-5 rounded-t-[32px] shadow-[0_-10px_40px_rgba(16,185,129,0.18)] transform transition-transform duration-500 z-40 ${isTimerActive || timeLeft > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
           <div className="max-w-md mx-auto relative">
             <div className="absolute -top-5 left-0 right-0 h-1.5 bg-neutral-800 rounded-t-3xl overflow-hidden">
-              <div className="h-full bg-emerald-500 transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(16,185,129,0.8)]" style={{ width: `${(timeLeft / maxTime) * 100}%` }} />
+              <div className="h-full bg-gradient-to-r from-emerald-400 to-yellow-300 transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{ width: `${(timeLeft / maxTime) * 100}%` }} />
             </div>
             <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-3">
-              <button onClick={() => setIsAlarmSettingsOpen(true)} className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-black text-emerald-400 rounded-lg flex-shrink-0 transition-colors border border-emerald-900/60 flex items-center gap-1"><Bell className="w-3.5 h-3.5" /> {(ALARM_SOUNDS.find(a => a.id === timerSettings.sound) || ALARM_SOUNDS[0]).label}</button>
+              <button onClick={() => setIsAlarmSettingsOpen(true)} className="px-3 py-1.5 bg-yellow-400/10 hover:bg-yellow-400/20 text-xs font-black text-yellow-300 rounded-lg flex-shrink-0 transition-colors border border-yellow-400/40 flex items-center gap-1"><Bell className="w-3.5 h-3.5" /> {(ALARM_SOUNDS.find(a => a.id === timerSettings.sound) || ALARM_SOUNDS[0]).label}</button>
               {[30, 60, 90, 120, 180].map(sec => (
-                <button key={`preset-${sec}`} onClick={() => startRest(sec)} className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-neutral-300 rounded-lg flex-shrink-0 transition-colors">{sec >= 60 ? `${sec/60}분` : `${sec}초`}</button>
+                <button key={`preset-${sec}`} onClick={() => startRest(sec)} className="px-3 py-1.5 bg-black hover:bg-emerald-400/10 text-xs font-bold text-emerald-300 rounded-lg flex-shrink-0 transition-colors border border-emerald-500/30">{sec >= 60 ? `${sec/60}분` : `${sec}초`}</button>
               ))}
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-neutral-950 rounded-2xl flex items-center justify-center border border-neutral-800 shadow-inner"><Flame className={`w-7 h-7 ${isTimerActive ? 'text-emerald-400 animate-pulse' : 'text-neutral-500'}`} /></div>
+                <div className={`w-14 h-14 bg-black rounded-2xl flex items-center justify-center border ${isTimerActive ? 'border-yellow-300/60 shadow-[0_0_18px_rgba(250,204,21,0.45)]' : 'border-emerald-500/20'}`}><Flame className={`w-7 h-7 ${isTimerActive ? 'text-yellow-300 animate-pulse' : 'text-neutral-600'}`} /></div>
                 <div>
-                  <div className="text-xs text-neutral-400 font-bold mb-0.5 tracking-wider">REST TIMER</div>
-                  <div className="text-3xl font-black font-mono text-white tracking-tight">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
+                  <div className="text-xs text-emerald-400/70 font-bold mb-0.5 tracking-widest">REST TIMER</div>
+                  <div className="text-3xl font-black font-mono text-yellow-300 tracking-tight [text-shadow:0_0_12px_rgba(250,204,21,0.8)]">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => adjustTimer(-10)} className="w-12 h-12 rounded-2xl bg-neutral-800 font-black text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all">-10</button>
-                <button onClick={() => adjustTimer(30)} className="w-12 h-12 rounded-2xl bg-neutral-800 font-black text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all">+30</button>
-                <button onClick={() => { unlockAudio(); setIsTimerActive(!isTimerActive); }} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-amber-500 text-neutral-950' : 'bg-emerald-500 text-neutral-950'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
+                <button onClick={() => adjustTimer(-10)} className="w-12 h-12 rounded-2xl bg-black border border-emerald-500/30 font-black text-emerald-300 hover:bg-emerald-400/10 active:scale-95 transition-all">-10</button>
+                <button onClick={() => adjustTimer(30)} className="w-12 h-12 rounded-2xl bg-black border border-emerald-500/30 font-black text-emerald-300 hover:bg-emerald-400/10 active:scale-95 transition-all">+30</button>
+                <button onClick={() => { unlockAudio(); setIsTimerActive(!isTimerActive); }} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-yellow-300 text-black shadow-[0_0_20px_rgba(250,204,21,0.7)]' : 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.7)]'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
               </div>
             </div>
           </div>
