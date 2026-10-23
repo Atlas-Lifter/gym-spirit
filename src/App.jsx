@@ -17,6 +17,7 @@ import { PosingGuideSection } from './PosingGuide.jsx';
 import { QuestCenter } from './QuestCenter.jsx';
 import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
+import { StopwatchDial } from './StopwatchDial.jsx';
 import { weightRule, platesFor, setLoad, nextWeight, formatPlates, sideWeight } from './weightRules.js';
 import { DEFAULT_TIMER_SETTINGS, ALARM_SOUNDS, REPEAT_OPTIONS, REST_OPTIONS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { FriendCenter } from './FriendCenter.jsx';
@@ -1034,6 +1035,23 @@ export default function App() {
     stopAlarm();
     setAlarmRinging(true);
     alarmStopRef.current = playAlarm({ ...timerSettings, ...patch, repeat: 1, vibrate: false }, () => { setAlarmRinging(false); alarmStopRef.current = null; });
+  };
+  const timerPagerRef = useRef(null);
+  const timerPage = timerSettings.view === 'dial' ? 1 : 0;
+  const onTimerPagerScroll = (e) => {
+    const el = e.currentTarget;
+    const page = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+    if (page !== timerPage) updateTimerSettings({ view: page ? 'dial' : 'digital' });
+  };
+  // 타이머가 다시 나타날 때 마지막으로 보던 보기(숫자/시계)로 맞춘다
+  const timerVisible = isTimerActive || timeLeft > 0 || overtimeOn;
+  useEffect(() => {
+    const el = timerPagerRef.current;
+    if (el && timerVisible) el.scrollLeft = timerPage * el.clientWidth;
+  }, [timerVisible, currentScreen]);
+  const scrollTimerPage = (page) => {
+    const el = timerPagerRef.current;
+    if (el) el.scrollTo({ left: page * el.clientWidth, behavior: 'smooth' });
   };
   const startRest = (sec) => { unlockAudio(); stopAlarm(); setOvertimeSec(null); setTimeLeft(sec); setMaxTime(sec); setIsTimerActive(true); };
   // 세트 볼륨 = 실제 부하 × 횟수 (맨몸 종목은 체중 포함, 어시스트는 체중에서 도움 무게를 뺀 값)
@@ -2654,6 +2672,9 @@ export default function App() {
               ))}
             </div>
             )}
+            {/* 옆으로 밀면 숫자 ↔ 스톱워치 시계 보기 */}
+            <div ref={timerPagerRef} onScroll={onTimerPagerScroll} className="flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory hide-scrollbar transition-[height] duration-300" style={{ height: timerPage === 1 ? 128 : 60 }}>
+              <div className="w-full flex-shrink-0 snap-center">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 bg-black rounded-2xl flex items-center justify-center border ${overtimeOn ? 'ot-fill' : isTimerActive ? 'border-yellow-300/60 shadow-[0_0_18px_rgba(250,204,21,0.45)]' : 'border-emerald-500/20'}`}><Flame className={`w-7 h-7 ${overtimeOn ? 'text-rose-400 animate-pulse' : isTimerActive ? 'text-yellow-300 animate-pulse' : 'text-neutral-600'}`} /></div>
@@ -2683,6 +2704,31 @@ export default function App() {
                 <button onClick={() => { unlockAudio(); setIsTimerActive(!isTimerActive); }} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-yellow-300 text-black shadow-[0_0_20px_rgba(250,204,21,0.7)]' : 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.7)]'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
               </div>
               )}
+            </div>
+              </div>
+              <div className="w-full flex-shrink-0 snap-center flex items-center justify-between gap-2">
+                <StopwatchDial timeLeft={timeLeft} maxTime={maxTime} overtimeSec={overtimeSec} className="w-[116px] h-[120px] flex-shrink-0" />
+                <div className="flex flex-col items-end gap-2">
+                  <div className={`text-xs font-black tracking-widest ${overtimeOn ? 'ot-text' : 'text-emerald-400/70'}`}>{overtimeOn ? '휴식 초과' : isTimerActive ? 'REST TIMER' : '일시정지'}</div>
+                  {overtimeOn ? (
+                    <div className="flex gap-2">
+                      <button onClick={() => startRest(30)} className="h-12 px-3 rounded-2xl bg-black border border-emerald-500/30 font-black text-emerald-300 text-sm hover:bg-emerald-400/10 active:scale-95 transition-all">+30초 더 쉬기</button>
+                      <button onClick={() => { stopAlarm(); setOvertimeSec(null); }} aria-label="초과 타이머 닫기" className="w-12 h-12 rounded-2xl bg-black border border-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center active:scale-95 transition-all"><X className="w-5 h-5" /></button>
+                    </div>
+                  ) : (
+                  <div className="flex gap-2">
+                    <button onClick={() => adjustTimer(-10)} className="w-12 h-12 rounded-2xl bg-black border border-emerald-500/30 font-black text-emerald-300 hover:bg-emerald-400/10 active:scale-95 transition-all">-10</button>
+                    <button onClick={() => adjustTimer(30)} className="w-12 h-12 rounded-2xl bg-black border border-emerald-500/30 font-black text-emerald-300 hover:bg-emerald-400/10 active:scale-95 transition-all">+30</button>
+                    <button onClick={() => { unlockAudio(); setIsTimerActive(!isTimerActive); }} className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${isTimerActive ? 'bg-yellow-300 text-black shadow-[0_0_20px_rgba(250,204,21,0.7)]' : 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.7)]'}`}>{isTimerActive ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}</button>
+                  </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-center gap-1.5 mt-2">
+              {[0, 1].map(i => (
+                <button key={i} onClick={() => scrollTimerPage(i)} aria-label={i ? '스톱워치 보기' : '숫자 보기'} className={`h-1.5 rounded-full transition-all ${timerPage === i ? 'w-5 bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]' : 'w-1.5 bg-neutral-600'}`} />
+              ))}
             </div>
           </div>
         </div>
