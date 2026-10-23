@@ -2900,33 +2900,36 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111111] text-neutral-100 pb-[80px] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#03060a] text-neutral-100 pb-[80px] flex flex-col relative overflow-hidden">
       {globalOverlays}
-      <header className="px-5 py-5 flex justify-between items-center sticky top-0 z-10 bg-[#111111]">
+      {/* 상단 트론 격자와 에메랄드 광원 (아래로 갈수록 사라짐) */}
+      <div className="absolute inset-x-0 top-0 h-64 pointer-events-none" style={{ backgroundImage: 'radial-gradient(ellipse 80% 70% at 50% 0%, rgba(16,185,129,0.16), transparent 70%), linear-gradient(rgba(16,185,129,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.08) 1px, transparent 1px)', backgroundSize: '100% 100%, 32px 32px, 32px 32px', WebkitMaskImage: 'linear-gradient(to bottom, #000 40%, transparent)', maskImage: 'linear-gradient(to bottom, #000 40%, transparent)' }} />
+      <header className="px-5 py-4 flex justify-between items-center sticky top-0 z-10 bg-[#03060a]/90 backdrop-blur-md">
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-emerald-400/70 to-transparent shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
         <div className="flex items-center gap-3">
           <button onClick={() => setIsFullCalendarOpen(true)} className="flex items-center gap-2 active:scale-95 transition-transform group">
-            <div className="w-11 h-11 bg-rose-500 rounded-full flex flex-col items-center justify-center text-white font-black shadow-[0_0_15px_rgba(244,63,94,0.3)]">
-              <span className="text-xs -mb-1">{currentDate.split('-')[1]}월</span>
-              <span className="text-lg leading-tight">{new Date(currentDate).getDate()}</span>
+            <div className="w-12 h-12 rounded-2xl bg-black border border-emerald-400/60 flex flex-col items-center justify-center shadow-[0_0_16px_rgba(16,185,129,0.45)] group-hover:shadow-[0_0_22px_rgba(16,185,129,0.7)] transition-shadow">
+              <span className="text-[10px] font-black text-emerald-300 leading-none">{parseInt(currentDate.split('-')[1], 10)}월</span>
+              <span className="text-lg font-black text-white leading-tight [text-shadow:0_0_8px_rgba(16,185,129,0.8)]">{new Date(currentDate).getDate()}</span>
             </div>
-            <span className="text-2xl font-black text-white group-hover:text-rose-400 transition-colors tracking-tight flex items-center gap-0.5">
-              {currentDate === formatDate(new Date()) ? '오늘' : `${currentDate.split('-')[1]}월 ${currentDate.split('-')[2]}일`} <ChevronRight className="w-5 h-5 rotate-90 text-neutral-500"/>
+            <span className="text-2xl font-black text-white group-hover:text-emerald-300 transition-colors tracking-tight flex items-center gap-0.5">
+              {currentDate === formatDate(new Date()) ? '오늘' : `${parseInt(currentDate.split('-')[1], 10)}월 ${parseInt(currentDate.split('-')[2], 10)}일`} <ChevronRight className="w-5 h-5 rotate-90 text-emerald-400"/>
             </span>
           </button>
         </div>
         <div className="flex gap-4 items-center relative">
           <button onClick={() => setIsFullCalendarOpen(true)} className="relative active:scale-90 transition-transform">
-            <CalendarDays className="w-7 h-7 text-neutral-400 hover:text-white transition-colors" />
-            {pastWorkoutDates.length > 0 && <div className="absolute -top-1.5 -right-2 bg-rose-400/20 text-rose-400 border border-rose-400/50 text-[10px] font-black px-1.5 py-0.5 rounded-md backdrop-blur-sm">{pastWorkoutDates.length}</div>}
+            <CalendarDays className="w-7 h-7 text-emerald-300/80 hover:text-emerald-200 transition-colors drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+            {pastWorkoutDates.length > 0 && <div className="absolute -top-1.5 -right-2 bg-black text-yellow-300 border border-yellow-400/60 text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-[0_0_8px_rgba(250,204,21,0.45)]">{pastWorkoutDates.length}</div>}
           </button>
           <div className="relative">
             <button onClick={() => setIsNotiOpen(!isNotiOpen)} className="relative active:scale-90 transition-transform">
-              <Bell className={`w-7 h-7 transition-colors ${isNotiOpen ? 'text-white' : 'text-neutral-400'}`} />
-              {unreadCount > 0 && <div className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm ring-2 ring-[#111111]">{unreadCount}</div>}
+              <Bell className={`w-7 h-7 transition-colors drop-shadow-[0_0_6px_rgba(16,185,129,0.6)] ${isNotiOpen ? 'text-emerald-200' : 'text-emerald-300/80'}`} />
+              {unreadCount > 0 && <div className="absolute -top-1 -right-1 bg-yellow-300 text-black text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(250,204,21,0.7)] ring-2 ring-[#03060a]">{unreadCount}</div>}
             </button>
             {isNotiOpen && (
-              <div className="absolute right-0 top-full mt-3 w-80 bg-neutral-900 rounded-[24px] shadow-[0_15px_50px_rgba(0,0,0,0.8)] border border-neutral-800 overflow-hidden z-50 animate-fade-in origin-top-right text-left">
-                <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-900/50">
+              <div className="absolute right-0 top-full mt-3 w-80 bg-[#060b10] rounded-[24px] shadow-[0_15px_50px_rgba(0,0,0,0.8),0_0_24px_rgba(16,185,129,0.18)] border border-emerald-500/30 overflow-hidden z-50 animate-fade-in origin-top-right text-left">
+                <div className="p-4 border-b border-emerald-500/15 flex justify-between items-center">
                   <span className="font-black text-white text-sm">새로운 알림</span>
                   {cloudUser && <button onClick={() => { setIsNotiOpen(false); setIsFriendSearchModalOpen(true); }} className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-900/50 hover:bg-emerald-500/20 transition-colors">친구 관리</button>}
                 </div>
@@ -2966,10 +2969,10 @@ export default function App() {
                 const dayNames = ['일','월','화','수','목','금','토'];
                 return (
                   <button key={`wd-${index}`} onClick={() => setCurrentDate(dateStr)} className="flex flex-col items-center gap-2 group active:scale-90 transition-transform">
-                    <span className={`text-[11px] font-bold ${d.getDay()===0 ? 'text-rose-500' : d.getDay()===6 ? 'text-blue-500' : 'text-neutral-500'}`}>{dayNames[d.getDay()]}</span>
-                    <div className={`w-11 h-11 rounded-full flex flex-col items-center justify-center font-black text-lg relative transition-all ${isSelected ? 'bg-white text-neutral-900 shadow-[0_5px_15px_rgba(255,255,255,0.2)] scale-110' : 'text-neutral-400 hover:bg-neutral-800 border border-neutral-800'}`}>
+                    <span className={`text-[11px] font-bold ${d.getDay()===0 ? 'text-rose-400' : d.getDay()===6 ? 'text-sky-400' : 'text-emerald-200/50'}`}>{dayNames[d.getDay()]}</span>
+                    <div className={`w-11 h-11 rounded-2xl flex flex-col items-center justify-center font-black text-lg relative transition-all ${isSelected ? 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.7)] scale-110' : dateStr === formatDate(new Date()) ? 'bg-black text-yellow-200 border border-yellow-300/60 shadow-[0_0_10px_rgba(250,204,21,0.35)]' : 'bg-black/40 text-neutral-400 border border-emerald-500/15 hover:bg-emerald-500/10 hover:text-emerald-200'}`}>
                       {d.getDate()}
-                      {hasWorkout && <div className={`w-1.5 h-1.5 rounded-full absolute -bottom-2 ${isSelected ? 'bg-emerald-500' : 'bg-emerald-500/50'}`} />}
+                      {hasWorkout && <div className={`w-1.5 h-1.5 rounded-full absolute -bottom-2 bg-yellow-300 ${isSelected ? 'shadow-[0_0_6px_rgba(250,204,21,0.9)]' : 'opacity-70'}`} />}
                     </div>
                   </button>
                 );
@@ -3587,11 +3590,13 @@ export default function App() {
         return (
           <div className="fixed inset-0 bg-black/70 z-[70] flex flex-col justify-end animate-fade-in" onClick={() => setSelectedDayDetailModal(null)}>
             <div className="bg-white text-neutral-900 w-full h-[85vh] rounded-t-[40px] flex flex-col shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-slide-up relative overflow-hidden" onClick={e => e.stopPropagation()}>
+               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 via-yellow-300 to-emerald-400 z-10" />
                <div className="flex justify-center pt-3 pb-2 bg-white"><div className="w-12 h-1.5 bg-neutral-200 rounded-full"></div></div>
                <div className="px-6 flex justify-between items-start mb-4 border-b border-neutral-100 pb-5 bg-white">
                  <div>
-                   <h2 className="text-2xl font-black tracking-tight">{selectedDayDetailModal} 훈련</h2>
-                   <p className="text-sm font-bold text-neutral-500 mt-2">{sessionData.length}개 종목 수행</p>
+                   <p className="text-[11px] font-black text-emerald-600 mb-1">운동 기록</p>
+                   <h2 className="text-2xl font-black tracking-tight">{(() => { const d = new Date(selectedDayDetailModal); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${['일', '월', '화', '수', '목', '금', '토'][d.getDay()]})`; })()}</h2>
+                   <p className="text-sm font-bold text-neutral-500 mt-1">{sessionData.length}개 종목 수행</p>
                  </div>
                  <button onClick={() => setSelectedDayDetailModal(null)} className="p-2 bg-neutral-100 rounded-full hover:bg-neutral-200 transition-colors active:scale-90"><X className="w-5 h-5 text-neutral-500"/></button>
                </div>
@@ -3599,18 +3604,18 @@ export default function App() {
                  <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm flex justify-between items-center mb-4">
                    <div className="text-center"><div className="text-xs text-neutral-400 font-bold mb-1">총 볼륨</div><div className="text-2xl font-black text-neutral-900">{totalVol.toLocaleString()}<span className="text-sm text-neutral-400 ml-1">kg</span></div></div>
                    <div className="w-[1px] h-12 bg-neutral-100"></div>
-                   <div className="text-center"><div className="text-xs text-neutral-400 font-bold mb-1">완료 세트</div><div className="text-2xl font-black text-[#4768ff]">{totalSets}<span className="text-sm text-neutral-400 ml-1">세트</span></div></div>
+                   <div className="text-center"><div className="text-xs text-neutral-400 font-bold mb-1">완료 세트</div><div className="text-2xl font-black text-emerald-600">{totalSets}<span className="text-sm text-neutral-400 ml-1">세트</span></div></div>
                  </div>
                  <div className="space-y-4">
                     {sessionData.length === 0 ? (
                       <div className="text-center py-20 text-neutral-400 font-bold flex flex-col items-center"><Dumbbell className="w-12 h-12 mb-3 opacity-50"/>이 날은 기록된 운동이 없습니다.</div>
                     ) : (
                       sessionData.map((ex, idx) => (
-                        <div key={`d-ex-${idx}`} className="bg-white p-4 rounded-2xl border border-neutral-100 flex justify-between items-center shadow-sm hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer group">
+                        <div key={`d-ex-${idx}`} className="bg-white p-4 rounded-2xl border border-neutral-100 flex justify-between items-center shadow-sm hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
                           <div className="flex items-center gap-4">
                             <SmartExerciseThumbnail exerciseId={getExId(ex)} target={getExTarget(ex)} tool={ex.exercise && ex.exercise.tool ? String(ex.exercise.tool) : '바벨'} size="w-14 h-14" showShadow={false}/>
                             <div>
-                              <div className="font-black text-neutral-900 text-base mb-1 group-hover:text-[#4768ff] transition-colors">{getExName(ex)}</div>
+                              <div className="font-black text-neutral-900 text-base mb-1 group-hover:text-emerald-600 transition-colors">{getExName(ex)}</div>
                               <div className="text-xs font-bold text-neutral-400">{(ex.sets||[]).filter(s=>s.completed).length}세트 완료</div>
                             </div>
                           </div>
@@ -3622,7 +3627,7 @@ export default function App() {
                {sessionData.length > 0 && (
                  <div className="p-5 bg-white border-t border-neutral-100 shadow-[0_-5px_15px_rgba(0,0,0,0.02)] flex gap-2">
                    <button onClick={() => openPhotoCard(selectedDayDetailModal)} className="flex-1 bg-neutral-900 text-white font-black py-4 rounded-xl shadow-md hover:bg-neutral-800 active:scale-95 transition-all text-base flex items-center justify-center gap-2"><Camera className="w-5 h-5 text-emerald-400"/> 인증카드</button>
-                   <button onClick={() => { loadSpecificWorkout(selectedDayDetailModal); setSelectedDayDetailModal(null); }} className="flex-[2] bg-[#4768ff] text-white font-black py-4 rounded-xl shadow-[0_10px_25px_rgba(71,104,255,0.3)] hover:bg-blue-600 active:scale-95 transition-all text-base">이 루틴 불러와서 운동하기</button>
+                   <button onClick={() => { loadSpecificWorkout(selectedDayDetailModal); setSelectedDayDetailModal(null); }} className="flex-[2] bg-emerald-500 text-white font-black py-4 rounded-xl shadow-[0_10px_25px_rgba(16,185,129,0.35)] hover:bg-emerald-400 active:scale-95 transition-all text-base">이 루틴 불러와서 운동하기</button>
                  </div>
                )}
              </div>
@@ -3719,42 +3724,63 @@ export default function App() {
         </div>
       )}
 
-      {isFullCalendarOpen && (
-        <div className="fixed inset-0 bg-black/80 z-[80] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity" onClick={() => setIsFullCalendarOpen(false)}>
-          <div className="bg-neutral-900 rounded-[40px] p-8 max-w-sm w-full shadow-2xl border border-neutral-800 text-white relative" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex items-center gap-2">
-                <button onClick={() => setCalendarYear(prev => prev - 1)} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-white transition-colors"><ChevronLeft className="w-4 h-4"/></button>
-                <span className="text-lg font-black tracking-tight">{calendarYear}년</span>
-                <button onClick={() => setCalendarYear(prev => prev + 1)} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-white transition-colors"><ChevronRight className="w-4 h-4"/></button>
-                <div className="w-[1px] h-4 bg-neutral-700 mx-1"></div>
-                <button onClick={() => { if(calendarMonth === 0) { setCalendarMonth(11); setCalendarYear(prev => prev - 1); } else { setCalendarMonth(prev => prev - 1); } }} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-white transition-colors"><ChevronLeft className="w-4 h-4"/></button>
-                <span className="text-lg font-black tracking-tight">{calendarMonth + 1}월</span>
-                <button onClick={() => { if(calendarMonth === 11) { setCalendarMonth(0); setCalendarYear(prev => prev + 1); } else { setCalendarMonth(prev => prev + 1); } }} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-white transition-colors"><ChevronRight className="w-4 h-4"/></button>
+      {isFullCalendarOpen && (() => {
+        const todayStr = formatDate(new Date());
+        const monthDays = getMonthDays(calendarYear, calendarMonth);
+        const trainedDays = monthDays.filter(d => d && Array.isArray(safeWorkouts[formatDate(d)]) && safeWorkouts[formatDate(d)].length > 0).length;
+        const prevMonth = () => { if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear(y => y - 1); } else setCalendarMonth(m => m - 1); };
+        const nextMonth = () => { if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear(y => y + 1); } else setCalendarMonth(m => m + 1); };
+        return (
+        <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setIsFullCalendarOpen(false)}>
+          <div className="bg-white text-neutral-900 rounded-[32px] p-6 max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.35)] border border-emerald-100 relative overflow-hidden animate-scale-up" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 via-yellow-300 to-emerald-400" />
+            <div className="flex justify-between items-start mb-5 mt-1">
+              <div>
+                <div className="flex items-center gap-1 text-xs font-black text-emerald-600">
+                  <button onClick={() => setCalendarYear(y => y - 1)} aria-label="이전 해" className="p-0.5 rounded-md hover:bg-emerald-50"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                  {calendarYear}년
+                  <button onClick={() => setCalendarYear(y => y + 1)} aria-label="다음 해" className="p-0.5 rounded-md hover:bg-emerald-50"><ChevronRight className="w-3.5 h-3.5" /></button>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <button onClick={prevMonth} aria-label="이전 달" className="p-1.5 rounded-xl bg-neutral-100 hover:bg-emerald-50 text-neutral-500 hover:text-emerald-600 transition-colors active:scale-90"><ChevronLeft className="w-4 h-4" /></button>
+                  <h3 className="text-2xl font-black tracking-tight w-16 text-center">{calendarMonth + 1}월</h3>
+                  <button onClick={nextMonth} aria-label="다음 달" className="p-1.5 rounded-xl bg-neutral-100 hover:bg-emerald-50 text-neutral-500 hover:text-emerald-600 transition-colors active:scale-90"><ChevronRight className="w-4 h-4" /></button>
+                </div>
               </div>
-              <button onClick={() => setIsFullCalendarOpen(false)} className="p-2.5 bg-neutral-800 rounded-full hover:bg-neutral-700 active:scale-90 transition-transform"><X className="w-5 h-5"/></button>
+              <button onClick={() => setIsFullCalendarOpen(false)} aria-label="닫기" className="p-2 bg-neutral-100 rounded-full text-neutral-500 hover:bg-neutral-200 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
             </div>
-            <div className="flex justify-between items-center mb-4">
-              <button onClick={() => { const today = new Date(); setCalendarYear(today.getFullYear()); setCalendarMonth(today.getMonth()); setCurrentDate(formatDate(today)); setIsFullCalendarOpen(false); }} className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-900/50 hover:bg-emerald-500/20 transition-colors">오늘 날짜로 이동</button>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg">이번 달 운동 {trainedDays}일</span>
+              <button onClick={() => { const today = new Date(); setCalendarYear(today.getFullYear()); setCalendarMonth(today.getMonth()); setCurrentDate(formatDate(today)); setIsFullCalendarOpen(false); }} className="text-[11px] font-black text-white bg-emerald-500 px-3 py-1.5 rounded-lg shadow-[0_4px_12px_rgba(16,185,129,0.35)] hover:bg-emerald-400 active:scale-95 transition-all">오늘로 이동</button>
             </div>
-            <div className="grid grid-cols-7 gap-y-6 gap-x-2 text-center text-sm">
-              {['일','월','화','수','목','금','토'].map((d,i) => <div key={`dw-${d}`} className={`font-black mb-2 ${i===0 ? 'text-rose-500' : i===6 ? 'text-blue-500' : 'text-neutral-500'}`}>{d}</div>)}
-              {getMonthDays(calendarYear, calendarMonth).map((d, i) => {
+            <div className="grid grid-cols-7 gap-y-2 gap-x-1 text-center text-sm">
+              {['일','월','화','수','목','금','토'].map((d,i) => <div key={`dw-${d}`} className={`text-[11px] font-black pb-1 ${i===0 ? 'text-rose-500' : i===6 ? 'text-blue-500' : 'text-neutral-400'}`}>{d}</div>)}
+              {monthDays.map((d, i) => {
                 if (!d) return <div key={`empty-${i}`} />;
                 const dateStr = formatDate(d);
                 const isSelected = dateStr === currentDate;
+                const isToday = dateStr === todayStr;
                 const hasWorkout = Array.isArray(safeWorkouts[dateStr]) && safeWorkouts[dateStr].length > 0;
+                const tone = isSelected ? 'bg-emerald-500 text-white shadow-[0_6px_16px_rgba(16,185,129,0.45)] scale-105'
+                  : hasWorkout ? 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                  : d.getDay() === 0 ? 'text-rose-500 hover:bg-neutral-100' : d.getDay() === 6 ? 'text-blue-500 hover:bg-neutral-100' : 'text-neutral-700 hover:bg-neutral-100';
                 return (
-                  <button key={`day-${i}`} onClick={() => { setCurrentDate(dateStr); setIsFullCalendarOpen(false); }} className={`w-12 h-12 mx-auto rounded-2xl flex items-center justify-center font-black relative transition-all active:scale-95 ${isSelected ? 'bg-emerald-500 text-neutral-900 shadow-[0_0_20px_rgba(16,185,129,0.5)] scale-110' : 'text-neutral-200 hover:bg-neutral-800'}`}>
+                  <button key={`day-${i}`} onClick={() => { setCurrentDate(dateStr); setIsFullCalendarOpen(false); }} className={`w-10 h-10 mx-auto rounded-2xl flex items-center justify-center font-black relative transition-all active:scale-95 ${tone} ${isToday && !isSelected ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}`}>
                     {d.getDate()}
-                    {hasWorkout && <div className={`w-1.5 h-1.5 rounded-full absolute bottom-1.5 ${isSelected ? 'bg-neutral-900' : 'bg-emerald-500'}`} />}
+                    {hasWorkout && <div className={`w-1.5 h-1.5 rounded-full absolute bottom-1 ${isSelected ? 'bg-yellow-300' : 'bg-emerald-500'}`} />}
                   </button>
                 );
               })}
             </div>
+            <div className="flex items-center justify-center gap-4 mt-5 pt-4 border-t border-neutral-100 text-[10px] font-bold text-neutral-400">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-emerald-50 border border-emerald-200 relative"><span className="absolute left-1/2 -translate-x-1/2 bottom-0.5 w-1 h-1 rounded-full bg-emerald-500" /></span> 운동한 날</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md ring-2 ring-emerald-400" /> 오늘</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-emerald-500" /> 선택한 날</span>
+            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {selectedProgramModal && (
         <div className="fixed inset-0 bg-black/70 z-[70] flex flex-col justify-end animate-fade-in" onClick={() => setSelectedProgramModal(null)}>
