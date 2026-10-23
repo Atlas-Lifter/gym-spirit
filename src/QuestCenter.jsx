@@ -61,7 +61,7 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
   const claimed = questState?.claimed || {};
   const xp = questState?.xp || 0;
 
-  const S = useMemo(() => summarize(workouts, diet), [workouts, diet]);
+  const S = useMemo(() => summarize(workouts, diet, bodyStats?.weight), [workouts, diet, bodyStats?.weight]);
   const now = new Date();
   const daily = dailyQuests(S, bodyStats, now);
   const weekly = weeklyQuests(S, now);

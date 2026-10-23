@@ -17,6 +17,7 @@ import { PosingGuideSection } from './PosingGuide.jsx';
 import { QuestCenter } from './QuestCenter.jsx';
 import { BodyTransform } from './BodyTransform.jsx';
 import { RankingTab } from './RankingTab.jsx';
+import { weightRule, platesFor, setLoad, nextWeight } from './weightRules.js';
 import { FriendCenter } from './FriendCenter.jsx';
 import * as cloud from './cloud.js';
 import { FullBodyAvatar, AVATAR_SKIN_TONES, AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS } from './realAvatar.jsx';
@@ -42,21 +43,6 @@ const calculate1RM = (weight, reps) => {
   if (!w || !r || r < 1) return 0;
   if (r === 1) return w;
   return Math.round(w * (36 / (37 - r)));
-};
-
-const calculatePlates = (totalWeight, barWeight = 20) => {
-  const weight = parseFloat(totalWeight);
-  if (!weight || weight <= barWeight) return [];
-  let target = (weight - barWeight) / 2;
-  const availablePlates = [25, 20, 15, 10, 5, 2.5, 1.25];
-  const platesToUse = [];
-  for (let p of availablePlates) {
-    while (target >= p) {
-      platesToUse.push(p);
-      target = Math.round((target - p) * 100) / 100;
-    }
-  }
-  return platesToUse;
 };
 
 const EXERCISE_OPTIONS = [
@@ -402,6 +388,17 @@ const getExId = (exItem) => {
   if (exItem.exercise && exItem.exercise.id) return String(exItem.exercise.id);
   if (exItem.id) return String(exItem.id);
   return '';
+};
+
+// 종목의 중량 기준(바벨·덤벨·머신·맨몸). 종목표의 기구 정보를 우선 쓴다
+const ruleOfEx = (exItem) => {
+  const id = String(getExId(exItem));
+  const opt = EXERCISE_OPTIONS.find(e => e.id === id);
+  return weightRule(id, opt?.tool || exItem?.exercise?.tool || exItem?.tool);
+};
+const toolOfEx = (exItem) => {
+  const id = String(getExId(exItem));
+  return EXERCISE_OPTIONS.find(e => e.id === id)?.tool || exItem?.exercise?.tool || exItem?.tool;
 };
 
 // 종목 썸네일: 해부도 위에 주동근(진한 빨강)과 협응근(연한 빨강)을 표시한다
@@ -944,6 +941,9 @@ export default function App() {
   };
 
   const activeUser = currentUser;
+  // 세트 볼륨 = 실제 부하 × 횟수 (맨몸 종목은 체중 포함, 어시스트는 체중에서 도움 무게를 뺀 값)
+  const bodyWeightKg = parseFloat(activeUser?.bodyStats?.weight) || 0;
+  const setVolume = (ex, s) => setLoad(String(getExId(ex)), toolOfEx(ex), s.weight, bodyWeightKg) * (parseInt(s.reps, 10) || 0);
   const safeWorkouts = activeUser?.workouts || {};
   const pastWorkoutDates = Object.keys(safeWorkouts)
     .filter(d => Array.isArray(safeWorkouts[d]) && safeWorkouts[d].length > 0)
@@ -1380,8 +1380,7 @@ export default function App() {
     setSession(session.map(ex => {
       if (ex.id === sessionExId) {
         return { ...ex, sets: ex.sets.map(s => {
-            const currentW = parseFloat(s.weight) || 0;
-            return { ...s, weight: String(currentW > 0 ? currentW + 2.5 : 2.5) };
+            return { ...s, weight: nextWeight(ruleOfEx(ex), s.weight) };
           }) };
       }
       return ex;
@@ -1394,7 +1393,7 @@ export default function App() {
     let totalVol = 0;
     sessionData.forEach(ex => {
       if (ex.sets) ex.sets.forEach(s => {
-        if (s.completed && s.weight && s.reps) totalVol += parseFloat(s.weight) * parseInt(s.reps, 10);
+        if (s.completed && s.reps) totalVol += setVolume(ex, s);
       });
     });
     setPhotoCardData({
@@ -1457,8 +1456,8 @@ export default function App() {
             else if(targetStr.includes('팔')) targetGroup = '팔';
             else if(targetStr.includes('복근')) targetGroup = '복근';
             ex.sets.forEach(set => {
-               if(set.completed && set.weight && set.reps) {
-                  const v = (parseFloat(set.weight) * parseInt(set.reps, 10));
+               if(set.completed && set.reps) {
+                  const v = setVolume(ex, set);
                   if (!isNaN(v)) { volumes[i] += v; total += v; muscleShare[targetGroup] = (muscleShare[targetGroup] || 0) + v; }
                }
             });
@@ -1470,8 +1469,8 @@ export default function App() {
           prevSession.forEach(ex => {
             if (!ex || !ex.sets) return;
             ex.sets.forEach(set => {
-               if(set.completed && set.weight && set.reps) {
-                 const v = (parseFloat(set.weight) * parseInt(set.reps, 10));
+               if(set.completed && set.reps) {
+                 const v = setVolume(ex, set);
                  if (!isNaN(v)) prevTotal += v;
                }
             });
@@ -1498,7 +1497,7 @@ export default function App() {
           const group = getExTarget(ex).split('(')[0];
           (ex.sets || []).forEach(s => {
             if (!s.completed) return;
-            const v = parseFloat(s.weight) * parseInt(s.reps, 10);
+            const v = setVolume(ex, s);
             if (!isNaN(v)) volume += v;
             if (s.type === 'W') return;
             daySets++;
@@ -2257,7 +2256,7 @@ export default function App() {
   if (currentScreen === 'workout') {
     const formattedWorkoutTime = `${Math.floor(workoutDurationSec / 3600).toString().padStart(2, '0')}:${Math.floor((workoutDurationSec % 3600) / 60).toString().padStart(2, '0')}:${(workoutDurationSec % 60).toString().padStart(2, '0')}`;
     const currentSessionVolume = session.reduce((total, ex) => total + (ex.sets || []).reduce((sum, s) => {
-        if (s.completed && s.weight && s.reps) return sum + (parseFloat(s.weight) * parseInt(s.reps, 10));
+        if (s.completed && s.reps) return sum + setVolume(ex, s);
         return sum;
       }, 0), 0);
     const getRpeColor = (rpeStr) => {
@@ -2311,6 +2310,7 @@ export default function App() {
               const exTargetStr = getExTarget(ex);
               const exIdStr = getExId(ex);
               const exToolStr = ex.exercise && ex.exercise.tool ? String(ex.exercise.tool) : '바벨';
+              const exRule = ruleOfEx(ex);
               return (
                 <div key={ex.id} className="bg-neutral-900 rounded-[28px] p-5 border border-neutral-800 shadow-xl relative">
                   <div className="flex justify-between items-start gap-2 mb-5 border-b border-neutral-800 pb-4">
@@ -2323,6 +2323,7 @@ export default function App() {
                          </button>
                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                            <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-900">{exTargetStr}</span>
+                           <span className="text-[11px] font-bold text-neutral-300 bg-neutral-800 px-2 py-0.5 rounded-md border border-neutral-700 whitespace-nowrap">⚖️ {exRule.hint}</span>
                            <button onClick={() => setGuideExerciseId(exIdStr)} className="text-[11px] font-black text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-900/60 hover:bg-blue-500/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"><BookOpen className="w-3 h-3"/> 설명</button>
                            <button onClick={() => setSubstituteModalEx(ex)} className="text-[11px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-900/60 hover:bg-amber-500/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap" title="기구 대기 시 대체 운동 추천"><Zap className="w-3 h-3 fill-amber-400"/> 대체</button>
                            {max1RM > 0 && <span className="text-[11px] font-bold text-neutral-400 flex items-center gap-1"><Target className="w-3 h-3"/> 1RM <span className="text-white bg-neutral-800 px-1.5 py-0.5 rounded">{max1RM}kg</span></span>}
@@ -2338,17 +2339,18 @@ export default function App() {
                   </div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-12 gap-2 text-center text-[10px] font-black text-neutral-500 mb-1 px-1">
-                      <div className="col-span-1">SET</div><div className="col-span-3">KG</div><div className="col-span-3">REPS</div><div className="col-span-3">RPE</div><div className="col-span-2">DONE</div>
+                      <div className="col-span-1">SET</div><div className="col-span-3">{exRule.label}</div><div className="col-span-3">REPS</div><div className="col-span-3">RPE</div><div className="col-span-2">DONE</div>
                     </div>
                     {ex.sets.map((set, setIndex) => {
-                      const plateCalc = calculatePlates(set.weight);
+                      const plateCalc = platesFor(exRule, set.weight);
+                      const realLoad = (exRule.key === 'bodyweight' || exRule.key === 'assist') && bodyWeightKg > 0 ? setLoad(exIdStr, toolOfEx(ex), set.weight, bodyWeightKg) : null;
                       const isDropSet = set.type === 'D';
                       const prevSet = getPreviousRecord(exIdStr, setIndex);
                       return (
                         <div key={set.id} className="relative group/set">
                           <div className={`grid grid-cols-12 gap-2 items-center transition-all duration-300 ${set.completed ? 'opacity-50' : 'opacity-100'} ${isDropSet ? 'bg-rose-950/20 border border-rose-900/50 p-2 -mx-2 rounded-xl' : ''}`}>
                             <button onClick={() => cycleSetType(ex.id, set.id)} className={`col-span-1 font-black text-[10px] w-7 h-7 mx-auto rounded-lg flex items-center justify-center transition-colors shadow-sm ${set.type === 'W' ? 'text-neutral-400 bg-neutral-800' : set.type === 'D' ? 'text-rose-400 bg-rose-950 border border-rose-900/50' : 'text-emerald-400 bg-emerald-950 border border-emerald-900/50'}`}>{String(set.type)}</button>
-                            <div className="col-span-3"><input type="number" placeholder="0" value={set.weight} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-neutral-950 text-center font-black rounded-xl py-3 outline-none border border-neutral-800 focus:border-emerald-500 transition-colors shadow-inner text-lg" /></div>
+                            <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-neutral-950 text-center font-black rounded-xl py-3 outline-none border border-neutral-800 focus:border-emerald-500 transition-colors shadow-inner text-lg" /></div>
                             <div className="col-span-3"><input type="number" placeholder="0" value={set.reps} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-neutral-950 text-center font-black rounded-xl py-3 outline-none border border-neutral-800 focus:border-emerald-500 transition-colors shadow-inner text-lg" /></div>
                             <div className="col-span-3"><input type="number" placeholder="-" min="1" max="10" value={set.rpe} onChange={(e) => updateSet(ex.id, set.id, 'rpe', e.target.value)} className={`w-full text-center font-bold text-sm rounded-xl py-3 outline-none border transition-colors ${getRpeColor(set.rpe)}`} /></div>
                             <div className="col-span-2 flex justify-center relative">
@@ -2358,9 +2360,12 @@ export default function App() {
                           </div>
                           <div className="flex justify-between items-center px-8 mt-2 mb-4 h-4">
                             <span className="text-[10px] text-neutral-500 font-bold">{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}</span>
+                            {realLoad !== null && realLoad !== (parseFloat(set.weight) || 0) && (
+                              <span className="text-[10px] font-bold text-sky-300">실제 부하 {realLoad}kg {exRule.key === 'assist' ? '(체중 − 보조)' : '(체중 포함)'}</span>
+                            )}
                             {plateCalc.length > 0 && (
-                              <button onClick={() => setPlateVisualizerModal({ weight: set.weight, plates: plateCalc })} className="flex gap-1 justify-end items-center opacity-70 hover:opacity-100 transition-opacity">
-                                <span className="text-[9px] font-bold text-emerald-400">양쪽:</span>
+                              <button onClick={() => setPlateVisualizerModal({ weight: set.weight, plates: plateCalc, rule: exRule })} className="flex gap-1 justify-end items-center opacity-70 hover:opacity-100 transition-opacity">
+                                <span className="text-[9px] font-bold text-emerald-400">{exRule.plates === 'both' ? '양쪽 각' : '한쪽'}</span>
                                 {plateCalc.map((p, i) => <span key={`plate-${i}`} className="text-[10px] font-black bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded shadow-sm">{p}</span>)}
                               </button>
                             )}
@@ -2463,21 +2468,35 @@ export default function App() {
             <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 max-w-sm w-full text-center text-white relative shadow-2xl" onClick={e=>e.stopPropagation()}>
               <button onClick={() => setPlateVisualizerModal(null)} className="absolute top-4 right-4 p-2 bg-neutral-800 rounded-full text-neutral-400"><X className="w-5 h-5"/></button>
               <h3 className="text-2xl font-black mb-1">{plateVisualizerModal.weight} kg</h3>
-              <p className="text-xs font-bold text-neutral-400 mb-6">20kg 봉 기준 한쪽에 꽂아야 할 원판</p>
+              <p className="text-xs font-bold text-neutral-400 mb-6">{(() => {
+                const r = plateVisualizerModal.rule || { plates: 'both', bar: 20 };
+                if (r.plates === 'one') return '한쪽 끝에만 꽂을 원판';
+                return r.bar ? `${r.bar}kg 봉 + 양쪽에 똑같이 꽂을 원판` : '양쪽에 똑같이 꽂을 원판 (기구 무게 제외)';
+              })()}</p>
               <div className="bg-neutral-950 p-6 rounded-2xl border border-neutral-800 flex items-center justify-center min-h-[120px] mb-6 relative overflow-x-auto">
                 <div className="w-full h-3 bg-neutral-600 rounded-full absolute"></div>
-                <div className="flex gap-1.5 items-center z-10">
-                  {plateVisualizerModal.plates.map((p, idx) => {
+                {(() => {
+                  const r = plateVisualizerModal.rule || { plates: 'both' };
+                  const Plate = ({ p }) => {
                     let h = "h-20"; let col = "bg-rose-500";
                     if (p === 20) { h = "h-18"; col = "bg-blue-500"; }
                     if (p === 15) { h = "h-16"; col = "bg-amber-500"; }
                     if (p === 10) { h = "h-14"; col = "bg-emerald-500"; }
                     if (p === 5) { h = "h-12"; col = "bg-purple-500"; }
                     if (p < 5) { h = "h-10"; col = "bg-neutral-400"; }
-                    return (<div key={`p-vis-${idx}`} className={`w-5 ${h} ${col} rounded-sm shadow-md flex items-center justify-center text-[9px] font-black text-white`}>{p}</div>);
-                  })}
-                </div>
+                    return <div className={`w-5 ${h} ${col} rounded-sm shadow-md flex items-center justify-center text-[9px] font-black text-white`}>{p}</div>;
+                  };
+                  const side = plateVisualizerModal.plates;
+                  return (
+                    <div className="flex items-center justify-between w-full z-10">
+                      <div className="flex gap-1 items-center flex-row-reverse">{r.plates === 'both' && side.map((p, i) => <Plate key={`l-${i}`} p={p} />)}</div>
+                      <span className="text-[10px] font-black text-neutral-300 bg-neutral-800 px-2 py-0.5 rounded">{r.bar ? `봉 ${r.bar}kg` : r.plates === 'one' ? '고정 축' : '기구'}</span>
+                      <div className="flex gap-1 items-center">{side.map((p, i) => <Plate key={`r-${i}`} p={p} />)}</div>
+                    </div>
+                  );
+                })()}
               </div>
+              <p className="text-[11px] font-bold text-neutral-500 mb-2">{(plateVisualizerModal.rule || { plates: 'both' }).plates === 'both' ? '한쪽에 꽂을 원판 (반대쪽도 똑같이)' : '꽂을 원판'}</p>
               <div className="flex gap-2 justify-center flex-wrap">
                 {plateVisualizerModal.plates.map((p, idx) => (<span key={`txt-p-${idx}`} className="text-xs font-black bg-neutral-800 px-3 py-1 rounded-lg border border-neutral-700">{p}kg</span>))}
               </div>
@@ -2888,7 +2907,7 @@ export default function App() {
                       let maxExVol = 0;
                       daySession.forEach(ex => {
                           let exVol = 0;
-                          if(ex.sets) ex.sets.forEach(s => { if(s.completed && s.weight && s.reps) exVol += parseFloat(s.weight)*parseInt(s.reps, 10); });
+                          if(ex.sets) ex.sets.forEach(s => { if(s.completed && s.reps) exVol += setVolume(ex, s); });
                           if(exVol > maxExVol) { maxExVol = exVol; bestEx = getExName(ex); }
                       });
                       return (
@@ -3186,7 +3205,7 @@ export default function App() {
         const sessionData = safeWorkouts[selectedDayDetailModal] || [];
         let totalVol = 0;
         let totalSets = 0;
-        sessionData.forEach(ex => { if (ex.sets) ex.sets.forEach(s => { if (s.completed && s.weight && s.reps) { totalVol += parseFloat(s.weight) * parseInt(s.reps, 10); totalSets++; } }); });
+        sessionData.forEach(ex => { if (ex.sets) ex.sets.forEach(s => { if (s.completed && s.reps) { totalVol += setVolume(ex, s); totalSets++; } }); });
         return (
           <div className="fixed inset-0 bg-black/70 z-[70] flex flex-col justify-end animate-fade-in" onClick={() => setSelectedDayDetailModal(null)}>
             <div className="bg-white text-neutral-900 w-full h-[85vh] rounded-t-[40px] flex flex-col shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-slide-up relative overflow-hidden" onClick={e => e.stopPropagation()}>

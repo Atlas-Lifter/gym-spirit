@@ -1,4 +1,5 @@
 // 퀘스트·업적·레벨 계산. 운동/식단 기록에서 진행도를 계산하고, 보상(XP)을 받은 기록은 questState.claimed에 남긴다.
+import { setLoad } from './weightRules.js';
 
 export const dateKey = (date) => {
   const d = new Date(date);
@@ -27,7 +28,7 @@ export const levelInfo = (xp = 0) => {
 };
 
 // ── 기록 요약 ───────────────────────────────────────────────
-export const summarize = (workouts = {}, diet = {}) => {
+export const summarize = (workouts = {}, diet = {}, bodyWeight = 0) => {
   const dates = Object.keys(workouts).filter(d => Array.isArray(workouts[d]) && workouts[d].some(ex => goodSets(ex).length)).sort();
   const day = {};
   let volume = 0, sets = 0, legSets = 0;
@@ -44,7 +45,8 @@ export const summarize = (workouts = {}, diet = {}) => {
       const group = exTarget(ex).split('(')[0];
       let dayBest = 0;
       gs.forEach(st => {
-        const w = parseFloat(st.weight) || 0, r = parseInt(st.reps, 10) || 0;
+        // 맨몸 종목은 체중 포함, 어시스트는 체중에서 도움 무게를 뺀 실제 부하로 계산
+        const w = setLoad(exKey(ex), ex?.exercise?.tool || ex?.tool, st.weight, bodyWeight), r = parseInt(st.reps, 10) || 0;
         s.sets++;
         s.volume += w * r;
         if (group === '하체') s.legSets++;
