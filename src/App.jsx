@@ -2479,7 +2479,7 @@ export default function App() {
                   const r = plateVisualizerModal.rule || { plates: 'both' };
                   const Plate = ({ p }) => {
                     let h = "h-20"; let col = "bg-rose-500";
-                    if (p === 20) { h = "h-18"; col = "bg-blue-500"; }
+                    if (p === 20) { h = "h-20"; col = "bg-blue-500"; }
                     if (p === 15) { h = "h-16"; col = "bg-amber-500"; }
                     if (p === 10) { h = "h-14"; col = "bg-emerald-500"; }
                     if (p === 5) { h = "h-12"; col = "bg-purple-500"; }

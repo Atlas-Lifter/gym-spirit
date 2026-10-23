@@ -8,7 +8,8 @@
 // 기록에 저장되는 숫자(set.weight)는 바꾸지 않고, 보여주는 방식과 볼륨 계산만 달라진다.
 
 export const STANDARD_BAR = 20;
-export const GYM_PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
+// 일반 헬스장에는 25kg 원판이 없어서 한쪽에 꽂는 가장 큰 원판은 20kg
+export const GYM_PLATES = [20, 15, 10, 5, 2.5, 1.25];
 
 const PLATE_MACHINES = ['lpd', 's_lpd', 'hack_sq', 'vsq', 'tbar', 'smith_sq', 'sip', 'smith_ohp'];
 const ONE_END_BARBELL = ['landmine_p', 'meadows_row'];
