@@ -413,8 +413,19 @@ const SmartExerciseThumbnail = ({ exerciseId, target, size = "w-14 h-14", showSh
   );
 };
 
-// 근육 그림에서 부위를 누르면 고르는 세부 부위. match는 EXERCISE_OPTIONS의 target 문자열로 종목을 거른다.
+// 근육 그림에서 부위를 누르면 고르는 세부 부위. match는 EXERCISE_OPTIONS의 target 문자열(또는 ids 목록)로 종목을 거른다.
+const byIds = (ids) => (t, ex) => ids.includes(ex?.id);
 const MUSCLE_SUBGROUPS = {
+  '가슴': [
+    { key: '상부', label: '윗가슴 (대흉근 상부)', desc: '인클라인 바벨·덤벨 프레스, 랜드마인 프레스', ids: ['ip', 'idp', 'sip', 'landmine_p'] },
+    { key: '중부', label: '가슴 중앙 (중부·안쪽)', desc: '벤치프레스, 체스트 프레스, 플라이, 헥스 프레스', ids: ['bp', 'dp_chest', 'pdf', 'cpm', 'dfly', 'hex_press', 'cable_press', 'cable_fly_stand', 'floor_press', 'spoto_press', 'pushup', 'cg_bench'] },
+    { key: '하부', label: '아랫가슴 (대흉근 하부)', desc: '딥스, 디클라인 벤치프레스, 케이블 크로스오버', ids: ['dips', 'dbp', 'cf'] },
+  ],
+  '등': [
+    { key: '상부', label: '등 상부 (승모·능형근)', desc: '슈러그, 페이스 풀, 체스트 서포티드·씰 로우', ids: ['chest_row', 'seal_row', 'face_pull', 'shrug_bb', 'shrug_db', 'mag_lpd'] },
+    { key: '중부', label: '등 중부 (광배 폭·두께)', desc: '풀업, 랫풀다운, 바벨·티바·시티드 로우', ids: ['pu', 'pd', 'br', 'sr', 'tbar', 'csr', 'cu', 'astpu', 'prow', 'meadows_row', 'inv_row', 'apd', 'pullover_mac'] },
+    { key: '하부', label: '등 하부 (광배 하부·기립근)', desc: '원암·클로즈그립 랫풀다운, 덤벨 로우, 데드리프트', ids: ['onearm_lpd', 'cg_pd', 'dr_back', 'dl', 'rack_pull'] },
+  ],
   '어깨': [
     { key: '전면', label: '전면 삼각근', desc: '오버헤드·숄더 프레스, 프론트 레이즈', match: t => t.startsWith('어깨') && /전면|전\//.test(t) },
     { key: '측면', label: '측면 삼각근', desc: '사이드 레터럴 레이즈, 업라이트 로우', match: t => t.startsWith('어깨') && t.includes('측면') },
@@ -659,7 +670,7 @@ const AnimeMuscleBodySVG = ({ recoveryData, onMuscleClick }) => {
   const partsInfo = [
     { id: '어깨', title: '어깨', side: 'left', y: 80, target: [138, 112] },
     { id: '가슴', title: '가슴', side: 'right', y: 110, target: [228, 124] },
-    { id: '등', title: '등(광배)', side: 'left', y: 145, target: [158, 172] },
+    { id: '등', title: '등', side: 'left', y: 145, target: [158, 172] },
     { id: '복근', title: '복근', side: 'right', y: 175, target: [209, 200] },
     { id: '팔', title: '팔', side: 'left', y: 215, target: [125, 212] },
     { id: '하체', title: '하체', side: 'right', y: 300, target: [226, 296] }
@@ -688,7 +699,8 @@ const AnimeMuscleBodySVG = ({ recoveryData, onMuscleClick }) => {
 
   return (
     <div className="relative w-full h-full flex items-center justify-center py-4">
-      <svg viewBox="0 0 400 450" className="w-full h-full max-w-[360px]">
+      <div className="relative w-full max-w-[360px] aspect-[400/450]">
+      <svg viewBox="0 0 400 450" className="absolute inset-0 w-full h-full">
         <defs>
           <linearGradient id="anatSkin" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#ead6cc" />
@@ -726,21 +738,20 @@ const AnimeMuscleBodySVG = ({ recoveryData, onMuscleClick }) => {
           <circle key={`dot-${part.id}`} cx={part.target[0]} cy={part.target[1]} r="2.5" fill="#475569" stroke="#ffffff" strokeWidth="1" pointerEvents="none" />
         ))}
 
-        {partsInfo.map(part => {
-          const hoursLeft = recoveryData[part.id]?.hoursLeft || 0;
-          const perc = getRecoveryPercent(hoursLeft);
-          return (
-            <foreignObject key={`label-${part.id}`} x={part.side === 'left' ? 0 : 290} y={part.y - 15} width="110" height="40" className="overflow-visible">
-              <div className={`flex flex-col ${part.side === 'left' ? 'items-end pr-1' : 'items-start pl-1'} w-full h-full justify-center`}>
-                <div onClick={() => onMuscleClick(part.id)} className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-neutral-200 shadow-sm cursor-pointer hover:border-[#4768ff] hover:shadow-md transition-all active:scale-95">
-                   <span className="text-[11px] font-black text-neutral-700 whitespace-nowrap">{part.title}</span>
-                   <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md border ${perc === 100 ? 'bg-slate-50 text-slate-500 border-slate-200' : perc >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : perc >= 50 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>{perc}%</span>
-                </div>
-              </div>
-            </foreignObject>
-          );
-        })}
       </svg>
+      {/* 라벨은 SVG 밖에 겹쳐 그린다: 지시선 끝(x=110 / x=290)에 맞춰 좌우 대칭 */}
+      {partsInfo.map(part => {
+        const perc = getRecoveryPercent(recoveryData[part.id]?.hoursLeft || 0);
+        const pos = part.side === 'left' ? { right: `${(290 / 400) * 100}%` } : { left: `${(290 / 400) * 100}%` };
+        return (
+          <button key={`label-${part.id}`} onClick={() => onMuscleClick(part.id)} style={{ ...pos, top: `${(part.y / 450) * 100}%` }}
+            className="absolute -translate-y-1/2 flex items-center gap-1.5 bg-white/95 px-2.5 py-1.5 rounded-xl border border-neutral-200 shadow-sm cursor-pointer hover:border-[#4768ff] hover:shadow-md transition-[border-color,box-shadow] whitespace-nowrap">
+            <span className="text-[11px] font-black text-neutral-700">{part.title}</span>
+            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md border ${perc === 100 ? 'bg-slate-50 text-slate-500 border-slate-200' : perc >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : perc >= 50 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>{perc}%</span>
+          </button>
+        );
+      })}
+      </div>
     </div>
   );
 };
@@ -1228,7 +1239,7 @@ export default function App() {
     else if(part.includes('팔')) searchTarget = '팔';
     else if(part.includes('복근')) searchTarget = '복근';
     if(!searchTarget) return;
-    // 세부 부위가 있는 부위(어깨/팔/하체)는 먼저 세부 부위를 고르게 한다
+    // 세부 부위가 있는 부위(가슴/등/어깨/팔/하체)는 먼저 세부 부위를 고르게 한다
     if (MUSCLE_SUBGROUPS[searchTarget]) setMuscleSubPicker(searchTarget);
     else setMuscleConfirmModal({ group: searchTarget });
   };
@@ -1238,8 +1249,10 @@ export default function App() {
     setMuscleConfirmModal({ group, sub });
   };
 
-  const getMuscleExercises = ({ group, sub }) =>
-    EXERCISE_OPTIONS.filter(ex => sub ? sub.match(String(ex.target)) : String(ex.target).includes(group));
+  const getMuscleExercises = ({ group, sub }) => {
+    if (sub?.ids) return sub.ids.map(id => EXERCISE_OPTIONS.find(ex => ex.id === id)).filter(Boolean);
+    return EXERCISE_OPTIONS.filter(ex => sub ? sub.match(String(ex.target), ex) : String(ex.target).includes(group));
+  };
 
   const startMuscleRoutine = () => {
     if(!muscleConfirmModal) return;
