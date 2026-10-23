@@ -1482,7 +1482,16 @@ export default function App() {
 
   const updateSet = (exerciseId, setId, field, value) => {
     setSession(session.map(ex => {
-      if (ex.id === exerciseId) return { ...ex, sets: ex.sets.map(s => s.id === setId ? { ...s, [field]: String(value), ...(field === 'rpe' ? { rpeAuto: false } : {}) } : s) };
+      if (ex.id === exerciseId) return { ...ex, sets: ex.sets.map(s => {
+        if (s.id !== setId) return s;
+        const next = { ...s, [field]: String(value), ...(field === 'rpe' ? { rpeAuto: false } : {}) };
+        // 완료한 세트에 무게·횟수를 나중에 넣거나 고쳐도, RPE가 비었거나 자동값이면 다시 계산해 넣는다
+        if ((field === 'weight' || field === 'reps') && next.completed && (!String(next.rpe || '').trim() || next.rpeAuto)) {
+          const auto = suggestRpe(ex, next);
+          return auto !== null ? { ...next, rpe: String(auto), rpeAuto: true } : { ...next, rpe: next.rpeAuto ? '' : next.rpe, rpeAuto: false };
+        }
+        return next;
+      }) };
       return ex;
     }));
   };
@@ -2632,8 +2641,12 @@ export default function App() {
                                <button onClick={() => removeSet(ex.id, set.id)} className="absolute -right-8 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-rose-500 transition-all opacity-0 group-hover/set:opacity-100 bg-neutral-900 rounded-full shadow-md"><X className="w-4 h-4"/></button>
                             </div>
                           </div>
-                          <div className="flex justify-between items-center px-8 mt-2 mb-4 h-4">
-                            <span className="text-[10px] text-neutral-500 font-bold">{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}{(set.rpeAuto || !String(set.rpe || '').trim()) && suggestRpe(ex, set, exRM) !== null && <span className="ml-1.5 text-emerald-400/80">· RPE {set.rpeAuto ? '자동' : '추천'} {suggestRpe(ex, set, exRM)} (1RM {exRM}kg 기준)</span>}</span>
+                          <div className="flex justify-between items-start gap-2 px-2 mt-2 mb-4 min-h-[16px]">
+                            <span className="flex-1 min-w-0 text-[10px] text-neutral-500 font-bold leading-snug">{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}{(set.rpeAuto || !String(set.rpe || '').trim()) && suggestRpe(ex, set, exRM) !== null && <span className="ml-1.5 text-emerald-400/80">· RPE {set.rpeAuto ? '자동' : '추천'} {suggestRpe(ex, set, exRM)} (1RM {exRM}kg 기준)</span>}
+                              {!(parseInt(set.reps, 10) > 0) && parseFloat(set.weight) > 0 && exRM > 0 && exRule.key !== 'bodyweight' && exRule.key !== 'assist' && (() => {
+                                const max = parseFloat(set.weight) >= exRM ? 1 : Math.floor(30 * (exRM / parseFloat(set.weight) - 1));
+                                return <span className="ml-1.5 text-emerald-400/80">· 이 무게 최대 약 {max}회 (RPE 8 ≈ {Math.max(1, max - 2)}회) · 횟수를 넣으면 RPE 자동</span>;
+                              })()}</span>
                             {realLoad !== null && realLoad !== (parseFloat(set.weight) || 0) && (
                               <span className="text-[10px] font-bold text-sky-300">실제 부하 {realLoad}kg {exRule.key === 'assist' ? '(체중 − 보조)' : '(체중 포함)'}</span>
                             )}
