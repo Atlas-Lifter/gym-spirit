@@ -1482,9 +1482,25 @@ export default function App() {
 
   const updateSet = (exerciseId, setId, field, value) => {
     setSession(session.map(ex => {
-      if (ex.id === exerciseId) return { ...ex, sets: ex.sets.map(s => s.id === setId ? { ...s, [field]: String(value) } : s) };
+      if (ex.id === exerciseId) return { ...ex, sets: ex.sets.map(s => s.id === setId ? { ...s, [field]: String(value), ...(field === 'rpe' ? { rpeAuto: false } : {}) } : s) };
       return ex;
     }));
+  };
+
+  // 추천 RPE: 1RM(3대는 분석 탭에 입력한 값과 기록 중 큰 값, 그 외 종목은 내 최고 기록)으로
+  // 이 무게를 최대 몇 번 들 수 있는지(Epley 역산) 구하고, 남은 반복 수를 RPE로 바꾼다 (RPE = 10 - 남은 반복)
+  const exOneRM = (ex) => {
+    const id = String(getExId(ex));
+    return ['sq', 'bp', 'dl'].includes(id) ? getEffective1RM(id) : getTop1RM(id);
+  };
+  const suggestRpe = (ex, set, oneRM = exOneRM(ex)) => {
+    const rule = ruleOfEx(ex);
+    if (rule.key === 'bodyweight' || rule.key === 'assist') return null;
+    const w = parseFloat(set.weight), r = parseInt(set.reps, 10);
+    if (!(oneRM > 0) || !(w > 0) || !(r > 0)) return null;
+    const maxReps = w >= oneRM ? 1 : 30 * (oneRM / w - 1);
+    const rpe = Math.max(5, Math.min(10, 10 - (maxReps - r)));
+    return Math.round(rpe * 2) / 2;
   };
 
   const toggleSetComplete = (exerciseId, setId) => {
@@ -1492,7 +1508,12 @@ export default function App() {
     setSession(session.map(ex => {
       if (ex.id === exerciseId) {
         return { ...ex, sets: ex.sets.map(s => {
-            if (s.id === setId) { justCompleted = !s.completed; return { ...s, completed: !s.completed }; }
+            if (s.id === setId) {
+              justCompleted = !s.completed;
+              // 완료할 때 RPE를 비워 뒀으면 추천값을 자동으로 넣는다 (직접 적은 값은 그대로)
+              const auto = justCompleted && !String(s.rpe || '').trim() ? suggestRpe(ex, s) : null;
+              return { ...s, completed: !s.completed, ...(auto !== null ? { rpe: String(auto), rpeAuto: true } : {}) };
+            }
             return s;
           }) };
       }
@@ -2557,6 +2578,7 @@ export default function App() {
               const exIdStr = getExId(ex);
               const exToolStr = ex.exercise && ex.exercise.tool ? String(ex.exercise.tool) : '바벨';
               const exRule = ruleOfEx(ex);
+              const exRM = exOneRM(ex);
               return (
                 <div key={ex.id} className="bg-[#060b10]/95 rounded-[28px] p-5 border border-emerald-500/30 shadow-[0_0_28px_rgba(16,185,129,0.12),inset_0_0_24px_rgba(16,185,129,0.05)] relative overflow-hidden">
                   <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-300 to-transparent shadow-[0_0_14px_rgba(16,185,129,1)]" />
@@ -2604,14 +2626,14 @@ export default function App() {
                             </button>
                             <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
                             <div className="col-span-3"><input type="number" placeholder="0" value={set.reps} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
-                            <div className="col-span-2"><input type="number" placeholder="-" min="1" max="10" value={set.rpe} onChange={(e) => updateSet(ex.id, set.id, 'rpe', e.target.value)} className={`w-full text-center font-bold text-sm rounded-xl py-3 outline-none border transition-colors ${getRpeColor(set.rpe)}`} /></div>
+                            <div className="col-span-2"><input type="number" inputMode="decimal" step="0.5" placeholder={suggestRpe(ex, set, exRM) !== null ? `≈${suggestRpe(ex, set, exRM)}` : '-'} min="1" max="10" value={set.rpe} onChange={(e) => updateSet(ex.id, set.id, 'rpe', e.target.value)} className={`w-full text-center font-bold text-sm rounded-xl py-3 outline-none border transition-colors ${getRpeColor(set.rpe)}`} /></div>
                             <div className="col-span-2 flex justify-center relative">
                                <button onClick={() => toggleSetComplete(ex.id, set.id)} className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-75 z-10 relative ${set.completed ? 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'bg-black text-emerald-500/40 hover:text-emerald-300 hover:shadow-[0_0_12px_rgba(16,185,129,0.4)] border border-emerald-500/30'}`}><Check className="w-6 h-6 stroke-[3]" /></button>
                                <button onClick={() => removeSet(ex.id, set.id)} className="absolute -right-8 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-rose-500 transition-all opacity-0 group-hover/set:opacity-100 bg-neutral-900 rounded-full shadow-md"><X className="w-4 h-4"/></button>
                             </div>
                           </div>
                           <div className="flex justify-between items-center px-8 mt-2 mb-4 h-4">
-                            <span className="text-[10px] text-neutral-500 font-bold">{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}</span>
+                            <span className="text-[10px] text-neutral-500 font-bold">{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}{(set.rpeAuto || !String(set.rpe || '').trim()) && suggestRpe(ex, set, exRM) !== null && <span className="ml-1.5 text-emerald-400/80">· RPE {set.rpeAuto ? '자동' : '추천'} {suggestRpe(ex, set, exRM)} (1RM {exRM}kg 기준)</span>}</span>
                             {realLoad !== null && realLoad !== (parseFloat(set.weight) || 0) && (
                               <span className="text-[10px] font-bold text-sky-300">실제 부하 {realLoad}kg {exRule.key === 'assist' ? '(체중 − 보조)' : '(체중 포함)'}</span>
                             )}
@@ -3181,6 +3203,7 @@ export default function App() {
                    <div className="flex justify-between items-center mb-4">
                      <div>
                        <h3 className="text-xs font-black text-neutral-400 uppercase tracking-wider mb-1">3대 운동 Peak 1RM Total</h3>
+                       <p className="text-[10px] font-bold text-emerald-600 mb-1">입력한 1RM으로 운동 기록 때 RPE(힘든 정도)를 자동 추천해요</p>
                        <div className="text-3xl font-black text-neutral-900">{getTotalLift3()} <span className="text-base text-neutral-400 font-bold">kg</span></div>
                      </div>
                      <div className="flex flex-col gap-2">
