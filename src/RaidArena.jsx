@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { cleanAvatar } from './admin.js';
 import { BossArt } from './BossArt.jsx';
 import { FullBodyAvatar } from './realAvatar.jsx';
 
@@ -67,7 +68,7 @@ export const RaidArena = ({ raid, members = [], meId, todayIdx, isThisWeek = tru
             <React.Fragment key={m.id}>
               <div className="absolute flex flex-col items-center" style={{ left: spot.left, bottom: spot.bottom, zIndex: 10 - Math.floor(spot.bottom / 10), animation: ko ? `ra-cheer .9s ease-in-out ${delay} infinite` : `ra-lunge ${CYCLE}s ease-in-out ${delay} infinite` }}>
                 <div className={`relative ${m.id === meId ? 'drop-shadow-[0_0_8px_rgba(52,211,153,.9)]' : 'drop-shadow-[0_4px_6px_rgba(0,0,0,.5)]'}`}>
-                  <FullBodyAvatar profile={m.avatar && Object.keys(m.avatar).length ? m.avatar : undefined} size="w-[46px] h-[92px]" pose="flex" />
+                  <FullBodyAvatar profile={m.avatar && Object.keys(m.avatar).length ? cleanAvatar(m.id, m.avatar) : undefined} size="w-[46px] h-[92px]" pose="flex" />
                 </div>
                 <span className={`-mt-1 px-1.5 rounded-md text-[9px] font-black whitespace-nowrap max-w-[64px] truncate ${m.id === meId ? 'bg-emerald-400 text-neutral-950' : 'bg-black/60 text-white'}`}>{m.id === meId ? '나' : m.nickname}</span>
               </div>

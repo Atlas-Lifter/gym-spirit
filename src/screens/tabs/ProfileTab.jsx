@@ -1,4 +1,6 @@
 import React, { lazy, Suspense } from 'react';
+import { GmBadge } from '../../GmBadge.jsx';
+import { HERO_BG } from '../../theme.js';
 import { Activity, Edit3, LogOut, Settings } from 'lucide-react';
 import { InstallCard } from '../../pwa.jsx';
 import { QuestCenter } from '../../QuestCenter.jsx';
@@ -34,6 +36,10 @@ export function ProfileTab() {
     showToast,
     updateProfile,
     upsertBodyEntry,
+    adminMode,
+    amAdmin,
+    setAdminMode,
+    setIsAdminConsoleOpen,
   } = useApp();
   return (
     <div className="flex-1 bg-neutral-50 pb-28 overflow-y-auto animate-fade-in text-neutral-900">
@@ -56,7 +62,7 @@ export function ProfileTab() {
               ) : (
                 <h2 className="text-2xl font-black text-neutral-900 flex items-center justify-center gap-2">{String(activeUser?.profile?.nickname || '짐스피릿 유저')}
                   <button onClick={() => setEditingNick(String(activeUser?.profile?.nickname || ''))} aria-label="닉네임 수정" className="p-1 rounded-lg text-neutral-300 hover:text-[#4768ff] hover:bg-neutral-100 transition-colors"><Edit3 className="w-4 h-4" /></button>
-                  <div className="bg-[#e8edff] text-[#4768ff] text-[10px] font-black px-2 py-0.5 rounded-md">{getUserLevel()}</div></h2>
+                  <div className="bg-[#e8edff] text-[#4768ff] text-[10px] font-black px-2 py-0.5 rounded-md">{getUserLevel()}</div>{adminMode && <GmBadge />}</h2>
               )}
               {!cloudUser && <button onClick={goToSignup} className="mt-2 text-[11px] font-black text-[#4768ff] bg-[#eef2ff] px-3 py-1.5 rounded-lg">게스트 모드 · 회원가입하면 기록이 안전하게 저장돼요</button>}
               <p className="text-sm font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5"><Activity className="w-4 h-4 text-emerald-500"/> 3대 운동 <span className="text-neutral-900 text-base font-black">{getTotalLift3()}kg</span></p>
@@ -78,7 +84,22 @@ export function ProfileTab() {
          </div>
          <button onClick={openBodyStatsModal} className="w-full bg-neutral-100 text-neutral-600 font-black py-4 rounded-2xl text-sm hover:bg-neutral-200 transition-colors active:scale-[0.98] mb-6">스탯 입력 및 수정하기</button>
 
-         <div className="mb-4"><InstallCard onOpen={() => setIsInstallOpen(true)} /></div>
+         {amAdmin && (
+                 <div className="mb-4 rounded-[24px] p-4 text-white overflow-hidden" style={{ background: HERO_BG }}>
+                   <div className="flex items-center gap-3">
+                     <div className="text-2xl">👑</div>
+                     <div className="flex-1">
+                       <div className="text-sm font-black">운영자 모드</div>
+                       <div className="text-[11px] font-bold text-white/55">{adminMode ? '운영자 칭호와 전용 흰 정장을 입고 있어요' : '지금은 일반 유저처럼 보여요'}</div>
+                     </div>
+                     <button onClick={() => setAdminMode(!adminMode)} aria-label="운영자 모드" className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${adminMode ? 'bg-amber-400' : 'bg-white/20'}`}>
+                       <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${adminMode ? 'left-6' : 'left-1'}`} />
+                     </button>
+                   </div>
+                   {adminMode && <button onClick={() => setIsAdminConsoleOpen(true)} className="mt-3 w-full py-3 rounded-2xl bg-gradient-to-r from-yellow-200 via-amber-300 to-yellow-200 text-neutral-950 text-sm font-black shadow-[0_0_14px_rgba(250,204,21,.5)] active:scale-[0.98] transition-transform">운영자 콘솔 열기</button>}
+                 </div>
+               )}
+               <div className="mb-4"><InstallCard onOpen={() => setIsInstallOpen(true)} /></div>
 
          <QuestCenter
            workouts={safeWorkouts}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as cloud from './cloud.js';
+import { setAdminIds } from './admin.js';
 import { DEFAULT_COVER_PHOTOS } from './coverPhotos.js';
 import { MUSCLE_SUBGROUPS, getExerciseMuscles } from './data/anatomy.js';
 import { ACC_COLORS, BOTTOM_COLORS, EXERCISE_OPTIONS, PROGRAMS, SHIRT_COLORS, SKIN_COLORS, getExId, getExName, getExTarget, ruleOfEx, toolOfEx } from './data/catalog.js';
@@ -1177,6 +1178,28 @@ export function useGymApp() {
   }, []);
   const rankingUser = devMock ? { id: devMock.meId } : cloudUser;
   const guildApiImpl = devMock ? devMock.guildApi : cloud.guildApi;
+
+  // 운영자: 운영자 명단과 전체 공지를 불러온다 (운영자 기능은 DB 함수가 다시 확인한다)
+  const [adminIdList, setAdminIdList] = useState(null); // null = 아직 못 불러옴
+  const [appNotice, setAppNotice] = useState(null);
+  const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState(false);
+  const refreshNotice = () => (devMock ? devMock.notice() : cloud.fetchActiveNotice()).then(setAppNotice).catch(() => {});
+  useEffect(() => {
+    (devMock ? devMock.adminIds() : cloud.fetchAdminIds()).then(ids => { setAdminIds(ids); setAdminIdList(ids); }).catch(() => {});
+    refreshNotice();
+  }, [devMock]);
+  const amAdmin = !!rankingUser && !!adminIdList?.includes(rankingUser.id);
+  const adminMode = amAdmin && !!currentUser?.adminMode;
+  const adminApiImpl = devMock ? devMock.adminApi : cloud.adminApi;
+  // 운영자 모드: 켜면 운영자 칭호와 전용 흰 정장·모자, 끄면 일반 유저처럼 보인다
+  const setAdminMode = (on) => {
+    setCurrentUser(prev => ({ ...prev, adminMode: on, profile: { ...(prev.profile || {}), gm: on } }));
+    showToast(on ? '👑 운영자 모드를 켰어요' : '일반 유저 모드로 바꿨어요');
+  };
+  // 운영자가 아닌데 운영자 의상이 남아 있으면 벗긴다 (명단을 제대로 불러온 뒤에만)
+  useEffect(() => {
+    if (adminIdList && rankingUser && !amAdmin && currentUser?.profile?.gm) setCurrentUser(prev => ({ ...prev, adminMode: false, profile: { ...(prev.profile || {}), gm: false } }));
+  }, [adminIdList, rankingUser, amAdmin]);
   const reloadGuild = async () => {
     if (!rankingUser) { setGuildData(null); return; }
     setGuildLoading(true);
@@ -1366,6 +1389,15 @@ export function useGymApp() {
     guildLoading,
     setGuildLoading,
     devMock,
+    adminIdList,
+    appNotice,
+    refreshNotice,
+    isAdminConsoleOpen,
+    setIsAdminConsoleOpen,
+    amAdmin,
+    adminMode,
+    adminApiImpl,
+    setAdminMode,
     setDevMock,
     lastContrib,
     isInstallOpen,

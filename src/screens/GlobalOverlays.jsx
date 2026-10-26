@@ -1,4 +1,5 @@
 import React from 'react';
+import { AdminConsole } from '../AdminConsole.jsx';
 import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, Share2, X, Zap } from 'lucide-react';
 import * as cloud from '../cloud.js';
 import { SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
@@ -73,10 +74,17 @@ export function GlobalOverlays() {
     updateTimerSettings,
     workoutDurationSec,
     workoutMinimized,
+    amAdmin,
+    adminMode,
+    isAdminConsoleOpen,
+    setIsAdminConsoleOpen,
+    adminApiImpl,
+    refreshNotice,
   } = useApp();
   return (
     <>
       <InstallSheet open={isInstallOpen} onClose={() => setIsInstallOpen(false)} onToast={showToast} />
+      {amAdmin && <AdminConsole open={isAdminConsoleOpen && adminMode} onClose={() => setIsAdminConsoleOpen(false)} api={adminApiImpl} onToast={showToast} onNoticeChanged={refreshNotice} />}
       {guideExerciseId && (() => {
         const ex = EXERCISE_OPTIONS.find(e => e.id === guideExerciseId);
         const guide = EXERCISE_GUIDES[guideExerciseId];

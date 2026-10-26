@@ -1,4 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { GmBadge } from './GmBadge.jsx';
+import { isGmOn } from './admin.js';
 import { createPortal } from 'react-dom';
 import { Search, Crown, Heart, UserPlus, Check, Clock, Download, ChevronDown, X, Lock } from 'lucide-react';
 import { GuildCenter, GuildBadge, GuildViewSheet } from './GuildCenter.jsx';
@@ -134,7 +136,7 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
         <Avatar user={user} size={72} ring={`linear-gradient(135deg, ${tier.ring}, #ffffff)`} Avatar3={Avatar3} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <h3 className="text-xl font-black text-neutral-900 truncate">{user.name}</h3>
+            <h3 className="text-xl font-black text-neutral-900 truncate">{user.name}</h3>{isGmOn(user.id, user.profile) && <GmBadge />}
             {isMe && <span className="text-[10px] font-black bg-[#4768ff] text-white px-1.5 py-0.5 rounded-md">ME</span>}
           </div>
           <div className={`inline-flex items-center gap-1 mt-1 text-[11px] font-black px-2 py-0.5 rounded-lg bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name}</div>
@@ -323,7 +325,7 @@ export const RankingTab = ({ onClaimXp, claimedKeys = [], friendUsers = [], glob
               <Avatar user={me} size={54} ring={`linear-gradient(135deg, ${tier.ring}, #ffffff)`} Avatar3={Avatar3} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-black truncate">{me.name}</span>
+                  <span className="font-black truncate">{me.name}</span>{isGmOn(me.id, me.profile) && <GmBadge small />}
                   <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name}</span>
                 </div>
                 <div className="flex items-baseline gap-1 mt-0.5">
@@ -434,7 +436,7 @@ export const RankingTab = ({ onClaimXp, claimedKeys = [], friendUsers = [], glob
                       <Mark u={u} size={44} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-black text-neutral-900 truncate">{u.name}</span>
+                          <span className="text-sm font-black text-neutral-900 truncate">{u.name}</span>{!u.kind || u.kind === 'solo' ? isGmOn(u.id, u.profile) && <GmBadge small /> : null}
                           {u.isMe && <span className="text-[9px] font-black bg-emerald-500 text-white px-1.5 py-0.5 rounded">{u.kind === 'guild' ? '내 길드' : 'ME'}</span>}
                           {!u.kind && friends.includes(u.id) && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">친구</span>}
                         </div>

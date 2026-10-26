@@ -1,6 +1,7 @@
 // Supabase 연결: 회원(로그인), 개인 기록 저장, 공개 프로필(랭킹), 친구 요청, 응원
 // publishable 키는 브라우저에 공개되도록 만들어진 키라 코드에 둬도 안전하다. (권한은 DB의 RLS 규칙이 막는다)
 import { createClient } from '@supabase/supabase-js';
+import { cleanAvatar } from './admin.js';
 
 const SUPABASE_URL = 'https://jparwpjyertrfncmftil.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_chMnSPGH1m0CN0oDwg26-Q_wy5nUHVO';
@@ -93,7 +94,7 @@ export const toRankUser = (p) => ({
   name: p.nickname || '짐스피릿 유저',
   volume: null,
   lift: null,
-  profile: p.avatar && Object.keys(p.avatar).length ? p.avatar : null,
+  profile: p.avatar && Object.keys(p.avatar).length ? cleanAvatar(p.id, p.avatar) : null,
   avatarColor: 'bg-neutral-700',
 });
 
@@ -194,7 +195,7 @@ export const friendRowToRankUser = (r) => ({
   volume: Math.round(Number(r.volume) || 0),
   lift: Math.round(Number(r.lift) || 0),
   fav: r.fav || '',
-  profile: r.avatar && Object.keys(r.avatar).length ? r.avatar : null,
+  profile: r.avatar && Object.keys(r.avatar).length ? cleanAvatar(r.id, r.avatar) : null,
   routine: r.last_routine || null,
   guild: r.guild_name ? { name: r.guild_name, emblem: r.guild_emblem } : null,
   avatarColor: 'bg-neutral-700',
@@ -223,6 +224,26 @@ export const guildApi = {
   post: (body, notice) => rpc('post_guild_message', { p_body: body, p_notice: !!notice }),
   deletePost: (id) => rpc('delete_guild_post', { p_id: id }),
   cheer: (userId) => rpc('cheer_guild_member', { p_to: userId }),
+};
+
+// ── 운영자 · 전체 공지 (supabase/admin.sql) ──
+export const fetchAdminIds = async () => (await rpc('admin_ids')) || [];
+export const fetchActiveNotice = async () => {
+  const { data, error } = await supabase.from('app_notices').select('id, body, created_at').eq('active', true).order('created_at', { ascending: false }).limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
+};
+export const adminApi = {
+  overview: () => rpc('admin_overview'),
+  users: (q) => rpc('admin_users', { p_q: q || '' }),
+  resetNickname: (userId) => rpc('admin_reset_nickname', { p_user: userId }),
+  guilds: (q) => rpc('admin_guilds', { p_q: q || '' }),
+  setGuildRanked: (guildId, on) => rpc('admin_set_guild_ranked', { p_guild: guildId, p_on: on }),
+  disbandGuild: (guildId) => rpc('admin_disband_guild', { p_guild: guildId }),
+  posts: () => rpc('admin_posts'),
+  deletePost: (id) => rpc('admin_delete_post', { p_id: id }),
+  postNotice: (body) => rpc('admin_post_notice', { p_body: body }),
+  endNotice: () => rpc('admin_end_notice'),
 };
 
 // 나와 관련된 친구 요청이 생기거나 바뀌면 바로 알려준다 (실시간)

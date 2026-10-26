@@ -163,6 +163,7 @@ export const guildErrorText = (e) => {
     'GS:SKILL_MAX': '이미 최고 단계예요.',
     'GS:NOT_DONE': '아직 목표를 달성하지 못했어요.',
     'GS:CLAIMED': '이번 주 보상은 이미 받았어요.',
+    'GS:NOT_ADMIN': '운영자만 할 수 있어요.',
     'GS:POST_LEN': '1~200자로 적어 주세요.',
     'GS:POST_LIMIT': '오늘은 글을 너무 많이 썼어요. 내일 다시 써 주세요.',
     'GS:NO_POST': '글을 찾을 수 없어요.',

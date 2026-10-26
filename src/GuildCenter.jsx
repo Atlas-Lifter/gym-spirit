@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { GmBadge } from './GmBadge.jsx';
+import { cleanAvatar, isGmOn } from './admin.js';
 import { Search, Plus, KeyRound, Share2, X, Check, ChevronRight, LogOut, Trash2, Pencil, Users, Send, Megaphone } from 'lucide-react';
 import { Sheet, Segmented, Avatar } from './RankingTab.jsx';
 import {
@@ -20,7 +22,7 @@ const ago = (iso) => {
   if (m < 1440) return `${Math.floor(m / 60)}시간 전`;
   return `${Math.floor(m / 1440)}일 전`;
 };
-const memberUser = (m) => ({ id: m.id, name: m.nickname || '짐스피릿 유저', profile: m.avatar && Object.keys(m.avatar).length ? m.avatar : null, avatarColor: 'bg-neutral-700' });
+const memberUser = (m) => ({ id: m.id, name: m.nickname || '짐스피릿 유저', profile: m.avatar && Object.keys(m.avatar).length ? cleanAvatar(m.id, m.avatar) : null, avatarColor: 'bg-neutral-700' });
 
 export const GuildBadge = ({ emblem, color, size = 48, glow }) => {
   const c = guildColor(color);
@@ -191,7 +193,7 @@ const MemberSheet = ({ member, myRole, meId, coachCount, busy, onAction, onClose
       <div className="flex items-center gap-4 mb-4">
         <Avatar user={memberUser(m)} size={60} Avatar3={Avatar3} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5"><h3 className="text-lg font-black text-neutral-900 truncate">{m.nickname}</h3><RoleChip role={m.role} /></div>
+          <div className="flex items-center gap-1.5"><h3 className="text-lg font-black text-neutral-900 truncate">{m.nickname}</h3>{isGmOn(m.id, m.avatar) && <GmBadge small />}<RoleChip role={m.role} /></div>
           <div className="text-xs font-bold text-neutral-500 mt-0.5">{t.icon} {t.name} · 기여 {num(m.contrib)} XP</div>
           {nt && <div className="text-[11px] font-bold text-neutral-400">{nt.icon} {nt.name}까지 {num(nt.min - m.contrib)} XP</div>}
         </div>
@@ -679,7 +681,7 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
                     <span className={`w-7 text-center flex-shrink-0 ${medal ? 'text-xl' : 'text-sm font-black text-neutral-400 tabular-nums'}`}>{medal || i + 1}</span>
                     <Avatar user={memberUser(m)} size={42} Avatar3={Avatar3} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5"><span className="text-sm font-black text-neutral-900 truncate">{m.nickname}</span>{m.role !== 'member' && <RoleChip role={m.role} />}{m.id === meId && <span className="text-[9px] font-black bg-neutral-900 text-white px-1.5 py-0.5 rounded">나</span>}</div>
+                      <div className="flex items-center gap-1.5"><span className="text-sm font-black text-neutral-900 truncate">{m.nickname}</span>{isGmOn(m.id, m.avatar) && <GmBadge small />}{m.role !== 'member' && <RoleChip role={m.role} />}{m.id === meId && <span className="text-[9px] font-black bg-neutral-900 text-white px-1.5 py-0.5 rounded">나</span>}</div>
                       <div className="text-[11px] font-bold text-neutral-400 truncate">{t.icon} {t.name}{rankBy !== 'days' ? ` · 이번 주 ${m.days || 0}회` : ` · ${num(m.volume)}kg`}{m.cheers ? ` · 👏${m.cheers}` : ''}</div>
                     </div>
                     <div className="text-right">

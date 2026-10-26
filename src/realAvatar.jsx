@@ -90,18 +90,20 @@ export const FullBodyAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = 
   const female = gender === 'female';
   const skin = LEGACY_SKIN[profile?.skinColor] || profile?.skinColor || AVATAR_SKIN_TONES[1];
   const eyeColor = profile?.eyeColor || AVATAR_EYE_COLORS[0];
-  const topColor = profile?.shirtColor || '#10b981';
-  const bottomColor = profile?.bottomColor || '#171717';
-  const shoeColor = profile?.shoeColor || AVATAR_SHOE_COLORS[0];
-  const topStyle = profile?.topStyle || 'tshirt';
-  const bottomStyle = profile?.bottomStyle || 'shorts';
+  // 운영자 전용 의상: 흰 정장(금색 장식)·흰 중절모(GM 배지)·검은 구두. 다른 옷 설정보다 우선한다
+  const gm = !!profile?.gm;
+  const topColor = gm ? '#0f172a' : (profile?.shirtColor || '#10b981');
+  const bottomColor = gm ? '#f1f5f9' : (profile?.bottomColor || '#171717');
+  const shoeColor = gm ? '#111827' : (profile?.shoeColor || AVATAR_SHOE_COLORS[0]);
+  const topStyle = gm ? 'tank' : (profile?.topStyle || 'tshirt');
+  const bottomStyle = gm ? 'joggers' : (profile?.bottomStyle || 'shorts');
   const face = profile?.faceExpression || 'normal';
 
   const legacyAcc = profile?.accessory || 'none';
-  const hat = profile?.hat !== undefined ? profile.hat : (legacyAcc === 'headband' || legacyAcc === 'cap' ? legacyAcc : 'none');
+  const hat = gm ? 'gm' : profile?.hat !== undefined ? profile.hat : (legacyAcc === 'headband' || legacyAcc === 'cap' ? legacyAcc : 'none');
   const faceAcc = profile?.faceAcc !== undefined ? profile.faceAcc : (legacyAcc === 'glasses' ? legacyAcc : 'none');
-  const neckAcc = profile?.neckAcc || 'none';
-  const bodyAcc = profile?.bodyAcc !== undefined ? profile.bodyAcc : (legacyAcc === 'belt' ? legacyAcc : 'none');
+  const neckAcc = gm ? 'none' : (profile?.neckAcc || 'none');
+  const bodyAcc = gm ? 'none' : profile?.bodyAcc !== undefined ? profile.bodyAcc : (legacyAcc === 'belt' ? legacyAcc : 'none');
   const hatColor = profile?.hatColor || '#ef4444';
   const faceAccColor = profile?.faceAccColor || '#171717';
   const neckAccColor = profile?.neckAccColor || '#fbbf24';
@@ -237,7 +239,8 @@ export const FullBodyAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = 
         )}
         {!legsCovered && <ellipse cx={K[0]} cy={K[1] + 1} rx={calf.r1 * 0.55} ry={calf.r1 * 0.45} fill="#ffffff" opacity="0.16" filter={url('soft')} />}
         {!legsCovered && <ellipse cx={lerp(H, K, 0.45)[0] - (left ? 1 : -1) * 2} cy={lerp(H, K, 0.45)[1]} rx={thigh.r1 * 0.32} ry={thigh.r1 * 1.3} fill="#ffffff" opacity="0.13" filter={url('soft')} />}
-        {bottomStyle === 'joggers' && <rect x={A[0] - calf.r2 - 1.5} y={A[1] - 6} width={calf.r2 * 2 + 3} height="6" rx="2" fill={shade(bottomColor, -0.2)} />}
+        {bottomStyle === 'joggers' && !gm && <rect x={A[0] - calf.r2 - 1.5} y={A[1] - 6} width={calf.r2 * 2 + 3} height="6" rx="2" fill={shade(bottomColor, -0.2)} />}
+        {gm && <path d={`M ${f(H[0])} ${f(H[1] + 6)} L ${f(A[0])} ${f(A[1] - 2)}`} stroke="#cbd5e1" strokeWidth="0.8" />}
         {/* 운동화 */}
         <g>
           <path d={`M ${f(A[0] - shoeW / 2)} ${f(A[1] + 2)} Q ${f(A[0] - shoeW / 2 - 1)} ${f(A[1] + 13)} ${f(A[0] - shoeW / 2 + 2)} ${f(A[1] + 16)} L ${f(A[0] + shoeW / 2 - 2)} ${f(A[1] + 16)} Q ${f(A[0] + shoeW / 2 + 1)} ${f(A[1] + 13)} ${f(A[0] + shoeW / 2)} ${f(A[1] + 2)} Q ${f(A[0])} ${f(A[1] - 3)} ${f(A[0] - shoeW / 2)} ${f(A[1] + 2)} Z`} fill={shoeColor} filter={url('cloth')} />
@@ -629,6 +632,50 @@ export const FullBodyAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = 
         {(topStyle === 'tshirt' || topStyle === 'tank') && <path d={`M ${100 - nw - 1.6} 76 Q 100 ${topStyle === 'tank' ? 92 : 86} ${100 + nw + 1.6} 76`} stroke={shade(topColor, -0.25)} strokeWidth="2.2" fill="none" />}
         {arm.onHip && clothTop && [true, false].map(left => <Arm key={left ? 'll' : 'lr'} left={left} lowerOnly />)}
 
+        {/* 운영자 흰 정장: 소매 → 재킷 몸판 → 셔츠·넥타이·라펠·단추 */}
+        {gm && (
+          <g>
+            {[true, false].map(left => {
+              const m = left ? (p) => p : mirrorX;
+              const S = m(arm.S), E = m(arm.E), W = m(arm.W), D = m([100 - sw + 3, 99]);
+              const Wc = lerp(E, W, 0.84);
+              return (
+                <g key={left ? 'gl' : 'gr'}>
+                  <g filter={url('cloth')} fill="#f8fafc">
+                    <ellipse cx={D[0]} cy={D[1]} rx={at * 0.62 + 3.6} ry={at * 0.7 + 4} />
+                    <path d={limb(m([100 - sw + 5, 94]), E, upper.r1 + 2.8, upper.r2 + 2.2, upper.rb + 2)} />
+                    <path d={limb(lerp(E, S, 0.08), Wc, fore.r1 + 2.4, fore.r2 + 2, fore.rb + 2.2)} />
+                  </g>
+                  <path d={limb(lerp(E, W, 0.79), Wc, fore.r2 + 2.1, fore.r2 + 1.9, fore.r2 + 2)} fill="#d4af37" />
+                </g>
+              );
+            })}
+            <clipPath id={id('jacket')}><rect x="30" y="70" width="140" height="154" /></clipPath>
+            <g clipPath={url('jacket')}>
+              <path d={torsoPath} fill="#f8fafc" filter={url('cloth')} transform="translate(100 0) scale(1.07 1) translate(-100 0)" />
+            </g>
+            <path d={`M ${100 - nw - 2} 76 L 100 132 L ${100 + nw + 2} 76 Z`} fill={topColor} />
+            <path d="M 97.6 78 L 102.4 78 L 101.6 84 L 98.4 84 Z" fill="#059669" />
+            <path d="M 98.4 84 L 101.6 84 L 103.2 118 L 100 124 L 96.8 118 Z" fill="#10b981" />
+            <path d="M 97.6 96 L 102.6 93 M 97.2 106 L 102.8 103" stroke="#047857" strokeWidth="1.1" />
+            {[1, -1].map(sd => (
+              <g key={sd}>
+                <path d={`M ${100 - sd * (nw + 2)} 76 L ${100 - sd * sw * 0.52} 92 L ${100 - sd * sw * 0.36} 99 L ${100 - sd * 1} 132 L ${100 - sd * (nw + 2) + sd * 1.5} 82 Z`} fill="#e2e8f0" />
+                <path d={`M ${100 - sd * (nw + 2)} 76 L ${100 - sd * sw * 0.52} 92 L ${100 - sd * sw * 0.36} 99 L 100 132`} stroke="#d4af37" strokeWidth="1.3" fill="none" strokeLinejoin="round" />
+              </g>
+            ))}
+            <path d={`M 100 132 L 100 222`} stroke="#cbd5e1" strokeWidth="1" />
+            {[146, 162].map(y => <circle key={y} cx="101.6" cy={y} r="1.9" fill="#d4af37" stroke="#a16207" strokeWidth="0.5" />)}
+            <path d={`M ${100 - sw * 0.66} 110 L ${100 - sw * 0.3} 110`} stroke="#cbd5e1" strokeWidth="1" />
+            <path d={`M ${100 - sw * 0.6} 110 L ${100 - sw * 0.52} 104 L ${100 - sw * 0.44} 110 Z`} fill="#10b981" />
+            <g transform={`translate(${100 + sw * 0.5} 106)`}>
+              <path d="M -4 -4 L 4 -4 L 4 1.5 Q 0 5.5 -4 1.5 Z" fill="#0f172a" stroke="#d4af37" strokeWidth="0.8" />
+              <text x="0" y="0.8" textAnchor="middle" fontSize="3.6" fontWeight="900" fill="#facc15">GM</text>
+            </g>
+            <path d={`M ${100 - hw * 1.08} 221 Q 100 225 ${100 + hw * 1.08} 221`} stroke="#d4af37" strokeWidth="1.4" fill="none" />
+          </g>
+        )}
+
         {/* 목 뒤로 지나가는 수건·헤드폰 띠 */}
         {neckAcc === 'towel' && <path d={`M ${100 - nw - 3} 76 Q 100 64 ${100 + nw + 3} 76 L ${100 + nw + 1} 70 Q 100 60 ${100 - nw - 1} 70 Z`} fill={shade(neckAccColor, -0.2)} />}
         {neckAcc === 'headphones' && <path d={`M ${100 - nw - 7} 82 Q 100 64 ${100 + nw + 7} 82`} stroke={shade(neckAccColor, -0.25)} strokeWidth="2.6" fill="none" />}
@@ -694,7 +741,7 @@ export const FullBodyAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = 
         {facialHair === 'beard' && <path d="M 89 66 Q 100 73 111 66" stroke={hairLight} strokeOpacity="0.3" strokeWidth="0.6" fill="none" />}
 
         {/* 모자를 쓰면 정수리 머리카락은 모자 아래로 숨긴다 */}
-        {(hat === 'cap' || hat === 'beanie' || hat === 'bandana')
+        {(hat === 'cap' || hat === 'beanie' || hat === 'bandana' || hat === 'gm')
           ? <g clipPath={url('underHat')}><HairFront /></g>
           : <HairFront />}
 
@@ -712,6 +759,22 @@ export const FullBodyAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = 
               <path d="M 79.4 36 Q 100 30.4 120.6 36 Q 121.4 40.6 117 42.6 Q 100 38.4 83 42.6 Q 78.6 40.6 79.4 36 Z" fill={shade(hatColor, -0.08)} />
             </g>
             <path d="M 83 42.4 Q 100 38.2 117 42.4" stroke={shade(hatColor, -0.45)} strokeWidth="0.8" fill="none" />
+          </g>
+        )}
+        {hat === 'gm' && (
+          <g>
+            <path d="M 80 41 Q 100 36 120 41 L 120 45 Q 100 40 80 45 Z" fill="#000" opacity="0.2" filter={url('soft')} />
+            <g filter={url('cloth')} fill="#f8fafc">
+              <path d="M 83.5 35 C 82.6 22 86.5 11 100 11 C 113.5 11 117.4 22 116.5 35 Z" />
+            </g>
+            <path d="M 92 13.6 Q 100 18.4 108 13.6" stroke="#cbd5e1" strokeWidth="1" fill="none" />
+            <path d="M 83.6 29 Q 100 25.6 116.4 29 L 116.6 35 Q 100 31.6 83.4 35 Z" fill="#d4af37" />
+            <g filter={url('cloth')}>
+              <path d="M 67.5 37.6 Q 100 27.4 132.5 37.6 Q 133.4 42.2 126 42.6 Q 100 34.6 74 42.6 Q 66.6 42.2 67.5 37.6 Z" fill="#f1f5f9" />
+            </g>
+            <path d="M 74 42.4 Q 100 34.4 126 42.4" stroke="#94a3b8" strokeWidth="0.7" fill="none" />
+            <circle cx="100" cy="30.6" r="4.4" fill="#0f172a" stroke="#facc15" strokeWidth="0.9" />
+            <text x="100" y="32.3" textAnchor="middle" fontSize="4.6" fontWeight="900" fill="#facc15">GM</text>
           </g>
         )}
         {hat === 'beanie' && (

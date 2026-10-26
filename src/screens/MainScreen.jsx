@@ -99,6 +99,7 @@ export function MainScreen() {
     tempStats,
     unreadCount,
     updateProfile,
+    appNotice,
   } = useApp();
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 pb-[80px] flex flex-col relative overflow-hidden">
@@ -138,6 +139,12 @@ export function MainScreen() {
                   {cloudUser && <button onClick={() => { setIsNotiOpen(false); setIsFriendSearchModalOpen(true); }} className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg hover:bg-emerald-100 transition-colors">친구 관리</button>}
                 </div>
                 <div className="max-h-80 overflow-y-auto hide-scrollbar">
+                  {appNotice && (
+                    <div className="p-4 border-b border-neutral-100 bg-amber-50/60">
+                      <div className="text-xs font-black text-amber-700 mb-1">👑 운영자 공지</div>
+                      <div className="text-sm font-bold text-amber-950 leading-relaxed break-words">{appNotice.body}</div>
+                    </div>
+                  )}
                   {friendState.incoming.map(r => (
                     <div key={`req-${r.requestId}`} className="p-4 border-b border-neutral-100">
                       <div className="text-xs font-black text-emerald-600 mb-1.5 flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> 친구 요청</div>

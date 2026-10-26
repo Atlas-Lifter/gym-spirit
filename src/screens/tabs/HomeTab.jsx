@@ -1,4 +1,5 @@
 import React from 'react';
+import { NoticeBanner } from '../../NoticeBanner.jsx';
 import { CheckCircle2, Dumbbell, MoreVertical, Plus, Sparkles, Utensils, Zap } from 'lucide-react';
 import { getExName, getExTarget } from '../../data/catalog.js';
 import { formatDate } from '../../lib/dates.js';
@@ -21,11 +22,13 @@ export function HomeTab() {
     setSelectedPastDate,
     setSession,
     setWorkoutDurationSec,
+    appNotice,
   } = useApp();
   return (
     <div className="flex flex-col h-full animate-fade-in">
       <div className="flex-1 bg-neutral-50 text-neutral-900 p-5 pb-32 min-h-[60vh]">
-        <InstallBanner onOpen={() => setIsInstallOpen(true)} />
+        <NoticeBanner notice={appNotice} />
+      <InstallBanner onOpen={() => setIsInstallOpen(true)} />
         <div className="flex gap-3 mb-8 mt-2">
           <div onClick={() => setCurrentScreen('diet')} className="flex-1 bg-white p-4 rounded-[24px] border border-neutral-100 flex items-center gap-3 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer active:scale-95 group">
             <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 group-hover:scale-110 transition-all"><Utensils className="w-5 h-5 text-emerald-600" /></div>

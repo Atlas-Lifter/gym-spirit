@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { GmBadge } from './GmBadge.jsx';
+import { isGmOn } from './admin.js';
 import { Search, UserPlus, Check, Clock, X, Share2 } from 'lucide-react';
 import { Sheet, Segmented, Avatar } from './RankingTab.jsx';
 
@@ -35,7 +37,7 @@ export const FriendCenter = ({ open, onClose, isCloud, onLogin, friends, sent, i
     <div className="flex items-center gap-3 py-3 border-b border-neutral-50 last:border-0">
       <Avatar user={u} size={44} Avatar3={Avatar3} />
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-black text-neutral-900 truncate">{u.name}</div>
+        <div className="text-sm font-black text-neutral-900 truncate flex items-center gap-1">{u.name}{isGmOn(u.id, u.profile) && <GmBadge small />}</div>
         <div className="text-[11px] font-bold text-neutral-400 truncate">{sub ?? (u.volume == null ? '친구가 되면 서로의 운동 기록이 보여요' : `이번 주 ${Number(u.volume || 0).toLocaleString()}kg · 3대 ${u.lift || 0}kg`)}</div>
       </div>
       {right}

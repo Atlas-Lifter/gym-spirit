@@ -220,7 +220,22 @@ export const createGuildMock = () => {
   };
   // 체험용 단축키: 콘솔에서 __guildMock.boost() 하면 이번 주 기록이 크게 늘어 미션·레이드 완료 화면을 볼 수 있다
   const boost = () => { const m = mine(); if (!m) return; Object.entries(members).filter(([, x]) => x.guild === m.guild).forEach(([u], i) => [0, 1, 2].forEach(d => activity.push({ guild: m.guild, user: u, day: dayKey(d), volume: 30000 + i * 1000, xp: 100, at: Date.now() }))); };
-  const api = { meId: ME, guildApi, globalRanking, friendRanking, boost };
+  // 운영자 흉내: 주소에 mockadmin 이 있으면 '나'를 운영자로 본다
+  let notice = null;
+  const isAdmin = new URLSearchParams(window.location.search).has('mockadmin');
+  const adminApi = {
+    overview: () => wait({ users: 7, new_7d: 3, active_week: 5, guilds: Object.keys(guilds).length, ranked_guilds: Object.values(guilds).filter(g => g.ranked).length, solo_ranked: 2, posts_24h: posts.length, friendships: 2, week_volume: 162300, notice: notice && { id: 1, body: notice.body, at: new Date().toISOString() } }),
+    users: () => wait(Object.entries(users).map(([id, u]) => ({ id, nickname: u.nickname, joined_at: new Date().toISOString(), volume: u.volume, lift: u.lift, guild_name: members[id] ? guilds[members[id].guild]?.name : null, is_admin: id === ME && isAdmin }))),
+    resetNickname: (id) => { users[id].nickname = '짐스피릿 유저'; return wait(null); },
+    guilds: () => wait(Object.values(guilds).map(g => ({ ...g, level: guildLevelInfo(g.xp).level, members: count(g.id), leader: users[Object.keys(members).find(u => members[u].guild === g.id && members[u].role === 'leader')]?.nickname }))),
+    setGuildRanked: (id, on) => { guilds[id].ranked = on; return wait(null); },
+    disbandGuild: (id) => { Object.keys(members).forEach(u => { if (members[u].guild === id) delete members[u]; }); delete guilds[id]; return wait(null); },
+    posts: () => wait(posts.map(p => ({ id: p.id, body: p.body, kind: p.kind, at: new Date(p.at).toISOString(), nickname: users[p.user].nickname, guild: guilds[p.guild]?.name, emblem: guilds[p.guild]?.emblem }))),
+    deletePost: (id) => { posts = posts.filter(p => p.id !== id); return wait(null); },
+    postNotice: (body) => { notice = { id: Date.now(), body, created_at: new Date().toISOString() }; return wait(notice.id); },
+    endNotice: () => { notice = null; return wait(null); },
+  };
+  const api = { meId: ME, guildApi, globalRanking, friendRanking, boost, adminApi, adminIds: () => wait(isAdmin ? [ME] : []), notice: () => wait(notice) };
   window.__guildMock = api;
   return api;
 };
