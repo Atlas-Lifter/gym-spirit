@@ -373,7 +373,7 @@ export const RankingTab = ({ friendUsers = [], globalEntries = [], me, meId, fri
       </div>
 
       <div className="px-5 space-y-3 -mt-1">
-        <Segmented options={[['global', '🏆 전체 랭킹'], ['friends', `🤝 친구${friends.length ? ` ${friends.length}` : ''}`], ['guild', `🛡️ 길드${guildData?.guild ? '' : ''}`]]} value={scope} onChange={change(setScope)} />
+        <Segmented options={[['global', '🏆 전체 랭킹'], ['friends', '🤝 친구'], ['guild', '🛡️ 길드']]} value={scope} onChange={change(setScope)} />
         {scope !== 'guild' && <Segmented options={Object.entries(METRIC).map(([k, m]) => [k, `${m.icon} ${m.label}`])} value={metric} onChange={change(setMetric)} />}
 
         {scope === 'guild' ? (

@@ -34,6 +34,11 @@ export const createGuildMock = () => {
   [['g1', 'u1', 0, 9000], ['g1', 'u1', 2, 11000], ['g1', 'u3', 1, 7000], ['g2', 'u2', 0, 14000], ['g2', 'u6', 0, 16000], ['g2', 'u6', 1, 12000]]
     .forEach(([g, u, i, v]) => activity.push({ guild: g, user: u, day: dayKey(i), volume: v, xp: dayXp(v, guilds[g].skills), at: Date.now() - i * 3600e3 }));
   const claims = []; // { guild, week, key }
+  const lastWs = (() => { const d = new Date(ws); d.setDate(d.getDate() - 7); return key(d); })();
+  let posts = []; // { id, guild, user, body, kind, at }
+  let cheers = []; // { guild, from, to, day }
+  let postSeq = 1;
+  const today = key(new Date());
 
   const count = (gid) => Object.values(members).filter(m => m.guild === gid).length;
   const cap = (g) => guildCap(g.xp, g.skills);
@@ -82,13 +87,26 @@ export const createGuildMock = () => {
       const ms = Object.entries(members).filter(([, x]) => x.guild === g.id).map(([u, x]) => {
         const mine7 = activity.filter(a => a.guild === g.id && a.user === u && a.volume > 0 && a.day >= key(ws));
         return { id: u, nickname: users[u].nickname, avatar: null, role: x.role, contrib: x.contrib, volume: users[u].volume, lift: users[u].lift, days: mine7.length,
-          week_days: mine7.map(a => ((new Date(`${a.day}T00:00:00`).getDay() + 6) % 7) + 1) };
+          week_days: mine7.map(a => ((new Date(`${a.day}T00:00:00`).getDay() + 6) % 7) + 1),
+          cheers: cheers.filter(c => c.guild === g.id && c.to === u && c.day >= key(ws)).length,
+          cheered_today: cheers.some(c => c.from === ME && c.to === u && c.day === today) };
       }).sort((a, b) => (b.role === 'leader') - (a.role === 'leader') || (b.role === 'coach') - (a.role === 'coach') || b.contrib - a.contrib);
       return wait({
         guild: { ...g, level: guildLevelInfo(g.xp).level, cap: cap(g) }, my_role: m.role, members: ms,
         requests: m.role === 'member' ? [] : requests.filter(r => r.guild === g.id).map(r => ({ id: r.user, nickname: users[r.user].nickname, avatar: null })),
         week: weekStats(g.id), claims: claims.filter(c => c.guild === g.id && c.week === key(ws)).map(c => c.key),
         feed: activity.filter(a => a.guild === g.id && a.volume > 0).sort((a, b) => b.at - a.at).slice(0, 15).map(a => ({ nickname: users[a.user].nickname, day: a.day, volume: a.volume, xp: a.xp })),
+        my_cheers_today: cheers.filter(c => c.from === ME && c.day === today).length,
+        posts: posts.filter(p => p.guild === g.id).sort((a, b) => b.at - a.at).map(p => ({ id: p.id, body: p.body, kind: p.kind, at: new Date(p.at).toISOString(), mine: p.user === ME, nickname: users[p.user].nickname, avatar: null, role: members[p.user]?.role })),
+        mvp: (() => {
+          const by = {};
+          activity.filter(a => a.guild === g.id && a.volume > 0 && a.day >= key(ws)).forEach(a => { by[a.user] = by[a.user] || { v: 0, d: 0 }; by[a.user].v += a.volume; by[a.user].d += 1; });
+          const top = Object.entries(by).sort((a, b) => b[1].v - a[1].v)[0];
+          return top ? { nickname: users[top[0]].nickname, avatar: null, volume: top[1].v, days: top[1].d } : null;
+        })(),
+        last_week: { mvp: { nickname: users.u1?.nickname || '새벽헬창', avatar: null, volume: 52300 }, volume: 88400, claims: ['volume', 'raid'] },
+        stats: { raids: 1, missions: claims.filter(c => c.guild === g.id && c.key !== 'raid').length + 3, cheers: cheers.filter(c => c.guild === g.id).length,
+          posts: posts.filter(p => p.guild === g.id).length, claim_weeks: [...new Set([lastWs, ...claims.filter(c => c.guild === g.id).map(c => c.week)])] },
       });
     },
     search: (q) => wait(Object.values(guilds).filter(g => !q || g.name.includes(q)).map(g => ({ ...g, level: guildLevelInfo(g.xp).level, members: count(g.id), cap: cap(g) }))),
@@ -111,6 +129,7 @@ export const createGuildMock = () => {
       requests.push({ user: 'u5', guild: id });
       activity.push({ guild: id, user: ME, day: key(new Date()), volume: 18400, xp: dayXp(18400, {}), at: Date.now() });
       members[ME].contrib = dayXp(18400, {}); guilds[id].xp = dayXp(18400, {});
+      posts.push({ id: postSeq++, guild: id, user: ME, body: '이번 주 목표: 레이드 보스 잡기! 다들 하체 빼먹지 말기 🔥', kind: 'notice', at: Date.now() - 600000 });
       return wait(id);
     },
     update: (f) => { const m = leader(); if (!m) return fail('GS:NOT_LEADER'); Object.assign(guilds[m.guild], { name: f.name, emblem: f.emblem, color: f.color, intro: f.intro, join_mode: f.joinMode }); return wait(null); },
@@ -159,6 +178,27 @@ export const createGuildMock = () => {
     setRanked: (on) => { const m = leader(); if (!m) return fail('GS:NOT_LEADER'); if (on && count(m.guild) < 2) return fail('GS:MIN2'); guilds[m.guild].ranked = on; return wait(null); },
     setSolo: (on) => { if (on && mine()) return fail('GS:IN_GUILD'); users.me.solo = on; return wait(null); },
     contribute: () => wait(0),
+    post: (body, notice) => {
+      const m = mine(); if (!m) return fail('GS:NO_GUILD');
+      if (!body || body.length > 200) return fail('GS:POST_LEN');
+      if (notice && m.role === 'member') return fail('GS:NO_PERMISSION');
+      posts.push({ id: postSeq++, guild: m.guild, user: ME, body, kind: notice ? 'notice' : 'talk', at: Date.now() });
+      return wait(postSeq);
+    },
+    deletePost: (id) => {
+      const m = mine(), p = posts.find(x => x.id === id);
+      if (!p || !m || p.guild !== m.guild) return fail('GS:NO_POST');
+      if (p.user !== ME && m.role === 'member') return fail('GS:NO_PERMISSION');
+      posts = posts.filter(x => x.id !== id); return wait(null);
+    },
+    cheer: (uid) => {
+      const m = mine(); if (!m || uid === ME || members[uid]?.guild !== m.guild) return fail('GS:NO_MEMBER');
+      if (cheers.filter(c => c.from === ME && c.day === today).length >= 5) return fail('GS:CHEER_LIMIT');
+      if (cheers.some(c => c.from === ME && c.to === uid && c.day === today)) return fail('GS:CHEERED');
+      cheers.push({ guild: m.guild, from: ME, to: uid, day: today });
+      guilds[m.guild].xp += 10; members[uid].contrib += 10;
+      return wait(10);
+    },
     upgradeSkill: (k) => {
       const m = leader(); if (!m) return fail('GS:NOT_LEADER');
       const g = guilds[m.guild];

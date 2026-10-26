@@ -1,15 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Plus, KeyRound, Share2, X, Check, ChevronRight, LogOut, Trash2, Pencil, Users } from 'lucide-react';
+import { Search, Plus, KeyRound, Share2, X, Check, ChevronRight, LogOut, Trash2, Pencil, Users, Send, Megaphone } from 'lucide-react';
 import { Sheet, Segmented, Avatar } from './RankingTab.jsx';
 import {
   GUILD_EMBLEMS, GUILD_COLORS, guildColor, GUILD_ROLES, COACH_MAX, MEMBER_TIERS, memberTier, nextMemberTier,
-  guildLevelInfo, GUILD_SKILLS, skillLv, skillPoints, weeklyMissions, raidOf, guildErrorText,
+  guildLevelInfo, GUILD_SKILLS, skillLv, skillPoints, weeklyMissions, raidOf, guildErrorText, CHEER_DAILY, claimStreak, guildBadges,
 } from './guildSystem.js';
 
 // 길드: 만들기·찾기·가입, 내 길드(레이드 보스·주간 미션·출석부·길드원 계급·스킬·관리)
 
 const DAY_NAMES = ['월', '화', '수', '목', '금', '토', '일'];
 const num = (v) => Math.round(Number(v) || 0).toLocaleString();
+const ago = (iso) => {
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (m < 1) return '방금';
+  if (m < 60) return `${m}분 전`;
+  if (m < 1440) return `${Math.floor(m / 60)}시간 전`;
+  return `${Math.floor(m / 1440)}일 전`;
+};
 const memberUser = (m) => ({ id: m.id, name: m.nickname || '짐스피릿 유저', profile: m.avatar && Object.keys(m.avatar).length ? m.avatar : null, avatarColor: 'bg-neutral-700' });
 
 export const GuildBadge = ({ emblem, color, size = 48, glow }) => {
@@ -217,6 +224,8 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
   const [viewId, setViewId] = useState(null);
   const [member, setMember] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [draft, setDraft] = useState('');
+  const [asNotice, setAsNotice] = useState(false);
   const seq = useRef(0);
   const g = data?.guild;
 
@@ -341,6 +350,20 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
   const coachCount = members.filter(m => m.role === 'coach').length;
   const requests = data.requests || [];
   const todayIdx = (new Date().getDay() + 6) % 7;
+  const todayCount = members.filter(m => (m.week_days || []).includes(todayIdx + 1)).length;
+  const posts = data.posts || [];
+  const notice = posts.find(p => p.kind === 'notice');
+  const stats = data.stats || {};
+  const streak = claimStreak(stats.claim_weeks || [], week.week_start);
+  const badges = guildBadges({ level: lv.level, members: members.length, stats, streak, rank: g.ranked ? myGuildRank : null });
+  const cheersLeft = Math.max(0, CHEER_DAILY - (data.my_cheers_today || 0));
+  const lastWeek = data.last_week || {};
+  const cheer = (m) => run(`cheer-${m.id}`, () => api.cheer(m.id), `👏 ${m.nickname}님을 응원했어요! 길드 +10 XP`);
+  const sendPost = async () => {
+    const body = draft.trim();
+    if (!body) return;
+    if (await run('post', () => api.post(body, asNotice), asNotice ? '📢 공지를 올렸어요' : null)) { setDraft(''); setAsNotice(false); }
+  };
 
   const share = async () => {
     const text = `GYM SPIRIT '${g.name}' 길드에 들어와요! 💪 초대 코드: ${g.invite_code}`;
@@ -374,6 +397,8 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
             {g.intro && <div className="text-xs font-bold text-white/55 truncate mt-0.5">{g.intro}</div>}
             <div className="flex flex-wrap gap-1.5 mt-2 text-[10px] font-black">
               <span className="px-2 py-0.5 rounded-full bg-white/10">👥 {members.length}/{g.cap}</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/10">💪 오늘 출석 {todayCount}/{members.length}</span>
+              {streak > 0 && <span className="px-2 py-0.5 rounded-full bg-orange-400/20 text-orange-300">🔥 {streak}주 연속</span>}
               <span className="px-2 py-0.5 rounded-full bg-white/10">내 직책 {GUILD_ROLES[myRole]?.icon} {GUILD_ROLES[myRole]?.name}</span>
               {g.ranked
                 ? <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300">🏆 전체 {myGuildRank ? `${myGuildRank}위` : '랭킹 참가 중'}</span>
@@ -394,10 +419,36 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
         </div>
       </div>
 
-      <Segmented value={tab} onChange={setTab} options={[['home', '홈'], ['members', `길드원 ${members.length}`], ['skills', `스킬${points > 0 ? ` ·${points}` : ''}`], ['settings', `설정${isStaff && requests.length ? ` ·${requests.length}` : ''}`]]} />
+      <Segmented value={tab} onChange={setTab} options={[['home', '홈'], ['board', '게시판'], ['members', '길드원'], ['skills', points > 0 ? `스킬·${points}` : '스킬'], ['settings', isStaff && requests.length ? `설정·${requests.length}` : '설정']]} />
 
       {tab === 'home' && (
         <>
+          {notice && (
+            <button onClick={() => setTab('board')} className="w-full flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 text-left active:scale-[0.99] transition-transform">
+              <Megaphone className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <span className="flex-1 min-w-0"><span className="block text-[10px] font-black text-amber-600">공지 · {notice.nickname} · {ago(notice.at)}</span><span className="block text-sm font-bold text-amber-900 line-clamp-2">{notice.body}</span></span>
+            </button>
+          )}
+
+          {/* 이번 주 MVP · 지난주 */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-[22px] p-4 bg-gradient-to-br from-amber-100 to-amber-50 border border-amber-200/60">
+              <div className="text-[10px] font-black text-amber-700">👑 이번 주 MVP</div>
+              {data.mvp ? (
+                <>
+                  <div className="text-base font-black text-neutral-900 truncate mt-1">{data.mvp.nickname}</div>
+                  <div className="text-[11px] font-bold text-amber-800">{num(data.mvp.volume)}kg · {data.mvp.days}회</div>
+                </>
+              ) : <div className="text-xs font-bold text-amber-800/70 mt-1">첫 운동을 저장하면<br />MVP 후보가 돼요</div>}
+            </div>
+            <div className="rounded-[22px] p-4 bg-white border border-neutral-100">
+              <div className="text-[10px] font-black text-neutral-400">📜 지난주 기록</div>
+              <div className="text-base font-black text-neutral-900 mt-1">{num(lastWeek.volume)}kg</div>
+              <div className="text-[11px] font-bold text-neutral-500 truncate">{(lastWeek.claims || []).includes('raid') ? '👹 보스 처치' : '보스 생존'} · 미션 {(lastWeek.claims || []).filter(k => k !== 'raid').length}개</div>
+              {lastWeek.mvp && <div className="text-[10px] font-bold text-amber-600 truncate">MVP {lastWeek.mvp.nickname}</div>}
+            </div>
+          </div>
+
           {/* 레이드 보스 */}
           <div className="relative rounded-[28px] bg-gradient-to-br from-[#1a0b12] to-[#070b0f] p-5 overflow-hidden text-white">
             <div className="absolute -top-10 right-0 w-40 h-40 rounded-full bg-rose-500/25 blur-3xl" />
@@ -470,6 +521,20 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
             </div>
           </div>
 
+          {/* 길드 업적 */}
+          <div className="bg-white rounded-[28px] border border-neutral-100 p-4">
+            <div className="flex items-end justify-between mb-3"><div className="text-sm font-black text-neutral-900">🏅 길드 업적</div><div className="text-[11px] font-black text-emerald-600">{badges.filter(b => b.done).length} / {badges.length}</div></div>
+            <div className="grid grid-cols-4 gap-2">
+              {badges.map(b => (
+                <div key={b.name} title={b.desc} className={`rounded-2xl py-2.5 px-1 text-center border ${b.done ? 'bg-gradient-to-b from-emerald-50 to-white border-emerald-200 shadow-[0_0_10px_rgba(16,185,129,.18)]' : 'bg-neutral-50 border-neutral-100'}`}>
+                  <div className={`text-2xl ${b.done ? '' : 'grayscale opacity-30'}`}>{b.icon}</div>
+                  <div className={`text-[10px] font-black mt-0.5 ${b.done ? 'text-neutral-800' : 'text-neutral-400'}`}>{b.name}</div>
+                  <div className="text-[9px] font-bold text-neutral-400 leading-tight">{b.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* 랭킹 등록 */}
           {!g.ranked && (
             <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
@@ -492,6 +557,43 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
             ))}
           </div>
         </>
+      )}
+
+      {tab === 'board' && (
+        <div className="space-y-3">
+          <div className="bg-white rounded-[28px] border border-neutral-100 p-4">
+            <textarea value={draft} onChange={e => setDraft(e.target.value.slice(0, 200))} rows={2} placeholder={asNotice ? '길드원 모두에게 알릴 공지를 적어 주세요' : '오늘 운동 인증, 응원 한마디를 남겨 보세요 💪'}
+              className="w-full resize-none bg-neutral-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-300" />
+            <div className="flex items-center gap-2 mt-2">
+              {isStaff && (
+                <button onClick={() => setAsNotice(v => !v)} className={`px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1 ${asNotice ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-500'}`}><Megaphone className="w-3.5 h-3.5" /> 공지로</button>
+              )}
+              <span className="flex-1 text-right text-[10px] font-bold text-neutral-400">{draft.length}/200</span>
+              <button disabled={!draft.trim() || busy === 'post'} onClick={sendPost} className="px-4 py-2 rounded-xl bg-emerald-500 text-white text-xs font-black flex items-center gap-1 disabled:opacity-40 active:scale-95 transition-transform"><Send className="w-3.5 h-3.5" /> 올리기</button>
+            </div>
+          </div>
+          {posts.length === 0 && <div className="bg-white rounded-[28px] border border-neutral-100 p-8 text-center text-xs font-bold text-neutral-400">아직 글이 없어요. 첫 인사를 남겨 보세요!</div>}
+          {/* 가장 최근 공지는 맨 위에 고정 */}
+          {(notice ? [notice, ...posts.filter(p => p !== notice)] : posts).map(p => {
+            const canDelete = p.mine || isStaff;
+            return p.kind === 'notice' ? (
+              <div key={p.id} className="rounded-[22px] p-4 bg-amber-50 border border-amber-100">
+                <div className="flex items-center gap-1.5 mb-1"><Megaphone className="w-3.5 h-3.5 text-amber-600" /><span className="text-[11px] font-black text-amber-700">공지 · {p.nickname}</span><span className="text-[10px] font-bold text-amber-600/70">{ago(p.at)}</span>
+                  {canDelete && <button onClick={() => run(`del-${p.id}`, () => api.deletePost(p.id), '글을 지웠어요')} aria-label="삭제" className="ml-auto p-1 text-amber-400"><Trash2 className="w-3.5 h-3.5" /></button>}</div>
+                <p className="text-sm font-bold text-amber-950 whitespace-pre-wrap break-words">{p.body}</p>
+              </div>
+            ) : (
+              <div key={p.id} className="flex gap-3 bg-white rounded-[22px] border border-neutral-100 p-3.5">
+                <Avatar user={memberUser({ id: p.id, nickname: p.nickname, avatar: p.avatar })} size={36} Avatar3={Avatar3} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5"><span className="text-xs font-black text-neutral-800 truncate">{p.nickname}</span>{p.role && p.role !== 'member' && <RoleChip role={p.role} />}<span className="text-[10px] font-bold text-neutral-400">{ago(p.at)}</span>
+                    {canDelete && <button onClick={() => run(`del-${p.id}`, () => api.deletePost(p.id), '글을 지웠어요')} aria-label="삭제" className="ml-auto p-1 text-neutral-300"><Trash2 className="w-3.5 h-3.5" /></button>}</div>
+                  <p className="text-sm font-bold text-neutral-700 mt-0.5 whitespace-pre-wrap break-words">{p.body}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {tab === 'members' && (
@@ -521,21 +623,29 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
               );
             })()}
           </div>
+          <div className="text-[11px] font-bold text-neutral-400 px-1">👏 길드원을 응원하면 길드 +10 XP · 오늘 남은 응원 {cheersLeft}/{CHEER_DAILY}</div>
           <div className="bg-white rounded-[28px] border border-neutral-100 overflow-hidden">
             {members.map((m, i) => {
               const t = memberTier(m.contrib);
+              const canCheer = m.id !== meId && !m.cheered_today && cheersLeft > 0;
               return (
-                <button key={m.id} onClick={() => setMember(m)} className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-neutral-50 ${i ? 'border-t border-neutral-50' : ''} ${m.id === meId ? 'bg-emerald-50/50' : ''}`}>
-                  <Avatar user={memberUser(m)} size={42} Avatar3={Avatar3} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5"><span className="text-sm font-black text-neutral-900 truncate">{m.nickname}</span>{m.role !== 'member' && <RoleChip role={m.role} />}{m.id === meId && <span className="text-[9px] font-black bg-neutral-900 text-white px-1.5 py-0.5 rounded">나</span>}</div>
-                    <div className="text-[11px] font-bold text-neutral-400">{t.icon} {t.name} · 이번 주 {m.days || 0}회 · {num(m.volume)}kg</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs font-black text-emerald-600 tabular-nums">{num(m.contrib)}</div>
-                    <div className="text-[9px] font-bold text-neutral-400">기여 XP</div>
-                  </div>
-                </button>
+                <div key={m.id} className={`flex items-center gap-2 pr-3 ${i ? 'border-t border-neutral-50' : ''} ${m.id === meId ? 'bg-emerald-50/50' : ''}`}>
+                  <button onClick={() => setMember(m)} className="flex-1 min-w-0 flex items-center gap-3 pl-4 py-3 text-left active:bg-neutral-50">
+                    <Avatar user={memberUser(m)} size={42} Avatar3={Avatar3} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5"><span className="text-sm font-black text-neutral-900 truncate">{m.nickname}</span>{m.role !== 'member' && <RoleChip role={m.role} />}{m.id === meId && <span className="text-[9px] font-black bg-neutral-900 text-white px-1.5 py-0.5 rounded">나</span>}</div>
+                      <div className="text-[11px] font-bold text-neutral-400 truncate">{t.icon} {t.name} · 이번 주 {m.days || 0}회 · {num(m.volume)}kg{m.cheers ? ` · 👏${m.cheers}` : ''}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-black text-emerald-600 tabular-nums">{num(m.contrib)}</div>
+                      <div className="text-[9px] font-bold text-neutral-400">기여 XP</div>
+                    </div>
+                  </button>
+                  {m.id !== meId && (
+                    <button disabled={!canCheer || busy === `cheer-${m.id}`} onClick={() => cheer(m)} aria-label={`${m.nickname} 응원하기`}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 transition-all active:scale-90 ${m.cheered_today ? 'bg-emerald-50 opacity-60' : canCheer ? 'bg-amber-50 hover:bg-amber-100' : 'bg-neutral-100 opacity-40'}`}>{m.cheered_today ? '✅' : '👏'}</button>
+                  )}
+                </div>
               );
             })}
           </div>

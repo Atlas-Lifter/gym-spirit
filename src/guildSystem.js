@@ -104,6 +104,11 @@ export const guildErrorText = (e) => {
     'GS:SKILL_MAX': '이미 최고 단계예요.',
     'GS:NOT_DONE': '아직 목표를 달성하지 못했어요.',
     'GS:CLAIMED': '이번 주 보상은 이미 받았어요.',
+    'GS:POST_LEN': '1~200자로 적어 주세요.',
+    'GS:POST_LIMIT': '오늘은 글을 너무 많이 썼어요. 내일 다시 써 주세요.',
+    'GS:NO_POST': '글을 찾을 수 없어요.',
+    'GS:CHEERED': '오늘은 이미 응원했어요.',
+    'GS:CHEER_LIMIT': '응원은 하루 5번까지예요.',
   };
   const key = Object.keys(map).find(k => m.includes(k));
   if (key) return map[key];
@@ -111,3 +116,31 @@ export const guildErrorText = (e) => {
   if (/failed to fetch|network/i.test(m)) return '인터넷 연결을 확인해 주세요.';
   return '잠시 후 다시 시도해 주세요.';
 };
+
+// 응원: 하루 5번, 같은 사람에게 하루 한 번, 1번에 길드 경험치 +10
+export const CHEER_DAILY = 5;
+
+// 연속 기록: 미션·레이드 보상을 받은 주가 이어진 수 (이번 주에 아직 없으면 지난주부터 센다)
+export const claimStreak = (weeks = [], thisWeek) => {
+  const set = new Set(weeks);
+  const back = (k, n) => { const d = new Date(`${k}T00:00:00`); d.setDate(d.getDate() - 7 * n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  let start = set.has(thisWeek) ? 0 : 1, n = 0;
+  while (set.has(back(thisWeek, start + n))) n += 1;
+  return n;
+};
+
+// 길드 업적: 조건을 채우면 반짝이고, 아직이면 회색
+export const guildBadges = ({ level = 1, members = 1, stats = {}, streak = 0, rank = null }) => [
+  { icon: '🎉', name: '창단', desc: '길드를 만들었어요', done: true },
+  { icon: '👥', name: '북적북적', desc: '길드원 5명', done: members >= 5 },
+  { icon: '🏟️', name: '대형 길드', desc: '길드원 10명', done: members >= 10 },
+  { icon: '⭐', name: '성장 중', desc: '길드 Lv.5', done: level >= 5 },
+  { icon: '🌟', name: '명문 길드', desc: '길드 Lv.10', done: level >= 10 },
+  { icon: '💫', name: '전설의 체육관', desc: '길드 Lv.20', done: level >= 20 },
+  { icon: '👹', name: '첫 토벌', desc: '레이드 보스 1회 처치', done: (stats.raids || 0) >= 1 },
+  { icon: '🗡️', name: '보스 사냥꾼', desc: '레이드 보스 5회 처치', done: (stats.raids || 0) >= 5 },
+  { icon: '🎯', name: '미션 마스터', desc: '주간 미션 10회 달성', done: (stats.missions || 0) >= 10 },
+  { icon: '🔥', name: '3주 연속', desc: '3주 연속 보상 획득', done: streak >= 3 },
+  { icon: '👏', name: '응원단', desc: '길드 응원 50회', done: (stats.cheers || 0) >= 50 },
+  { icon: '🏆', name: '랭킹 TOP 3', desc: '전체 랭킹 3위 안', done: !!rank && rank <= 3 },
+];

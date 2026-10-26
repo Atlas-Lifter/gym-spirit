@@ -220,6 +220,9 @@ export const guildApi = {
   contribute: (day, volume) => rpc('guild_contribute', { p_day: day, p_volume: volume }),
   upgradeSkill: (key) => rpc('upgrade_guild_skill', { p_key: key }),
   claim: (key) => rpc('claim_guild_reward', { p_key: key }),
+  post: (body, notice) => rpc('post_guild_message', { p_body: body, p_notice: !!notice }),
+  deletePost: (id) => rpc('delete_guild_post', { p_id: id }),
+  cheer: (userId) => rpc('cheer_guild_member', { p_to: userId }),
 };
 
 // 나와 관련된 친구 요청이 생기거나 바뀌면 바로 알려준다 (실시간)

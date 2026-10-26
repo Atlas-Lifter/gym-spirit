@@ -3547,7 +3547,7 @@ export default function App() {
           };
           return (
             <RankingTab
-              friendUsers={friendRank.filter(u => u.id !== rankingUser?.id)}
+              friendUsers={/* 서로 친구 수락한 사람만 (대기 중 요청은 제외) */ friendRank.filter(u => u.id !== rankingUser?.id && (devMock || friendState.friends.includes(u.id)))}
               globalEntries={globalEntries}
               me={me}
               meId={rankingUser?.id}
