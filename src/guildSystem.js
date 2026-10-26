@@ -65,22 +65,57 @@ export const weeklyMissions = (week, skills) => {
   ];
 };
 
-// 주간 레이드 보스: 매주 바뀌고, 길드원 볼륨이 곧 피해량
-export const RAID_BOSSES = [
-  { emoji: '👹', name: '작심삼일 대마왕', line: '월요일만 되면 나타나 의지를 꺾는다' },
-  { emoji: '🐉', name: '치팅데이 드래곤', line: '한 끼만 더… 라고 속삭인다' },
-  { emoji: '🍗', name: '야식 마왕', line: '밤 11시의 치킨 냄새로 공격한다' },
-  { emoji: '🛋️', name: '소파 골렘', line: '한 번 앉으면 일어날 수 없다' },
-  { emoji: '💀', name: '월요병 리치', line: '출근길 피로를 빨아들인다' },
-  { emoji: '📱', name: '숏폼 히드라', line: '하나 자르면 영상이 두 개 생긴다' },
+// 주간 레이드 보스: 1년(52주) 동안 한 번도 겹치지 않고 매주 바뀐다
+// 13종의 헬스 방해꾼 × 분기마다 바뀌는 4가지 속성(서리·맹독·용암·심연) = 52마리, 53주차가 있는 해는 황금 최종 보스
+// 길드원 이번 주 볼륨 합계가 곧 피해량 (보상·HP 계산은 DB와 같다)
+export const BOSS_KINDS = [
+  { key: 'sofa', name: '소파 골렘', line: '한 번 앉으면 다시는 일어날 수 없다' },
+  { key: 'chicken', name: '치킨 마왕', line: '밤 11시, 바삭한 유혹으로 공격한다' },
+  { key: 'phone', name: '숏폼 히드라', line: '하나 넘기면 영상이 두 개 생긴다' },
+  { key: 'alarm', name: '스누즈 리치', line: '5분만 더… 를 영원히 반복시킨다' },
+  { key: 'cola', name: '콜라 슬라임', line: '제로라서 괜찮다고 속삭인다' },
+  { key: 'ramen', name: '라면 크라켄', line: '국물까지 마시게 만드는 면발 촉수' },
+  { key: 'bed', name: '이불 미믹', line: '아침마다 온몸을 꽉 붙잡는다' },
+  { key: 'goblin', name: '핑계 고블린', line: '"진짜 내일부터 할게"를 외친다' },
+  { key: 'ogre', name: '배달 오우거', line: '최소주문금액을 채우라고 강요한다' },
+  { key: 'demon', name: '작심삼일 대마왕', line: '결심 사흘째 되는 날 반드시 나타난다' },
+  { key: 'dragon', name: '치팅데이 드래곤', line: '"오늘만 먹자"며 도넛 불꽃을 뿜는다' },
+  { key: 'sloth', name: '나무늘보 거인', line: '움직이지 않을수록 강해진다' },
+  { key: 'pizza', name: '피자 골렘', line: '치즈처럼 유혹이 끝없이 늘어난다' },
 ];
+export const BOSS_ELEMENTS = [
+  { key: 'frost', name: '서리', season: '1분기 · 겨울', glow: '#7dd3fc', eye: '#e0f2fe', accent: '#38bdf8', bg: ['#0c4a6e', '#082f49'], particle: 'snow' },
+  { key: 'toxic', name: '맹독', season: '2분기 · 봄', glow: '#a3e635', eye: '#f7fee7', accent: '#65a30d', bg: ['#365314', '#1a2e05'], particle: 'bubble' },
+  { key: 'magma', name: '용암', season: '3분기 · 여름', glow: '#fb923c', eye: '#fef08a', accent: '#ea580c', bg: ['#7c2d12', '#431407'], particle: 'ember' },
+  { key: 'void', name: '심연', season: '4분기 · 가을', glow: '#c084fc', eye: '#fae8ff', accent: '#7c3aed', bg: ['#4c1d95', '#2e1065'], particle: 'wisp' },
+];
+const GOLD = { key: 'gold', name: '황금', season: '연말 특별', glow: '#fde047', eye: '#fffbeb', accent: '#ca8a04', bg: ['#713f12', '#422006'], particle: 'ember' };
+
+// 한 해의 몇째 주인지 (ISO 주차, 1~53)
+export const isoWeek = (date) => {
+  const t = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t - y0) / 86400000 + 1) / 7);
+};
+
+export const bossOfWeek = (weekStart) => {
+  const ws = weekStart ? new Date(`${weekStart}T00:00:00`) : new Date();
+  const week = isoWeek(ws);
+  if (week >= 53) {
+    return { week, kind: BOSS_KINDS[9], element: GOLD, name: '최종 보스 · 황금 작심삼일 대마왕', line: '한 해의 마지막 주, 모든 결심을 시험한다', final: true };
+  }
+  const kind = BOSS_KINDS[(week - 1) % BOSS_KINDS.length];
+  const element = BOSS_ELEMENTS[Math.floor((week - 1) / BOSS_KINDS.length)];
+  return { week, kind, element, name: `${element.name}의 ${kind.name}`, line: kind.line };
+};
+
 export const raidOf = (week, skills) => {
-  const ws = week?.week_start ? new Date(`${week.week_start}T00:00:00`) : new Date();
-  const idx = Math.floor(ws.getTime() / (7 * 86400000)) % RAID_BOSSES.length;
   const n = Math.max(1, week?.members || 1);
   const hp = 25000 * n;
   const dmg = Math.round((week?.volume || 0) * (1 + 0.1 * skillLv(skills, 'rack')));
-  return { boss: RAID_BOSSES[(idx + RAID_BOSSES.length) % RAID_BOSSES.length], hp, dmg, left: Math.max(0, hp - dmg), pct: Math.min(100, (dmg / hp) * 100), defeated: dmg >= hp, reward: 500 };
+  return { boss: bossOfWeek(week?.week_start), hp, dmg, left: Math.max(0, hp - dmg), pct: Math.min(100, (dmg / hp) * 100), defeated: dmg >= hp, reward: 500 };
 };
 
 // DB 오류 → 안내 문장

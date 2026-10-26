@@ -6,6 +6,7 @@ import {
   guildLevelInfo, GUILD_SKILLS, skillLv, skillPoints, weeklyMissions, raidOf, guildErrorText, CHEER_DAILY, claimStreak, guildBadges,
 } from './guildSystem.js';
 import { HERO_BG, heroBg } from './theme.js';
+import { RaidArena } from './RaidArena.jsx';
 
 // 길드: 만들기·찾기·가입, 내 길드(레이드 보스·주간 미션·출석부·길드원 계급·스킬·관리)
 
@@ -226,6 +227,7 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
   const [member, setMember] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [draft, setDraft] = useState('');
+  const [rankBy, setRankBy] = useState('volume'); // 길드원 랭킹 기준
   const [asNotice, setAsNotice] = useState(false);
   const seq = useRef(0);
   const g = data?.guild;
@@ -447,16 +449,16 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
           </div>
 
           {/* 레이드 보스 */}
-          <div className="relative rounded-[28px] p-5 overflow-hidden text-white" style={{ background: heroBg('#f43f5e', '#7c3aed') }}>
-            <div className="relative flex items-center gap-4">
-              <div className={`text-6xl ${raid.defeated ? 'grayscale opacity-50' : 'animate-[pulse_2.4s_ease-in-out_infinite]'}`}>{raid.boss.emoji}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-black tracking-[.2em] text-rose-300">WEEKLY RAID</div>
-                <div className="text-lg font-black truncate">{raid.boss.name}</div>
-                <div className="text-[11px] font-bold text-white/50 truncate">{raid.boss.line}</div>
-              </div>
+          <div className="relative rounded-[28px] p-4 overflow-hidden text-white" style={{ background: heroBg(raid.boss.element.glow, '#0b0f14') }}>
+            <div className="relative flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-black tracking-[.2em] text-rose-300">WEEKLY RAID</span>
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-white/10">{raid.boss.week}주차</span>
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded" style={{ background: `${raid.boss.element.glow}26`, color: raid.boss.element.glow }}>{raid.boss.element.season}</span>
             </div>
-            <div className="relative mt-4">
+            <div className="relative text-xl font-black mt-1">{raid.boss.name}</div>
+            <div className="relative text-[11px] font-bold text-white/55">{raid.boss.line}</div>
+            <RaidArena raid={raid} members={members} meId={meId} todayIdx={todayIdx} />
+            <div className="relative mt-3">
               <div className="flex justify-between text-[10px] font-bold text-white/60 mb-1">
                 <span>HP {num(raid.left)} / {num(raid.hp)}</span>
                 <span>{raid.defeated ? '처치!' : `${Math.ceil(100 - raid.pct)}% 남음`}</span>
@@ -619,22 +621,31 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
               );
             })()}
           </div>
-          <div className="text-[11px] font-bold text-neutral-400 px-1">👏 길드원을 응원하면 길드 +10 XP · 오늘 남은 응원 {cheersLeft}/{CHEER_DAILY}</div>
+          {/* 길드 안 랭킹: 기준을 바꾸면 순서가 다시 매겨진다 */}
+          <div className="flex items-end justify-between px-1 pt-1">
+            <div className="text-sm font-black text-neutral-900">🏆 길드원 랭킹</div>
+            <div className="text-[10px] font-bold text-neutral-400">👏 응원 1번 = 길드 +10 XP · 오늘 {cheersLeft}/{CHEER_DAILY}</div>
+          </div>
+          <Segmented value={rankBy} onChange={setRankBy} options={[['volume', '이번 주 볼륨'], ['days', '출석'], ['contrib', '누적 기여'], ['lift', '3대']]} />
           <div className="bg-white rounded-[28px] border border-neutral-100 overflow-hidden">
-            {members.map((m, i) => {
+            {[...members].sort((a, b) => (Number(b[rankBy]) || 0) - (Number(a[rankBy]) || 0) || (b.contrib || 0) - (a.contrib || 0)).map((m, i) => {
               const t = memberTier(m.contrib);
+              const val = Number(m[rankBy]) || 0;
+              const valText = rankBy === 'days' ? `${val}회` : rankBy === 'contrib' ? `${num(val)} XP` : `${num(val)}kg`;
+              const medal = ['🥇', '🥈', '🥉'][i];
               const canCheer = m.id !== meId && !m.cheered_today && cheersLeft > 0;
               return (
                 <div key={m.id} className={`flex items-center gap-2 pr-3 ${i ? 'border-t border-neutral-50' : ''} ${m.id === meId ? 'bg-emerald-50/50' : ''}`}>
-                  <button onClick={() => setMember(m)} className="flex-1 min-w-0 flex items-center gap-3 pl-4 py-3 text-left active:bg-neutral-50">
+                  <button onClick={() => setMember(m)} className="flex-1 min-w-0 flex items-center gap-3 pl-3 py-3 text-left active:bg-neutral-50">
+                    <span className={`w-7 text-center flex-shrink-0 ${medal ? 'text-xl' : 'text-sm font-black text-neutral-400 tabular-nums'}`}>{medal || i + 1}</span>
                     <Avatar user={memberUser(m)} size={42} Avatar3={Avatar3} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5"><span className="text-sm font-black text-neutral-900 truncate">{m.nickname}</span>{m.role !== 'member' && <RoleChip role={m.role} />}{m.id === meId && <span className="text-[9px] font-black bg-neutral-900 text-white px-1.5 py-0.5 rounded">나</span>}</div>
-                      <div className="text-[11px] font-bold text-neutral-400 truncate">{t.icon} {t.name} · 이번 주 {m.days || 0}회 · {num(m.volume)}kg{m.cheers ? ` · 👏${m.cheers}` : ''}</div>
+                      <div className="text-[11px] font-bold text-neutral-400 truncate">{t.icon} {t.name}{rankBy !== 'days' ? ` · 이번 주 ${m.days || 0}회` : ` · ${num(m.volume)}kg`}{m.cheers ? ` · 👏${m.cheers}` : ''}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-black text-emerald-600 tabular-nums">{num(m.contrib)}</div>
-                      <div className="text-[9px] font-bold text-neutral-400">기여 XP</div>
+                      <div className={`text-xs font-black tabular-nums ${i === 0 && val > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{valText}</div>
+                      <div className="text-[9px] font-bold text-neutral-400">{{ volume: '이번 주', days: '이번 주', contrib: '누적', lift: '1RM 합계' }[rankBy]}</div>
                     </div>
                   </button>
                   {m.id !== meId && (
