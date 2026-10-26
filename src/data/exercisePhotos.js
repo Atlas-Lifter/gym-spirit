@@ -285,5 +285,17 @@ const PHOTO = {
   kb_thruster: 'Kettlebell_Thruster',
   kb_sumo_hp: 'Kettlebell_Sumo_High_Pull',
   y_raise: 'Dumbbell_Scaption',
+  // 유산소 기구 (유산소 기록 화면)
+  cd_treadmill_walk: 'Walking_Treadmill',
+  cd_treadmill_run: 'Running_Treadmill',
+  cd_outdoor: 'Trail_Running_Walking',
+  cd_stepmill: 'Step_Mill',
+  cd_stairmaster: 'Stairmaster',
+  cd_cycle: 'Bicycling_Stationary',
+  cd_recumbent: 'Recumbent_Bike',
+  cd_elliptical: 'Elliptical_Trainer',
+  cd_rowing: 'Rowing_Stationary',
+  cd_jumprope: 'Rope_Jumping',
+  cd_bike: 'Bicycling',
 };
 export const exercisePhotos = (id) => (PHOTO[id] ? [`/exercises/${PHOTO[id]}-0.jpg`, `/exercises/${PHOTO[id]}-1.jpg`] : null);

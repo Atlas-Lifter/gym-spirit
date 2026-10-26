@@ -2,6 +2,7 @@ import React from 'react';
 import { AppContext } from './appContext.js';
 import { AuthScreen } from './screens/AuthScreen.jsx';
 import { DietScreen } from './screens/DietScreen.jsx';
+import { CardioScreen } from './screens/CardioScreen.jsx';
 import { MainScreen } from './screens/MainScreen.jsx';
 import { WorkoutScreen } from './screens/WorkoutScreen.jsx';
 import { Onboarding } from './screens/Onboarding.jsx';
@@ -15,9 +16,10 @@ export default function App() {
   // 처음 쓰는 사람 안내: 기록이 하나도 없고 아직 안내를 마치지 않았을 때 기본 화면 위에 한 번
   const hasWorkout = Object.values(currentUser?.workouts || {}).some(w => Array.isArray(w) && w.length > 0);
   const showOnboarding = !!currentUser && !currentUser.onboarded && !hasWorkout && (!cloudUser || cloudReady)
-    && !['auth', 'diet', 'workout'].includes(currentScreen);
+    && !['auth', 'diet', 'workout', 'cardio'].includes(currentScreen);
   if (currentScreen === 'auth') screen = <AuthScreen />;
   if (currentScreen === 'diet') screen = <DietScreen />;
+  if (currentScreen === 'cardio') screen = <CardioScreen />;
   if (currentScreen === 'workout') screen = <WorkoutScreen />;
   return <AppContext.Provider value={app}>{screen}{showOnboarding && <Onboarding />}</AppContext.Provider>;
 }
