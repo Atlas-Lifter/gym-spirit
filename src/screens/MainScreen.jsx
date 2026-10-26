@@ -10,6 +10,7 @@ import { AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS, AVATAR_SKIN_TONES, FullBodyAvata
 import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { AnalysisTab } from './tabs/AnalysisTab.jsx';
 import { HomeTab } from './tabs/HomeTab.jsx';
+import { WeekRings } from './tabs/WeekRings.jsx';
 import { ProfileTab } from './tabs/ProfileTab.jsx';
 import { ProgramTab } from './tabs/ProgramTab.jsx';
 import { RankingScreen } from './tabs/RankingScreen.jsx';
@@ -105,9 +106,9 @@ export function MainScreen() {
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 pb-[80px] flex flex-col relative overflow-hidden">
       <GlobalOverlays />
-      <header className="relative z-20">
-        <div className="relative rounded-b-[32px] px-5 pt-6 pb-5 shadow-[0_10px_28px_rgba(7,11,15,0.16)]" style={{ background: HERO_BG }}>
-        <div className="absolute inset-0 rounded-b-[32px] overflow-hidden pointer-events-none">
+      <header className="relative z-20 px-3 pt-3">
+        <div className="relative rounded-[30px] px-5 pt-5 pb-4 shadow-[0_14px_34px_rgba(7,11,15,0.28)]" style={{ background: HERO_BG }}>
+        <div className="absolute inset-0 rounded-[30px] overflow-hidden pointer-events-none">
           <div className="absolute inset-0 opacity-[0.07]" style={TRON_GRID} />
           <div className="absolute bottom-0 left-10 right-10 h-px shadow-[0_0_10px_rgba(52,211,153,0.8)]" style={{ background: 'linear-gradient(90deg, transparent, #34d399 30%, #60a5fa 70%, transparent)' }} />
         </div>
@@ -116,10 +117,9 @@ export function MainScreen() {
           const d = new Date(currentDate);
           const isToday = currentDate === formatDate(new Date());
           return (
-            <button onClick={() => setIsFullCalendarOpen(true)} className="flex items-center gap-1.5 active:scale-[0.98] transition-transform text-left">
-              <span className="text-[22px] font-black tracking-tight text-white whitespace-nowrap">{d.getMonth() + 1}월 {d.getDate()}일 <span className="text-white/60">({['일', '월', '화', '수', '목', '금', '토'][d.getDay()]})</span></span>
-              {isToday && <span className="text-[11px] font-black text-neutral-950 bg-emerald-400 whitespace-nowrap px-2 py-0.5 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.7)]">오늘</span>}
-              <ChevronRight className="w-5 h-5 rotate-90 text-emerald-400" />
+            <button onClick={() => setIsFullCalendarOpen(true)} className="text-left active:scale-[0.98] transition-transform">
+              <span className={`block text-[11px] font-black tracking-[.2em] ${isToday ? 'text-emerald-300' : 'text-sky-300'}`}>{isToday ? 'TODAY' : '선택한 날'} · {['일', '월', '화', '수', '목', '금', '토'][d.getDay()]}요일</span>
+              <span className="flex items-center gap-1 text-[26px] font-black tracking-tight text-white leading-tight whitespace-nowrap">{d.getMonth() + 1}월 {d.getDate()}일<ChevronRight className="w-5 h-5 rotate-90 text-emerald-400" /></span>
             </button>
           );
         })()}
@@ -165,7 +165,10 @@ export function MainScreen() {
         </div>
               </div>
         {activeTab === 'workout' && (
-          <WeekStrip />
+          <>
+            <WeekRings />
+            <WeekStrip />
+          </>
         )}
         </div>
       </header>

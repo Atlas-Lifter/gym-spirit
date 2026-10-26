@@ -3,6 +3,7 @@ import { formatDate } from '../../lib/dates.js';
 import { useApp } from '../../appContext.js';
 
 // 상단 헤더 안의 이번 주 날짜 줄 (운동 탭에서만)
+// 운동한 날은 초록 링이 빛나고, 고른 날은 꽉 찬 초록 원, 오늘은 초록 숫자
 export function WeekStrip() {
   const {
     currentDate,
@@ -10,20 +11,26 @@ export function WeekStrip() {
     setCurrentDate,
     weekDays,
   } = useApp();
+  const today = formatDate(new Date());
   return (
-    <div className="relative flex justify-between mt-5 -mx-1">
+    <div className="relative grid grid-cols-7 mt-4 -mx-1 text-center">
       {weekDays.map((d, index) => {
         const dateStr = formatDate(d);
         const isSelected = dateStr === currentDate;
-        const isToday = dateStr === formatDate(new Date());
+        const isToday = dateStr === today;
         const hasWorkout = Array.isArray(safeWorkouts[dateStr]) && safeWorkouts[dateStr].length > 0;
         return (
-          <button key={`wd-${index}`} onClick={() => setCurrentDate(dateStr)} className="flex flex-col items-center gap-1.5 w-11 active:scale-90 transition-transform">
-            <span className={`text-[11px] font-bold ${d.getDay()===0 ? 'text-rose-400' : d.getDay()===6 ? 'text-sky-400' : 'text-white/40'}`}>{['일','월','화','수','목','금','토'][d.getDay()]}</span>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[17px] font-black transition-all ${isSelected ? 'bg-emerald-400 text-neutral-950 shadow-[0_0_16px_rgba(52,211,153,0.7)]' : isToday ? 'text-emerald-300 ring-[1.5px] ring-emerald-400/70' : 'text-white/85 hover:bg-white/10'}`}>
-              {d.getDate()}
-            </div>
-            <div className={`w-1 h-1 rounded-full -mt-1 ${hasWorkout ? 'bg-sky-400 shadow-[0_0_5px_rgba(56,189,248,0.9)]' : 'bg-transparent'}`} />
+          <button key={`wd-${index}`} onClick={() => setCurrentDate(dateStr)} className="flex flex-col items-center gap-1 active:scale-90 transition-transform">
+            <span className={`text-[10px] font-bold ${d.getDay() === 0 ? 'text-rose-300' : d.getDay() === 6 ? 'text-sky-300' : 'text-white/45'}`}>{['일', '월', '화', '수', '목', '금', '토'][d.getDay()]}</span>
+            <span className="relative w-10 h-10 flex items-center justify-center">
+              <svg className="absolute inset-0" viewBox="0 0 40 40" aria-hidden="true">
+                <circle cx="20" cy="20" r="17" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="3" />
+                {hasWorkout && <circle cx="20" cy="20" r="17" fill="none" stroke="#34d399" strokeWidth="3" style={{ filter: 'drop-shadow(0 0 3px #34d399)' }} />}
+              </svg>
+              <span className={`relative flex items-center justify-center text-[14px] font-black transition-all ${isSelected ? 'w-8 h-8 rounded-full bg-emerald-400 text-neutral-950 shadow-[0_0_14px_rgba(52,211,153,.75)]' : isToday ? 'text-emerald-300' : 'text-white/85'}`}>
+                {d.getDate()}
+              </span>
+            </span>
           </button>
         );
       })}
