@@ -11,11 +11,11 @@ export const STANDARD_BAR = 20;
 // 일반 헬스장에는 25kg 원판이 없어서 한쪽에 꽂는 가장 큰 원판은 20kg
 export const GYM_PLATES = [20, 15, 10, 5, 2.5, 1.25];
 
-const PLATE_MACHINES = ['lpd', 's_lpd', 'hack_sq', 'vsq', 'tbar', 'smith_sq', 'sip', 'smith_ohp', 'smith_bp', 'smith_row', 'inc_cpm', 'high_row', 'machine_shrug'];
-const ONE_END_BARBELL = ['landmine_p', 'meadows_row'];
+const PLATE_MACHINES = ['lpd', 's_lpd', 'hack_sq', 'vsq', 'tbar', 'smith_sq', 'sip', 'smith_ohp', 'smith_bp', 'smith_row', 'inc_cpm', 'high_row', 'machine_shrug', 'narrow_lpd', 'smith_calf', 'lp_calf', 'smith_sldl', 'smith_split', 'dec_cpm', 'smith_dec', 'smith_bshrug'];
+const ONE_END_BARBELL = ['landmine_p', 'meadows_row', 'oa_lm_row', 'lm_tbar'];
 const ASSISTED = ['astpu'];
 // 맨몸 종목에서 실제로 드는 체중 비율
-const BODY_LOAD = { pu: 1, cu: 1, dips: 1, pushup: 0.65, inv_row: 0.5, weighted_pu: 1, decline_pushup: 0.75, incline_pushup: 0.45, close_pushup: 0.65, bench_dips: 0.5 };
+const BODY_LOAD = { pu: 1, cu: 1, dips: 1, pushup: 0.65, inv_row: 0.5, weighted_pu: 1, decline_pushup: 0.75, incline_pushup: 0.45, close_pushup: 0.65, bench_dips: 0.5, wide_pu: 1, vbar_pu: 1, scap_pu: 1, tri_dips: 1, wide_pushup: 0.65, plyo_pushup: 0.65, oa_pushup: 0.65 };
 
 const RULES = {
   barbell: { key: 'barbell', label: 'KG', hint: '봉 20kg 포함 총중량', placeholder: '20', bar: STANDARD_BAR, plates: 'both', step: 2.5 },
@@ -35,7 +35,7 @@ export const weightRule = (id, tool) => {
   if (ASSISTED.includes(id)) return RULES.assist;
   if (PLATE_MACHINES.includes(id)) return RULES.plateMachine;
   if (ONE_END_BARBELL.includes(id)) return RULES.landmine;
-  if (id === 'ez_curl') return RULES.ezbar;
+  if (id === 'ez_curl' || id === 'ez_skull') return RULES.ezbar;
   if (t === '바벨') return RULES.barbell;
   if (t === '덤벨') return RULES.dumbbell;
   if (t === '케이블') return RULES.cable;
