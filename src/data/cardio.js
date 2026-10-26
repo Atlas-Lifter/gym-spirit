@@ -27,6 +27,8 @@ export const CARDIO_BY_ID = Object.fromEntries(CARDIO_TYPES.map(t => [t.id, t]))
 export const LEVELS = ['가볍게', '보통', '힘들게'];
 // 세계보건기구(WHO) 권장: 중강도 유산소 주 150분 이상
 export const WEEKLY_GOAL_MIN = 150;
+// 길드 레이드: 유산소 1분 = 보스 피해 100 (근력 볼륨 kg과 합산)
+export const CARDIO_DAMAGE_PER_MIN = 100;
 
 // 걷기·달리기 산소 소비량(ACSM): 속도는 m/분, 경사는 비율
 const gaitMet = (gait, kmh, inclinePct = 0) => {

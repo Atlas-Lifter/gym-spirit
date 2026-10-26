@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { RankingTab } from '../../RankingTab.jsx';
 import { FullBodyAvatar } from '../../realAvatar.jsx';
 import { useApp } from '../../appContext.js';
+import { formatDate } from '../../lib/dates.js';
 
 // 랭킹 탭 (전체·친구·길드)
 export function RankingScreen() {
@@ -30,6 +31,7 @@ export function RankingScreen() {
     stealRoutine,
     claimQuestRewards,
     buildPublicProfile,
+    cardioMinOn,
     rankingScope,
     setRankingScope,
   } = useApp();
@@ -42,6 +44,7 @@ export function RankingScreen() {
   const me = {
     id: rankingUser?.id || 'guest', name: currentUser?.profile?.nickname || '나',
     volume: getWeeklyVolumeData(weekInfo.monday).total, lift: getTotalLift3(), avatarColor: 'bg-neutral-800', isMe: true, profile: currentUser?.profile,
+    cardio: Array.from({ length: 7 }, (_, i) => { const x = new Date(weekInfo.monday); x.setDate(x.getDate() + i); return cardioMinOn(formatDate(x)); }).reduce((a, b) => a + b, 0),
   };
   // 내 시트에도 친구들이 보는 것과 같은 최근 루틴·최애 종목을 보여준다
   const pub = buildPublicProfile();

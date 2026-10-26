@@ -83,8 +83,16 @@ export const loadMyProfile = async (uid) => {
   return data;
 };
 
+// 유산소 칸(weekly_cardio)은 cardio_ranking.sql 을 실행해야 생긴다. 아직 없으면 그 칸만 빼고 다시 저장한다
+let cardioColumnMissing = false;
 export const savePublicProfile = async (uid, fields) => {
-  const { error } = await supabase.from('profiles').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', uid);
+  const send = (f) => supabase.from('profiles').update({ ...f, updated_at: new Date().toISOString() }).eq('id', uid);
+  const { weekly_cardio: cardio, ...rest } = fields;
+  let { error } = await send(cardioColumnMissing ? rest : fields);
+  if (error && !cardioColumnMissing && cardio !== undefined && /weekly_cardio/.test(String(error.message || error.details || ''))) {
+    cardioColumnMissing = true;
+    ({ error } = await send(rest));
+  }
   if (error) throw error;
 };
 
@@ -194,6 +202,7 @@ export const friendRowToRankUser = (r) => ({
   name: r.nickname || '짐스피릿 유저',
   volume: Math.round(Number(r.volume) || 0),
   lift: Math.round(Number(r.lift) || 0),
+  cardio: Math.round(Number(r.cardio) || 0),
   fav: r.fav || '',
   profile: r.avatar && Object.keys(r.avatar).length ? cleanAvatar(r.id, r.avatar) : null,
   routine: r.last_routine || null,

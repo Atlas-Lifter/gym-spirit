@@ -704,13 +704,13 @@ export const GuildCenter = ({ api, data, loading, reload, meId, meHidden = false
             <div className="text-sm font-black text-neutral-900">🏆 길드원 랭킹</div>
             <div className="text-[10px] font-bold text-neutral-400">👏 응원 1번 = 길드 +10 XP · 오늘 {cheersLeft}/{CHEER_DAILY}</div>
           </div>
-          <Segmented value={rankBy} onChange={setRankBy} options={[['volume', '이번 주 볼륨'], ['days', '출석'], ['contrib', '누적 기여'], ['lift', '3대']]} />
+          <Segmented value={rankBy} onChange={setRankBy} options={[['volume', '볼륨'], ['cardio', '유산소'], ['days', '출석'], ['contrib', '기여'], ['lift', '3대']]} />
           <div className="bg-white rounded-[28px] border border-neutral-100 overflow-hidden">
             {/* 운영자 모드인 운영자는 길드원 랭킹에서 빠진다 */}
             {members.filter(m => !(m.id === meId ? meHidden : isGmOn(m.id, m.avatar))).sort((a, b) => (Number(b[rankBy]) || 0) - (Number(a[rankBy]) || 0) || (b.contrib || 0) - (a.contrib || 0)).map((m, i) => {
               const t = memberTier(m.contrib);
               const val = Number(m[rankBy]) || 0;
-              const valText = rankBy === 'days' ? `${val}회` : rankBy === 'contrib' ? `${num(val)} XP` : `${num(val)}kg`;
+              const valText = rankBy === 'days' ? `${val}회` : rankBy === 'contrib' ? `${num(val)} XP` : rankBy === 'cardio' ? `${num(val)}분` : `${num(val)}kg`;
               const medal = ['🥇', '🥈', '🥉'][i];
               const canCheer = m.id !== meId && !m.cheered_today && cheersLeft > 0;
               return (
@@ -724,7 +724,7 @@ export const GuildCenter = ({ api, data, loading, reload, meId, meHidden = false
                     </div>
                     <div className="text-right">
                       <div className={`text-xs font-black tabular-nums ${i === 0 && val > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{valText}</div>
-                      <div className="text-[9px] font-bold text-neutral-400">{{ volume: '이번 주', days: '이번 주', contrib: '누적', lift: '1RM 합계' }[rankBy]}</div>
+                      <div className="text-[9px] font-bold text-neutral-400">{{ volume: '이번 주', cardio: '이번 주', days: '이번 주', contrib: '누적', lift: '1RM 합계' }[rankBy]}</div>
                     </div>
                   </button>
                   {m.id !== meId && (

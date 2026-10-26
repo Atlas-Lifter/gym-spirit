@@ -6,6 +6,7 @@ import { useApp } from '../../appContext.js';
 // 운동한 날은 초록 링이 빛나고, 고른 날은 꽉 찬 초록 원, 오늘은 초록 숫자
 export function WeekStrip() {
   const {
+    cardioMinOn,
     currentDate,
     safeWorkouts,
     setCurrentDate,
@@ -19,6 +20,7 @@ export function WeekStrip() {
         const isSelected = dateStr === currentDate;
         const isToday = dateStr === today;
         const hasWorkout = Array.isArray(safeWorkouts[dateStr]) && safeWorkouts[dateStr].length > 0;
+        const hasCardio = cardioMinOn(dateStr) > 0;
         return (
           <button key={`wd-${index}`} onClick={() => setCurrentDate(dateStr)} className="flex flex-col items-center gap-1 active:scale-90 transition-transform">
             <span className={`text-[10px] font-bold ${d.getDay() === 0 ? 'text-rose-300' : d.getDay() === 6 ? 'text-sky-300' : 'text-white/45'}`}>{['일', '월', '화', '수', '목', '금', '토'][d.getDay()]}</span>
@@ -30,6 +32,7 @@ export function WeekStrip() {
               <span className={`relative flex items-center justify-center text-[14px] font-black transition-all ${isSelected ? 'w-8 h-8 rounded-full bg-emerald-400 text-neutral-950 shadow-[0_0_14px_rgba(52,211,153,.75)]' : isToday ? 'text-emerald-300' : 'text-white/85'}`}>
                 {d.getDate()}
               </span>
+              {hasCardio && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-orange-400 shadow-[0_0_6px_#fb923c]" title="유산소" />}
             </span>
           </button>
         );

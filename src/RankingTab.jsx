@@ -24,6 +24,7 @@ const AVATAR_GRAD = { 'bg-rose-500': ['#fb7185', '#e11d48'], 'bg-blue-500': ['#6
 const METRIC = {
   volume: { label: '주간 볼륨', short: '볼륨', unit: 'kg', icon: '💪' },
   lift: { label: '3대 중량', short: '3대', unit: 'kg', icon: '🏋️' },
+  cardio: { label: '주간 유산소', short: '유산소', unit: '분', icon: '🏃' },
 };
 
 // 숫자가 부드럽게 올라가는 카운트업
@@ -230,7 +231,7 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
   // 전체 랭킹 항목: 길드는 엠블럼, 개인은 아바타
   const entries = useMemo(() => globalEntries.filter(e => !(e.kind === 'solo' && isGmOn(e.id, e.avatar))).map(e => ({
     id: e.id, kind: e.kind, name: e.name || '짐스피릿 유저', emblem: e.emblem, color: e.color, level: e.level, members: e.members,
-    volume: Math.round(Number(e.volume) || 0), lift: Math.round(Number(e.lift) || 0),
+    volume: Math.round(Number(e.volume) || 0), lift: Math.round(Number(e.lift) || 0), cardio: Math.round(Number(e.cardio) || 0),
     profile: e.avatar && Object.keys(e.avatar).length ? e.avatar : null, avatarColor: 'bg-neutral-700',
     isMe: e.kind === 'guild' ? e.id === myGuildId : e.id === meId,
   })), [globalEntries, myGuildId, meId]);

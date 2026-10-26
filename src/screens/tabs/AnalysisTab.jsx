@@ -8,6 +8,9 @@ import { useApp } from '../../appContext.js';
 // 분석 탭: 주간 부하·회복도·볼륨 분석
 export function AnalysisTab() {
   const {
+    cardioMinOn,
+    setCurrentScreen,
+    setCurrentDate,
     activeUser,
     analysisDate,
     getAnalysisWeekInfo,
@@ -78,6 +81,24 @@ export function AnalysisTab() {
       </div>
 
       <div className="px-5 space-y-6">
+        {/* 이 주의 유산소 (유산소 기록 화면으로 이동) */}
+        {(() => {
+          const mon = new Date(weekInfo.monday);
+          const days = Array.from({ length: 7 }, (_, i) => { const x = new Date(mon); x.setDate(mon.getDate() + i); const key = formatDate(x); return { key, min: cardioMinOn(key) }; });
+          const total = days.reduce((a, d) => a + d.min, 0);
+          const maxMin = Math.max(30, ...days.map(d => d.min));
+          return (
+            <button onClick={() => { const todayKey = formatDate(new Date()); setCurrentDate(days.some(d => d.key === todayKey) ? todayKey : days[6].key < todayKey ? days[6].key : days[0].key); setCurrentScreen('cardio'); }} className="w-full text-left bg-white p-5 rounded-[28px] shadow-sm border border-neutral-100 active:scale-[0.99] transition-transform">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-black text-neutral-900">🏃 이 주의 유산소</div>
+                <div className="text-xs font-black text-neutral-400"><span className="text-orange-500 text-base">{total}</span> / 150분 <ChevronRight className="w-3.5 h-3.5 inline -mt-0.5" /></div>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5 items-end h-12">
+                {days.map((d, i) => <div key={d.key} className="flex flex-col items-center justify-end h-full gap-1"><div className={`w-full rounded ${d.min ? 'bg-orange-400' : 'bg-neutral-100'}`} style={{ height: `${Math.max(4, (d.min / maxMin) * 32)}px` }} /><span className="text-[9px] font-black text-neutral-400">{'월화수목금토일'[i]}</span></div>)}
+              </div>
+            </button>
+          );
+        })()}
         <div className="bg-white p-6 rounded-[32px] shadow-sm border border-neutral-100">
           <div className="flex flex-wrap justify-between items-center gap-2 mb-1">
             <h3 className="text-xl font-black text-neutral-900 tracking-tight flex items-center gap-2"><Activity className="w-5 h-5 text-[#4768ff]"/> 주간 신체 피로도 및 부하 분석</h3>

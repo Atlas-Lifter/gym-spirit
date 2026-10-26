@@ -104,6 +104,7 @@ export function ProfileTab() {
          <QuestCenter
            workouts={safeWorkouts}
            diet={safeDiet}
+           cardio={activeUser?.cardio}
            bodyStats={activeUser?.bodyStats}
            total3={getTotalLift3()}
            questState={activeUser?.questState}

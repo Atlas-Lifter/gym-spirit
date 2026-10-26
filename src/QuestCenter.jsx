@@ -55,10 +55,12 @@ const QuestRow = ({ q, claimed, onClaim }) => {
   );
 };
 
+// 하루 최대로 받을 수 있는 XP: 일일 385 + 주간 퀘스트(1주 합계 ÷ 7). 길드 레이드·업적 보상은 별도로 더해진다
+const FULL_DAILY_XP = (weeklyTotal) => DILIGENT_XP_PER_DAY + Math.round(weeklyTotal / 7);
 const fmtDays = (d) => d <= 0 ? '' : d < 14 ? `약 ${d}일` : d < 60 ? `약 ${Math.round(d / 7)}주` : `약 ${Math.round(d / 30)}개월`;
 
 // 칭호 로드맵: 전체 단계, 내 위치, 단계별 필요 레벨·XP·예상 기간
-const TitleRoadmap = ({ open, onClose, lv, xpInRun, awaken }) => {
+const TitleRoadmap = ({ open, onClose, lv, xpInRun, awaken, weeklyTotal }) => {
   const curRef = useRef(null);
   useEffect(() => { if (open) setTimeout(() => curRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250); }, [open]);
   if (!open) return null;
@@ -71,7 +73,7 @@ const TitleRoadmap = ({ open, onClose, lv, xpInRun, awaken }) => {
           <div>
             <p className="text-[11px] font-black text-amber-300">칭호 로드맵</p>
             <h3 className="text-xl font-black">LV.{lv.level} · {lv.title}{awaken > 0 && <span className="ml-2 text-xs text-amber-300">{AWAKEN_NAME} {awaken}회</span>}</h3>
-            <p className="text-[11px] font-bold text-white/50 mt-1">운동·식단 퀘스트를 매일 꾸준히 하면 약 1년에 LV.{MAX_LEVEL}이에요</p>
+            <p className="text-[11px] font-bold text-white/50 mt-1 leading-relaxed">일일 퀘스트만 매일 다 받아도 1년에 LV.{MAX_LEVEL}({AWAKEN_NAME} 1회)이에요.<br />주간 퀘스트까지 받으면 {fmtDays(Math.ceil(xpForLevel(MAX_LEVEL) / FULL_DAILY_XP(weeklyTotal)))}, 길드 레이드·업적 보상까지 챙기면 더 빨라요.</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-full bg-white/10 text-white/70 text-sm font-black">✕</button>
         </div>
@@ -91,7 +93,7 @@ const TitleRoadmap = ({ open, onClose, lv, xpInRun, awaken }) => {
                       <span className="font-black text-sm">{st.title}</span>
                       <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${cur ? 'bg-amber-300 text-[#312e81]' : done ? 'bg-emerald-400/20 text-emerald-300' : 'bg-white/10 text-white/60'}`}>{cur ? '지금 여기' : done ? '달성 ✓' : '🔒 잠김'}</span>
                     </div>
-                    <div className="text-[11px] font-bold text-white/60 mt-1">LV.{st.level} 이상 · 누적 {needXp.toLocaleString()} XP{!done && !cur && remainDays > 0 ? ` · 꾸준히 하면 ${fmtDays(remainDays)} 뒤` : ''}</div>
+                    <div className="text-[11px] font-bold text-white/60 mt-1">LV.{st.level} 이상 · 누적 {needXp.toLocaleString()} XP{!done && !cur && remainDays > 0 ? ` · 일일 퀘스트만으로 ${fmtDays(remainDays)} 뒤` : ''}</div>
                     <div className="text-[11px] font-bold text-white/80 mt-1.5">🎯 {st.goal}</div>
                     {cur && next && (
                       <div className="mt-2">
@@ -119,14 +121,14 @@ const TitleRoadmap = ({ open, onClose, lv, xpInRun, awaken }) => {
   );
 };
 
-export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onClaim, onAwaken }) => {
+export const QuestCenter = ({ workouts, diet, cardio, bodyStats, total3, questState, onClaim, onAwaken }) => {
   const [tab, setTab] = useState('daily');
   const [openAch, setOpenAch] = useState(null);
   const [pop, setPop] = useState(null);
   const claimed = questState?.claimed || {};
   const xp = questState?.xp || 0;
 
-  const S = useMemo(() => summarize(workouts, diet, bodyStats?.weight), [workouts, diet, bodyStats?.weight]);
+  const S = useMemo(() => summarize(workouts, diet, bodyStats?.weight, cardio), [workouts, diet, cardio, bodyStats?.weight]);
   const now = new Date();
   const daily = dailyQuests(S, bodyStats, now);
   const weekly = weeklyQuests(S, now);
@@ -138,9 +140,10 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
   const left = timeLeft(now);
   const todayKey = dateKey(now);
 
-  // 오늘부터 거꾸로 이어지는 연속 운동일
+  // 오늘부터 거꾸로 이어지는 연속 운동일 (근력 또는 유산소)
   let streak = 0;
-  { const d = new Date(now); if (!S.day[dateKey(d)]) d.setDate(d.getDate() - 1); while (S.day[dateKey(d)]) { streak++; d.setDate(d.getDate() - 1); } }
+  { const d = new Date(now); if (!S.active.has(dateKey(d))) d.setDate(d.getDate() - 1); while (S.active.has(dateKey(d))) { streak++; d.setDate(d.getDate() - 1); } }
+  const weeklyTotal = weekly.quests.reduce((a, q) => a + q.xp, 0);
 
   const claimableDaily = daily.filter(q => q.done && !claimed[q.key]);
   const claimableWeekly = weekly.quests.filter(q => q.done && !claimed[q.key]);
@@ -170,7 +173,7 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
     <div className="mb-6">
       <h3 className="text-sm font-black text-neutral-900 mb-3 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-500" /> 퀘스트 & 업적</h3>
 
-      <TitleRoadmap open={roadmapOpen} onClose={() => setRoadmapOpen(false)} lv={lv} xpInRun={lv.xp} awaken={awaken} />
+      <TitleRoadmap open={roadmapOpen} onClose={() => setRoadmapOpen(false)} lv={lv} xpInRun={lv.xp} awaken={awaken} weeklyTotal={weeklyTotal} />
       {/* 레벨 카드 */}
       <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#1e1b4b] via-[#312e81] to-[#4c1d95] text-white p-5 shadow-lg mb-3">
         <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 blur-2xl" />
@@ -214,10 +217,11 @@ export const QuestCenter = ({ workouts, diet, bodyStats, total3, questState, onC
         <div className="flex justify-between mt-3 relative">
           {weekly.days.map((d, i) => {
             const done = !!S.day[d];
+            const cardioOnly = !done && S.active.has(d);
             const isToday = d === todayKey;
             return (
               <div key={d} className="flex flex-col items-center gap-1">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black ${done ? 'bg-gradient-to-br from-emerald-300 to-emerald-500 text-emerald-950' : 'bg-white/10 text-white/50'} ${isToday ? 'ring-2 ring-amber-300' : ''}`}>{done ? '✓' : Number(d.slice(8))}</div>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black ${done ? 'bg-gradient-to-br from-emerald-300 to-emerald-500 text-emerald-950' : cardioOnly ? 'bg-gradient-to-br from-orange-300 to-orange-500 text-orange-950' : 'bg-white/10 text-white/50'} ${isToday ? 'ring-2 ring-amber-300' : ''}`}>{done ? '✓' : cardioOnly ? '🏃' : Number(d.slice(8))}</div>
                 <span className={`text-[9px] font-bold ${isToday ? 'text-amber-300' : 'text-white/40'}`}>{isToday ? '오늘' : WEEK[i]}</span>
               </div>
             );

@@ -11,13 +11,13 @@ const monday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d
 export const createGuildMock = () => {
   const ME = 'me';
   const users = {
-    me: { nickname: '나', volume: 18400, lift: 420, solo: false },
-    u1: { nickname: '새벽헬창', volume: 32100, lift: 510, solo: false },
-    u2: { nickname: '데드킹', volume: 27500, lift: 560, solo: false },
-    u3: { nickname: '하체러버', volume: 12100, lift: 380, solo: false },
-    u4: { nickname: '벤치요정', volume: 21400, lift: 400, solo: true },
-    u5: { nickname: '득근중', volume: 9800, lift: 300, solo: true },
-    u6: { nickname: '쇠질장인', volume: 41000, lift: 600, solo: false },
+    me: { nickname: '나', volume: 18400, lift: 420, cardio: 40, solo: false },
+    u1: { nickname: '새벽헬창', volume: 32100, lift: 510, cardio: 150, solo: false },
+    u2: { nickname: '데드킹', volume: 27500, lift: 560, cardio: 30, solo: false },
+    u3: { nickname: '하체러버', volume: 12100, lift: 380, cardio: 95, solo: false },
+    u4: { nickname: '벤치요정', volume: 21400, lift: 400, cardio: 200, solo: true },
+    u5: { nickname: '득근중', volume: 9800, lift: 300, cardio: 60, solo: true },
+    u6: { nickname: '쇠질장인', volume: 41000, lift: 600, cardio: 20, solo: false },
   };
   const ws = monday();
   const dayKey = (i) => { const d = new Date(ws); d.setDate(d.getDate() + i); return key(d); };
@@ -67,13 +67,13 @@ export const createGuildMock = () => {
     ...Object.values(guilds).filter(g => g.ranked && count(g.id) >= 2).map(g => {
       const ms = Object.entries(members).filter(([, m]) => m.guild === g.id).map(([u]) => users[u]);
       return { kind: 'guild', id: g.id, name: g.name, emblem: g.emblem, color: g.color, avatar: null, level: guildLevelInfo(g.xp).level, members: ms.length,
-        volume: Math.round(ms.reduce((s, u) => s + u.volume, 0) / ms.length), lift: Math.round(ms.reduce((s, u) => s + u.lift, 0) / ms.length) };
+        volume: Math.round(ms.reduce((s, u) => s + u.volume, 0) / ms.length), lift: Math.round(ms.reduce((s, u) => s + u.lift, 0) / ms.length), cardio: Math.round(ms.reduce((s, u) => s + (u.cardio || 0), 0) / ms.length) };
     }),
-    ...Object.entries(users).filter(([u, x]) => x.solo && !members[u]).map(([u, x]) => ({ kind: 'solo', id: u, name: x.nickname, emblem: null, color: null, avatar: null, level: null, members: 1, volume: x.volume, lift: x.lift })),
+    ...Object.entries(users).filter(([u, x]) => x.solo && !members[u]).map(([u, x]) => ({ kind: 'solo', id: u, name: x.nickname, emblem: null, color: null, avatar: null, level: null, members: 1, volume: x.volume, lift: x.lift, cardio: x.cardio || 0 })),
   ]);
   const friendRanking = () => wait(['me', 'u1', 'u4'].map(u => {
     const g = members[u] && guilds[members[u].guild];
-    return { id: u, nickname: users[u].nickname, avatar: null, volume: users[u].volume, lift: users[u].lift, fav: '벤치프레스', last_routine: null, guild_name: g?.name || null, guild_emblem: g?.emblem || null };
+    return { id: u, nickname: users[u].nickname, avatar: null, volume: users[u].volume, lift: users[u].lift, cardio: users[u].cardio || 0, fav: '벤치프레스', last_routine: null, guild_name: g?.name || null, guild_emblem: g?.emblem || null };
   }));
 
   const guildApi = {
@@ -86,7 +86,7 @@ export const createGuildMock = () => {
       const g = guilds[m.guild];
       const ms = Object.entries(members).filter(([, x]) => x.guild === g.id).map(([u, x]) => {
         const mine7 = activity.filter(a => a.guild === g.id && a.user === u && a.volume > 0 && a.day >= key(ws));
-        return { id: u, nickname: users[u].nickname, avatar: null, role: x.role, contrib: x.contrib, volume: users[u].volume, lift: users[u].lift, days: mine7.length,
+        return { id: u, nickname: users[u].nickname, avatar: null, role: x.role, contrib: x.contrib, volume: users[u].volume, lift: users[u].lift, cardio: users[u].cardio || 0, days: mine7.length,
           week_days: mine7.map(a => ((new Date(`${a.day}T00:00:00`).getDay() + 6) % 7) + 1),
           cheers: cheers.filter(c => c.guild === g.id && c.to === u && c.day >= key(ws)).length,
           cheered_today: cheers.some(c => c.from === ME && c.to === u && c.day === today),

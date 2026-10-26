@@ -9,6 +9,7 @@ import { LegendCover } from './legendCovers.jsx';
 import { calculate1RM, formatDate } from './lib/dates.js';
 import { useWakeLock } from './pwa.jsx';
 import { MAX_LEVEL, levelInfo, xpForLevel } from './questSystem.js';
+import { CARDIO_DAMAGE_PER_MIN } from './data/cardio.js';
 import { computeRecovery } from './recovery.js';
 import { DEFAULT_TIMER_SETTINGS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { estimateFromLifts } from './strengthRatios.js';
@@ -295,11 +296,15 @@ export function useGymApp() {
   .filter(d => Array.isArray(safeWorkouts[d]) && safeWorkouts[d].length > 0)
   .sort((a,b) => new Date(b) - new Date(a));
   // 오늘(또는 오늘 아직 안 했으면 어제)부터 거꾸로 이어지는 연속 운동일 수
+  // 유산소 기록 (근력과 따로 저장, 출석·연속 운동·퀘스트·랭킹·길드에는 함께 반영)
+  const safeCardio = activeUser?.cardio || {};
+  const cardioMinOn = (key) => (Array.isArray(safeCardio[key]) ? safeCardio[key] : []).reduce((s, e) => s + (Number(e.min) || 0), 0);
+  const isActiveDay = (key) => pastWorkoutDates.includes(key) || cardioMinOn(key) > 0;
   const getWorkoutStreak = () => {
     const d = new Date();
-    if (!pastWorkoutDates.includes(formatDate(d))) d.setDate(d.getDate() - 1);
+    if (!isActiveDay(formatDate(d))) d.setDate(d.getDate() - 1);
     let streak = 0;
-    while (pastWorkoutDates.includes(formatDate(d))) {
+    while (isActiveDay(formatDate(d))) {
       streak++;
       d.setDate(d.getDate() - 1);
     }
@@ -1194,6 +1199,7 @@ export function useGymApp() {
       nickname: String(currentUser?.profile?.nickname || '짐스피릿 유저').slice(0, 20),
       avatar: currentUser?.profile || {},
       week_start: cloud.mondayKey(), weekly_volume: Math.round(vol || 0), lift3: getTotalLift3() || 0, fav, last_routine,
+      weekly_cardio: Array.from({ length: 7 }, (_, i) => { const x = new Date(getAnalysisWeekInfo(new Date()).monday); x.setDate(x.getDate() + i); return cardioMinOn(formatDate(x)); }).reduce((a, b) => a + b, 0),
     };
   };
   // 앱을 열면 로그인 상태를 확인하고, 회원이면 클라우드 기록으로 바로 들어간다
@@ -1332,7 +1338,8 @@ export function useGymApp() {
       [0, 1].forEach(back => {
         const d = new Date(); d.setDate(d.getDate() - back);
         const key = formatDate(d);
-        const vol = Math.round((safeWorkouts[key] || []).reduce((sum, ex) => sum + (ex.sets || []).reduce((a, st) => a + (st.completed && st.reps ? setVolume(ex, st) : 0), 0), 0));
+        // 근력 볼륨 + 유산소 1분당 100 (보스 피해·출석으로 함께 들어간다)
+        const vol = Math.round((safeWorkouts[key] || []).reduce((sum, ex) => sum + (ex.sets || []).reduce((a, st) => a + (st.completed && st.reps ? setVolume(ex, st) : 0), 0), 0)) + cardioMinOn(key) * CARDIO_DAMAGE_PER_MIN;
         if (!vol || lastContrib.current[key] === vol) return;
         lastContrib.current[key] = vol;
         cloud.guildApi.contribute(key, vol).catch(() => { delete lastContrib.current[key]; });
@@ -1558,6 +1565,8 @@ export function useGymApp() {
     safeWorkouts,
     pastWorkoutDates,
     getWorkoutStreak,
+    safeCardio,
+    cardioMinOn,
     safeDiet,
     defaultMeals,
     todayDiet,
