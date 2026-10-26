@@ -287,32 +287,7 @@ export const KOREAN_LEGENDS = [
     ]
   }
 ];
-export const FOOD_DB = [
-  { id: 'f1', name: '닭가슴살', category: '단백질', unit: '100g', calories: 109, protein: 23, carbs: 0, fat: 1.2, icon: '🍗', bgColor: 'bg-orange-100', txColor: 'text-orange-600' },
-  { id: 'f2', name: '고구마 (삶은것)', category: '탄수화물', unit: '100g', calories: 86, protein: 1.6, carbs: 20, fat: 0.1, icon: '🍠', bgColor: 'bg-purple-100', txColor: 'text-purple-600' },
-  { id: 'f3', name: '현미밥', category: '탄수화물', unit: '100g', calories: 111, protein: 2.6, carbs: 23, fat: 0.9, icon: '🍚', bgColor: 'bg-amber-100', txColor: 'text-amber-700' },
-  { id: 'f4', name: '계란 (전란 1개)', category: '단백질/지방', unit: '50g', calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8, icon: '🥚', bgColor: 'bg-yellow-100', txColor: 'text-yellow-700' },
-  { id: 'f5', name: '브로콜리', category: '채소', unit: '100g', calories: 34, protein: 2.8, carbs: 6.6, fat: 0.4, icon: '🥦', bgColor: 'bg-emerald-100', txColor: 'text-emerald-700' },
-  { id: 'f6', name: '아몬드', category: '지방', unit: '10g', calories: 58, protein: 2.1, carbs: 2.1, fat: 4.9, icon: '🥜', bgColor: 'bg-amber-200', txColor: 'text-amber-800' },
-  { id: 'f7', name: '연어', category: '단백질/지방', unit: '100g', calories: 208, protein: 20, carbs: 0, fat: 13, icon: '🐟', bgColor: 'bg-rose-100', txColor: 'text-rose-600' },
-  { id: 'f8', name: '오트밀', category: '탄수화물', unit: '100g', calories: 389, protein: 16, carbs: 66, fat: 6.9, icon: '🥣', bgColor: 'bg-stone-100', txColor: 'text-stone-600' },
-  { id: 'f9', name: '소고기 우둔살', category: '단백질', unit: '100g', calories: 132, protein: 22, carbs: 0, fat: 4.5, icon: '🥩', bgColor: 'bg-red-100', txColor: 'text-red-600' },
-  { id: 'f10', name: '바나나', category: '탄수화물', unit: '100g', calories: 89, protein: 1.1, carbs: 23, fat: 0.3, icon: '🍌', bgColor: 'bg-yellow-100', txColor: 'text-yellow-700' },
-  { id: 'f11', name: '단백질 쉐이크', category: '단백질', unit: '1스쿱(30g)', calories: 120, protein: 24, carbs: 3, fat: 1.5, icon: '🥛', bgColor: 'bg-cyan-100', txColor: 'text-cyan-600' },
-  { id: 'f12', name: '방울토마토', category: '채소', unit: '100g', calories: 16, protein: 0.9, carbs: 3.9, fat: 0.2, icon: '🍅', bgColor: 'bg-red-100', txColor: 'text-red-600' },
-  { id: 'f13', name: '아보카도', category: '지방', unit: '100g', calories: 160, protein: 2, carbs: 8.5, fat: 14.7, icon: '🥑', bgColor: 'bg-emerald-200', txColor: 'text-emerald-800' },
-  { id: 'f14', name: '틸라피아 (역돔)', category: '단백질', unit: '100g', calories: 96, protein: 20, carbs: 0, fat: 1.7, icon: '🐟', bgColor: 'bg-blue-100', txColor: 'text-blue-600' },
-  { id: 'f15', name: '돼지고기 목살 (구이)', category: '단백질/지방', unit: '100g', calories: 268, protein: 17.2, carbs: 0, fat: 21.5, icon: '🥩', bgColor: 'bg-rose-200', txColor: 'text-rose-700' },
-  { id: 'f16', name: '두부', category: '단백질', unit: '100g', calories: 84, protein: 8, carbs: 2, fat: 5.3, icon: '🧊', bgColor: 'bg-stone-100', txColor: 'text-stone-600' },
-  { id: 'f17', name: '그릭요거트 (무가당)', category: '단백질', unit: '100g', calories: 90, protein: 10, carbs: 3, fat: 4, icon: '🥣', bgColor: 'bg-blue-50', txColor: 'text-blue-500' },
-  { id: 'f18', name: '단호박 (찐것)', category: '탄수화물', unit: '100g', calories: 66, protein: 1.5, carbs: 15, fat: 0.2, icon: '🎃', bgColor: 'bg-amber-100', txColor: 'text-amber-600' },
-  { id: 'f19', name: '호밀빵', category: '탄수화물', unit: '100g', calories: 259, protein: 8.5, carbs: 48, fat: 3.3, icon: '🍞', bgColor: 'bg-amber-200', txColor: 'text-amber-800' },
-  { id: 'f20', name: '참치 캔 (기름뺀것)', category: '단백질', unit: '100g', calories: 116, protein: 25.5, carbs: 0, fat: 0.8, icon: '🥫', bgColor: 'bg-neutral-200', txColor: 'text-neutral-700' },
-  { id: 'f21', name: '저지방 우유', category: '단백질/지방', unit: '100ml', calories: 43, protein: 3.4, carbs: 5, fat: 1, icon: '🥛', bgColor: 'bg-cyan-50', txColor: 'text-cyan-600' },
-  { id: 'f22', name: '사과', category: '탄수화물', unit: '100g', calories: 52, protein: 0.3, carbs: 14, fat: 0.2, icon: '🍎', bgColor: 'bg-red-50', txColor: 'text-red-500' },
-  { id: 'f23', name: '블루베리', category: '탄수화물', unit: '100g', calories: 57, protein: 0.7, carbs: 14.5, fat: 0.3, icon: '🫐', bgColor: 'bg-indigo-100', txColor: 'text-indigo-600' },
-  { id: 'f24', name: '양배추', category: '채소', unit: '100g', calories: 25, protein: 1.3, carbs: 5.8, fat: 0.1, icon: '🥬', bgColor: 'bg-emerald-100', txColor: 'text-emerald-600' }
-];
+export { FOOD_DB } from './foods.js';
 export const SKIN_COLORS = ['#eec4a6', '#f6dccb', '#e0ab86', '#c98d64', '#a46a45', '#74472c'];
 export const SHIRT_COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#171717', '#ffffff', '#eab308', '#ec4899', '#06b6d4'];
 export const BOTTOM_COLORS = ['#171717', '#4b5563', '#1e3a8a', '#3b82f6', '#f3f4f6', '#a8a29e', '#7f1d1d'];

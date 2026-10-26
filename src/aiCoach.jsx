@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, ChevronLeft, ChevronRight, MessageSquare, RotateCw, Star, Search, BookOpen, Calculator, Activity, Dumbbell } from 'lucide-react';
 import { COACH_TREE } from './coachTree.js';
+import { FOOD_DB, foodTags } from './data/foods.js';
 
 // ── 기본 트리에 붙이는 확장: 계산기·도구 노드, 답변별 바로가기 버튼 ─────────────
 const TOOL_NODES = {
@@ -9,18 +10,27 @@ const TOOL_NODES = {
     { l: "🏋️ 1RM(최대 중량) & 세트별 추천 무게", n: "onerm_tool" },
     { l: "🗓 운동 요일 골라서 주간 분할표 만들기", n: "split_tool" },
     { l: "🩹 아픈 부위 눌러서 대처법 찾기", n: "pain_tool" },
+    { l: "🎯 1분 맞춤 진단 (루틴·식단 방향)", n: "quiz_tool" },
+    { l: "🍱 하루 식단 예시 만들기", n: "meal_tool" },
+    { l: "📉 목표 체중까지 걸리는 기간", n: "goal_tool" },
   ] },
   calorie_tool: { tool: 'calorie', title: '🍽 칼로리·영양소 계산기', q: "몸 정보와 목표를 고르면 하루 섭취량을 계산해 드려요.", kw: '칼로리 단백질 탄수화물 지방 식단 계산 다이어트 감량 벌크 증량 유지 tdee 기초대사' },
   onerm_tool: { tool: 'onerm', title: '🏋️ 1RM 계산기', q: "최근에 든 무게와 반복 횟수를 넣으면 1RM과 목표별 무게를 알려 드려요.", kw: '1rm 중량 무게 최대 벤치 스쿼트 데드 데드리프트 정체기 5x5 세트 몇키로' },
   split_tool: { tool: 'split', title: '🗓 주간 분할 플래너', q: "운동 가능한 요일을 눌러 보세요. 요일 수에 맞는 분할표를 바로 짜 드려요.", kw: '분할 루틴 요일 주간 일정 몇번 주3회 주4회 주5회 무분할 2분할 3분할' },
   pain_tool: { tool: 'pain', title: '🩹 통증 부위 찾기', q: "아픈 부위를 누르고 통증 느낌과 세기를 골라 주세요.", kw: '통증 아파 아픔 부상 어깨 무릎 허리 손목 팔꿈치 목 고관절 디스크 시큰 찌릿' },
+  quiz_tool: { tool: 'quiz', title: '🎯 1분 맞춤 진단', q: "네 가지만 골라 주세요. 지금 나에게 맞는 프로그램과 운동·식단 방향을 정리해 드려요.", kw: '추천 맞춤 진단 뭐부터 루틴 추천 프로그램 추천 나에게 맞는' },
+  meal_tool: { tool: 'meal', title: '🍱 하루 식단 예시', q: "목표 칼로리와 식사 스타일을 고르면 하루 식단 예시를 짜 드려요. 마음에 들면 오늘 식단에 바로 담을 수 있어요.", kw: '식단 예시 메뉴 추천 뭐먹지 식단표 하루 식단 짜기' },
+  goal_tool: { tool: 'goal', title: '📉 목표 체중 플래너', q: "지금 체중과 목표 체중, 속도를 고르면 예상 기간과 하루 칼로리 조절량을 알려 드려요.", kw: '목표 체중 감량 기간 언제 몇주 빠질까 증량 계획' },
 };
 
-const START_EXTRA = [{ l: "🧮 내 몸 맞춤 계산기 (칼로리·1RM·분할·통증)", n: "tools_sub" }];
+const START_FIRST = [{ l: "🎯 1분 맞춤 진단 (나에게 맞는 루틴·식단)", n: "quiz_tool" }];
+const START_EXTRA = [{ l: "🧮 내 몸 맞춤 계산기 (칼로리·1RM·식단·목표 체중)", n: "tools_sub" }];
 const OPTION_EXTRAS = {
   work_freq: [{ l: "🗓 요일을 직접 골라 분할표 만들기", n: "split_tool" }],
   work_plateau: [{ l: "🏋️ 내 1RM 계산해서 무게 다시 잡기", n: "onerm_tool" }],
-  diet_sub: [{ l: "🧮 내 칼로리·단백질 직접 계산하기", n: "calorie_tool" }],
+  diet_sub: [{ l: "🧮 내 칼로리·단백질 직접 계산하기", n: "calorie_tool" }, { l: "🍱 하루 식단 예시 만들기", n: "meal_tool" }],
+  contest_sub: [{ l: "📉 목표 체중까지 기간 계산하기", n: "goal_tool" }],
+  cardio_sub: [{ l: "📉 목표 체중까지 기간 계산하기", n: "goal_tool" }],
   pain_sub: [{ l: "🩹 아픈 부위를 직접 눌러서 찾기", n: "pain_tool" }],
 };
 // 답변 아래에 붙는 바로가기: program(프로그램 열기) / guide(운동 설명서) / node(다른 상담으로 이동)
@@ -44,11 +54,39 @@ const ACTIONS = {
   pain_lower: [{ t: 'node', n: 'pain_tool' }, { t: 'guide', ex: 'goblet' }],
   pain_posture: [{ t: 'guide', ex: 'face_pull' }, { t: 'guide', ex: 'sr' }],
   m_lazy: [{ t: 'program', id: 'p11' }],
+  beg_first: [{ t: 'program', id: 'p4' }, { t: 'guide', ex: 'lpd' }, { t: 'guide', ex: 'pd' }],
+  beg_sets: [{ t: 'node', n: 'onerm_tool' }],
+  work_order: [{ t: 'node', n: 'split_tool' }],
+  work_warmup: [{ t: 'guide', ex: 'sq' }],
+  work_overload: [{ t: 'program', id: 'p2' }, { t: 'node', n: 'onerm_tool' }],
+  diet_timing: [{ t: 'node', n: 'meal_tool' }],
+  diet_cheat: [{ t: 'node', n: 'calorie_tool' }],
+  diet_night: [{ t: 'node', n: 'meal_tool' }],
+  pain_ankle: [{ t: 'guide', ex: 'calf' }, { t: 'node', n: 'pain_tool' }],
+  m_motivation: [{ t: 'node', n: 'quiz_tool' }],
+  m_binge: [{ t: 'node', n: 'meal_tool' }],
+  home_noequip: [{ t: 'program', id: 'p8' }, { t: 'guide', ex: 'pushup' }, { t: 'guide', ex: 'bss' }],
+  home_dumbbell: [{ t: 'program', id: 'p11' }, { t: 'guide', ex: 'goblet' }, { t: 'guide', ex: 'dr_back' }],
+  home_short: [{ t: 'program', id: 'p11' }, { t: 'guide', ex: 'rdl' }],
+  c_fasted: [{ t: 'node', n: 'calorie_tool' }],
+  c_hiit: [{ t: 'node', n: 'goal_tool' }],
+  c_order: [{ t: 'node', n: 'split_tool' }],
+  c_running: [{ t: 'guide', ex: 'calf' }, { t: 'guide', ex: 'bss' }],
+  r_doms: [{ t: 'node', n: 'pain_tool' }],
+  w_hip: [{ t: 'program', id: 'p5' }, { t: 'guide', ex: 'ht' }, { t: 'guide', ex: 'bss' }],
+  w_arm: [{ t: 'guide', ex: 'pd' }, { t: 'guide', ex: 'sr' }],
+  w_bulky: [{ t: 'program', id: 'p4' }],
+  bp_plan: [{ t: 'program', id: 'p9' }, { t: 'node', n: 'goal_tool' }, { t: 'node', n: 'meal_tool' }],
+  bp_after: [{ t: 'node', n: 'calorie_tool' }],
+  life_student: [{ t: 'program', id: 'p3' }],
+  life_shift: [{ t: 'program', id: 'p3' }],
+  life_40: [{ t: 'program', id: 'p4' }, { t: 'guide', ex: 'lpd' }],
+  life_travel: [{ t: 'program', id: 'p8' }],
 };
 
 const TREE = (() => {
   const t = { ...COACH_TREE, ...TOOL_NODES };
-  t.start = { ...t.start, opt: [...t.start.opt, ...START_EXTRA] };
+  t.start = { ...t.start, opt: [...START_FIRST, ...t.start.opt, ...START_EXTRA] };
   Object.entries(OPTION_EXTRAS).forEach(([id, extra]) => { if (t[id]) t[id] = { ...t[id], opt: [...t[id].opt, ...extra] }; });
   Object.entries(ACTIONS).forEach(([id, actions]) => { if (t[id]) t[id] = { ...t[id], actions }; });
   return t;
@@ -361,12 +399,234 @@ const PainTool = ({ exName, onOpenGuide }) => {
   );
 };
 
+// ── 도구 5: 1분 맞춤 진단 ─────────────────────────────────────
+const Q_GOALS = [{ l: '🔥 체지방 감량', v: 'cut' }, { l: '💪 근육 키우기', v: 'muscle' }, { l: '🏋️ 힘 세지기', v: 'strength' }, { l: '🏃 체력·건강', v: 'health' }];
+const Q_LEVELS = [{ l: '입문 (6개월 미만)', v: 0 }, { l: '중급 (~2년)', v: 1 }, { l: '숙련 (2년+)', v: 2 }];
+const Q_DAYS = [2, 3, 4, 5, 6].map(d => ({ l: `주 ${d}회`, v: d }));
+const Q_PLACES = [{ l: '🏢 헬스장', v: 'gym' }, { l: '🏠 집 (맨몸·덤벨)', v: 'home' }];
+const pickProgram = ({ goal, level, days, place }) => {
+  if (place === 'home') return days <= 3 ? 'p11' : 'p8';
+  if (level === 0) return days <= 3 ? 'p4' : 'p3';
+  if (goal === 'strength') return days <= 3 ? 'p2' : days === 4 ? 'p13' : 'p15';
+  if (goal === 'cut') return days <= 3 ? 'p11' : level === 2 ? 'p9' : 'p1';
+  if (goal === 'health') return days <= 3 ? 'p3' : 'p11';
+  if (days <= 3) return level === 2 ? 'p14' : 'p3';
+  if (days === 4) return 'p13';
+  if (days === 5) return 'p15';
+  return level === 2 ? 'p16' : 'p1';
+};
+const GOAL_PLAN = {
+  cut: { reps: '10~15회 · 휴식 60~90초', cardio: '주 3~4회 30분 + 하루 8,000보 걷기', kcal: '유지 칼로리 −300~500kcal', protein: 2.0 },
+  muscle: { reps: '8~12회 · 휴식 90초~2분', cardio: '주 2회 20분 (회복 방해 안 될 만큼)', kcal: '유지 칼로리 +200~300kcal', protein: 1.8 },
+  strength: { reps: '메인 3~6회 · 보조 8~12회 · 휴식 2~3분', cardio: '주 2회 가볍게 (걷기·사이클)', kcal: '유지 칼로리 ~ +200kcal', protein: 1.8 },
+  health: { reps: '12~15회 · 휴식 60초', cardio: '주 3회 30분 (숨이 조금 찰 정도)', kcal: '유지 칼로리', protein: 1.4 },
+};
+const LEVEL_SETS = ['부위당 주 6~10세트', '부위당 주 10~15세트', '부위당 주 12~20세트'];
+
+const QuizTool = ({ bodyStats, programs, onOpenProgram, onGo }) => {
+  const [goal, setGoal] = useState(null);
+  const [level, setLevel] = useState(null);
+  const [days, setDays] = useState(null);
+  const [place, setPlace] = useState(null);
+  const done = goal !== null && level !== null && days !== null && place !== null;
+  const plan = done ? GOAL_PLAN[goal] : null;
+  const program = done ? programs.find(p => p.id === pickProgram({ goal, level, days, place })) : null;
+  const weight = Math.round(parseFloat(bodyStats?.weight)) || 70;
+  const Step = ({ n, title, children }) => (
+    <div><div className="text-xs font-black text-neutral-500 mb-1.5"><span className="text-[#4768ff] mr-1">{n}</span>{title}</div>{children}</div>
+  );
+  return (
+    <ToolCard>
+      <Step n="1" title="가장 큰 목표"><Chips cols={2} options={Q_GOALS} value={goal} onChange={setGoal} /></Step>
+      <Step n="2" title="운동 경력"><Chips options={Q_LEVELS} value={level} onChange={setLevel} /></Step>
+      <Step n="3" title="일주일에 운동할 수 있는 날"><Chips cols={4} options={Q_DAYS} value={days} onChange={setDays} /></Step>
+      <Step n="4" title="운동 장소"><Chips cols={2} options={Q_PLACES} value={place} onChange={setPlace} /></Step>
+      {!done ? (
+        <p className="text-[11px] font-bold text-neutral-400 text-center">네 가지를 모두 고르면 결과가 나와요.</p>
+      ) : (
+        <div className="bg-neutral-900 text-white rounded-2xl p-4 space-y-3 animate-fade-in">
+          <div>
+            <div className="text-[11px] font-bold text-neutral-400">나에게 맞는 프로그램</div>
+            <div className="text-lg font-black leading-snug">{program?.title}</div>
+            <div className="text-[11px] font-bold text-neutral-400 mt-0.5">{program?.level} · {program?.duration} · {SPLIT_NAME[days]}</div>
+          </div>
+          <div className="grid grid-cols-1 gap-1.5 text-xs font-bold">
+            {[['🔢 세트·횟수', `${plan.reps} · ${LEVEL_SETS[level]}`], ['🏃 유산소', plan.cardio], ['🍽 칼로리', plan.kcal], ['🥩 단백질', `하루 약 ${Math.round(weight * plan.protein)}g (체중 ${weight}kg × ${plan.protein})`]].map(([k, v]) => (
+              <div key={k} className="bg-white/5 rounded-xl px-3 py-2 flex gap-2"><span className="flex-shrink-0 text-neutral-400 w-20">{k}</span><span className="text-white">{v}</span></div>
+            ))}
+          </div>
+          {level === 0 && <p className="text-[11px] font-bold text-amber-300">💡 처음 4주는 무게보다 자세가 먼저예요. 운동 이름을 눌러 자세 설명서를 꼭 확인하세요.</p>}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {program && <button onClick={() => onOpenProgram(program.id)} className="text-xs font-black bg-[#4768ff] text-white px-3 py-2 rounded-xl flex items-center gap-1.5 active:scale-95"><Dumbbell className="w-3.5 h-3.5" />프로그램 보기</button>}
+            <button onClick={() => onGo('split_tool', '🗓 요일별 분할표 만들기')} className="text-xs font-black bg-white/10 text-white px-3 py-2 rounded-xl active:scale-95">🗓 요일별 분할표</button>
+            <button onClick={() => onGo('meal_tool', '🍱 하루 식단 예시 만들기')} className="text-xs font-black bg-white/10 text-white px-3 py-2 rounded-xl active:scale-95">🍱 식단 예시</button>
+          </div>
+        </div>
+      )}
+    </ToolCard>
+  );
+};
+
+// ── 도구 6: 하루 식단 예시 ─────────────────────────────────────
+const FOOD_BY_ID = Object.fromEntries(FOOD_DB.map(f => [f.id, f]));
+const MEAL_STYLES = [{ l: '🍳 집밥', v: 'home' }, { l: '🏪 편의점·외식', v: 'out' }, { l: '🥗 가볍게', v: 'light' }];
+const MEAL_TEMPLATES = {
+  home: [
+    ['아침', [['f8', 50], ['milk', 200], ['f4', 100], ['f10', 120]]],
+    ['점심', [['rice_white', 210], ['chk_grill', 120], ['salad_mix', 100], ['kimchi', 40]]],
+    ['간식', [['f17', 150], ['f6', 20]]],
+    ['저녁', [['f3', 180], ['f9', 150], ['f5', 100]]],
+  ],
+  out: [
+    ['아침', [['egg_baked', 100], ['protein_drink', 250], ['f10', 120]]],
+    ['점심', [['gimbap', 230], ['cvs_chicken', 100]]],
+    ['간식', [['protein_bar', 60], ['americano', 355]]],
+    ['저녁', [['bibimbap', 450], ['egg_fried', 46]]],
+  ],
+  light: [
+    ['아침', [['f17', 150], ['f23', 100], ['granola', 30]]],
+    ['점심', [['chicken_salad', 250], ['f2', 150]]],
+    ['간식', [['cottage', 100], ['f22', 200]]],
+    ['저녁', [['f14', 150], ['f3', 150], ['spinach', 80], ['paprika', 75]]],
+  ],
+};
+const nutri = (f, g) => ({ kcal: (f.calories * g) / f.per, p: (f.protein * g) / f.per, c: (f.carbs * g) / f.per, f: (f.fat * g) / f.per });
+const sumOf = (items) => items.reduce((a, it) => { const n = nutri(it.food, it.g); return { kcal: a.kcal + n.kcal, p: a.p + n.p, c: a.c + n.c, f: a.f + n.f }; }, { kcal: 0, p: 0, c: 0, f: 0 });
+// 단백질 식품은 단백질 목표에, 탄수화물 식품은 남은 칼로리에 맞춰 양을 조절한다
+const buildMealPlan = (style, kcalTarget, proteinTarget) => {
+  const meals = MEAL_TEMPLATES[style].map(([name, rows]) => [name, rows.map(([id, g]) => ({ food: FOOD_BY_ID[id], g })).filter(it => it.food)]);
+  const all = meals.flatMap(([, items]) => items);
+  const isProtein = (it) => foodTags(it.food).includes('고단백');
+  const isCarb = (it) => it.food.category === '탄수화물' || (['한식·외식', '편의점'].includes(it.food.category) && !isProtein(it)); // 밥·면·도시락처럼 양을 늘리고 줄이기 쉬운 것
+  const proteinNow = sumOf(all).p;
+  const pf = Math.min(1.8, Math.max(0.6, proteinTarget / (proteinNow || 1)));
+  all.forEach(it => { if (isProtein(it)) it.g *= pf; });
+  const flexKcal = sumOf(all.filter(isCarb)).kcal;
+  const fixedKcal = sumOf(all.filter(it => !isCarb(it))).kcal;
+  const cf = Math.min(3, Math.max(0.3, (kcalTarget - fixedKcal) / (flexKcal || 1)));
+  all.forEach(it => { if (isCarb(it)) it.g *= cf; });
+  // 탄수화물만으로 모자라면 과일·견과 같은 나머지 음식도 늘린다
+  const rest = all.filter(it => !isCarb(it) && !isProtein(it));
+  const gap = kcalTarget - sumOf(all).kcal;
+  const restKcal = sumOf(rest).kcal;
+  if (gap > kcalTarget * 0.03 && restKcal > 0) { const rf = Math.min(2.5, 1 + gap / restKcal); rest.forEach(it => { it.g *= rf; }); }
+  all.forEach(it => { it.g = Math.max(10, Math.round(it.g / 10) * 10); });
+  return meals;
+};
+
+const MealTool = ({ bodyStats, onApplyMealPlan }) => {
+  const weight = Math.round(parseFloat(bodyStats?.weight)) || 70;
+  const [kcal, setKcal] = useState(() => Math.round((weight * 30) / 50) * 50);
+  const [style, setStyle] = useState('home');
+  const [proteinX, setProteinX] = useState(1.8);
+  const [applied, setApplied] = useState(false);
+  const proteinTarget = Math.round(weight * proteinX);
+  const plan = useMemo(() => buildMealPlan(style, kcal, proteinTarget), [style, kcal, proteinTarget]);
+  const total = sumOf(plan.flatMap(([, items]) => items));
+  const apply = () => {
+    if (!onApplyMealPlan) return;
+    onApplyMealPlan(plan.map(([name, items]) => ({ name, items: items.map(it => ({ food: it.food, g: it.g })) })));
+    setApplied(true);
+  };
+  return (
+    <ToolCard>
+      <Chips options={MEAL_STYLES} value={style} onChange={(v) => { setStyle(v); setApplied(false); }} />
+      <Slider label="하루 목표 칼로리" value={kcal} min={1200} max={3600} step={50} unit="kcal" onChange={(v) => { setKcal(v); setApplied(false); }} />
+      <div><div className="text-xs font-black text-neutral-500 mb-1.5">단백질 목표 (체중 {weight}kg 기준)</div>
+        <Chips options={[{ l: '보통 ×1.4', v: 1.4 }, { l: '운동 ×1.8', v: 1.8 }, { l: '감량 ×2.2', v: 2.2 }]} value={proteinX} onChange={(v) => { setProteinX(v); setApplied(false); }} />
+      </div>
+      <div className="space-y-2">
+        {plan.map(([name, items]) => {
+          const m = sumOf(items);
+          return (
+            <div key={name} className="bg-neutral-50 rounded-xl p-3">
+              <div className="flex justify-between items-baseline mb-1.5"><span className="text-sm font-black text-neutral-900">{name}</span><span className="text-[11px] font-black text-neutral-500">{Math.round(m.kcal)}kcal · 단백질 {Math.round(m.p)}g</span></div>
+              {items.map(it => (
+                <div key={it.food.id} className="flex items-center gap-2 text-xs font-bold text-neutral-700 py-0.5">
+                  <span>{it.food.icon}</span><span className="flex-1 truncate">{it.food.name}</span><span className="text-neutral-400">{it.g}{it.food.unit}</span><span className="w-14 text-right">{Math.round(nutri(it.food, it.g).kcal)}kcal</span>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      <div className="bg-neutral-900 text-white rounded-2xl p-4">
+        <div className="flex justify-between items-end">
+          <div><div className="text-[11px] font-bold text-neutral-400">하루 합계</div><div className="text-2xl font-black">{Math.round(total.kcal).toLocaleString()}<span className="text-sm text-neutral-400 ml-1">/ {kcal.toLocaleString()} kcal</span></div></div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+          {[['단백질', total.p, 'text-[#8aa0ff]', `목표 ${proteinTarget}g`], ['탄수화물', total.c, 'text-amber-300', ''], ['지방', total.f, 'text-rose-300', '']].map(([n, g, c, sub]) => (
+            <div key={n} className="bg-white/5 rounded-xl py-2"><div className={`text-lg font-black ${c}`}>{Math.round(g)}g</div><div className="text-[10px] font-bold text-neutral-400">{n}{sub ? ` · ${sub}` : ''}</div></div>
+          ))}
+        </div>
+      </div>
+      {onApplyMealPlan && (
+        <button onClick={apply} disabled={applied} className={`w-full font-black py-3 rounded-xl text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all ${applied ? 'bg-emerald-50 text-emerald-600' : 'bg-[#4768ff] text-white shadow-[0_8px_20px_rgba(71,104,255,0.3)]'}`}>
+          {applied ? '✅ 식단 플래너에 담았어요' : '🍱 이 식단을 식단 플래너에 담기'}
+        </button>
+      )}
+      {total.kcal < kcal * 0.9 && <p className="text-xs font-bold text-amber-600 bg-amber-50 rounded-xl p-3">💡 이 스타일로는 {Math.round(total.kcal / 50) * 50}kcal 정도가 자연스러워요. 더 많이 드셔야 한다면 '집밥'이나 '편의점·외식'을 골라 보세요.</p>}
+      {total.kcal > kcal * 1.1 && <p className="text-xs font-bold text-amber-600 bg-amber-50 rounded-xl p-3">💡 단백질 목표를 채우느라 목표보다 조금 많아요. 단백질 목표를 '보통'으로 낮추면 맞출 수 있어요.</p>}
+      <p className="text-[11px] font-bold text-neutral-400">양은 10g 단위로 맞춘 예시예요. 비슷한 음식으로 바꿔 드셔도 괜찮아요.</p>
+    </ToolCard>
+  );
+};
+
+// ── 도구 7: 목표 체중 플래너 ───────────────────────────────────
+const PACES = { loss: [{ l: '천천히 0.5%/주', v: 0.005 }, { l: '보통 0.75%/주', v: 0.0075 }, { l: '빠르게 1%/주', v: 0.01 }], gain: [{ l: '천천히 0.25%/주', v: 0.0025 }, { l: '보통 0.5%/주', v: 0.005 }] };
+const fmtDate = (d) => `${d.getFullYear() !== new Date().getFullYear() ? `${d.getFullYear()}년 ` : ''}${d.getMonth() + 1}월 ${d.getDate()}일`;
+
+const GoalTool = ({ bodyStats }) => {
+  const start = Math.round(parseFloat(bodyStats?.weight)) || 70;
+  const [now, setNow] = useState(start);
+  const [target, setTarget] = useState(Math.max(40, start - 5));
+  const dir = target < now ? 'loss' : target > now ? 'gain' : 'keep';
+  const [pace, setPace] = useState(0.0075);
+  const paces = dir === 'gain' ? PACES.gain : PACES.loss;
+  const rate = paces.some(p => p.v === pace) ? pace : paces[paces.length > 2 ? 1 : 1].v;
+  const weeklyKg = now * rate;
+  const weeks = dir === 'keep' ? 0 : Math.ceil(Math.abs(now - target) / weeklyKg);
+  const end = new Date(); end.setDate(end.getDate() + weeks * 7);
+  const dailyKcal = Math.round((weeklyKg * 7700) / 7 / 10) * 10;
+  const marks = weeks > 4 ? [4, 8, 12, 16, 20, 24].filter(w => w < weeks).slice(0, 3) : [];
+  return (
+    <ToolCard>
+      <Slider label="지금 체중" value={now} min={40} max={150} unit="kg" onChange={setNow} />
+      <Slider label="목표 체중" value={target} min={40} max={150} unit="kg" onChange={setTarget} />
+      {dir !== 'keep' && <div><div className="text-xs font-black text-neutral-500 mb-1.5">속도</div><Chips cols={dir === 'gain' ? 2 : 3} options={paces} value={rate} onChange={setPace} /></div>}
+      {dir === 'keep' ? (
+        <p className="text-xs font-bold text-neutral-500 text-center">목표 체중이 지금과 같아요. 체성분(근육↑ 지방↓)을 바꾸는 '리컴프'를 노려 보세요.</p>
+      ) : (
+        <div className="bg-neutral-900 text-white rounded-2xl p-4">
+          <div className="text-[11px] font-bold text-neutral-400">예상 도달</div>
+          <div className="text-2xl font-black">{weeks}주 후 · {fmtDate(end)}</div>
+          <div className="grid grid-cols-2 gap-2 mt-3 text-center">
+            <div className="bg-white/5 rounded-xl py-2"><div className="text-lg font-black text-[#8aa0ff]">{dir === 'loss' ? '−' : '+'}{weeklyKg.toFixed(2)}kg</div><div className="text-[10px] font-bold text-neutral-400">한 주 변화</div></div>
+            <div className="bg-white/5 rounded-xl py-2"><div className="text-lg font-black text-amber-300">{dir === 'loss' ? '−' : '+'}{dailyKcal}kcal</div><div className="text-[10px] font-bold text-neutral-400">하루 칼로리 조절</div></div>
+          </div>
+          {marks.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {marks.map(w => { const d = new Date(); d.setDate(d.getDate() + w * 7); return (
+                <div key={w} className="flex justify-between text-[11px] font-bold text-neutral-400"><span>{w}주 차 ({fmtDate(d)})</span><span className="text-white font-black">{(now + (dir === 'loss' ? -1 : 1) * weeklyKg * w).toFixed(1)}kg</span></div>
+              ); })}
+            </div>
+          )}
+        </div>
+      )}
+      {dir === 'loss' && rate >= 0.01 && <p className="text-xs font-bold text-amber-600 bg-amber-50 rounded-xl p-3">⚠️ 주 1% 이상 빠르게 빼면 근손실과 요요 위험이 커져요. 단백질을 체중×2g 이상 드세요.</p>}
+      {dir === 'loss' && weeks > 16 && <p className="text-xs font-bold text-[#4768ff] bg-blue-50 rounded-xl p-3">💡 16주가 넘는 감량은 8~12주마다 1~2주 유지 칼로리로 쉬어 가면(다이어트 브레이크) 정체기가 줄어요.</p>}
+      <p className="text-[11px] font-bold text-neutral-400">지방 1kg ≈ 7,700kcal로 계산한 예상치예요. 처음 1~2주는 수분 때문에 더 빨리 빠지는 게 정상이에요.</p>
+    </ToolCard>
+  );
+};
+
 // ── 이번 주 내 상태 요약 (분석 탭과 같은 계산 결과를 사용) ──────────
 const Briefing = ({ report, onPick }) => {
   if (!report) return null;
   const [label, tone] = LEVEL_LABEL[report.level] || LEVEL_LABEL.collecting;
   const suggestions = [];
   if (report.level === 'danger' || report.level === 'caution') suggestions.push({ l: '😮‍💨 회복이 필요해요', n: 'brief' });
+  if (report.level === 'empty') suggestions.push({ l: '🎯 1분 맞춤 진단', n: 'quiz_tool' });
   if (report.level === 'empty' || report.level === 'low') suggestions.push({ l: '🗓 이번 주 계획 세우기', n: 'split_tool' });
   if (report.level === 'good' || report.level === 'collecting') suggestions.push({ l: '📈 이번 주 분석 자세히', n: 'brief' });
   suggestions.push({ l: '🏋️ 1RM 계산', n: 'onerm_tool' });
@@ -391,7 +651,7 @@ const Briefing = ({ report, onPick }) => {
 const TONE_DOT = { danger: 'bg-red-500', caution: 'bg-amber-500', good: 'bg-emerald-500', info: 'bg-[#4768ff]' };
 
 // ── 상담소 본체 ───────────────────────────────────────────────
-export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, programs, exercises, onOpenProgram, onOpenGuide }) => {
+export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, programs, exercises, onOpenProgram, onOpenGuide, onApplyMealPlan }) => {
   const [path, setPath] = useState([{ id: 'start' }]); // { id, label? } — label은 내가 고른 답(말풍선)
   const [typing, setTyping] = useState(false);
   const [query, setQuery] = useState('');
@@ -454,6 +714,9 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
     if (node.tool === 'onerm') return <OneRmTool bestLifts={bestLifts} onOpenGuide={onOpenGuide} />;
     if (node.tool === 'split') return <SplitTool exName={exName} programs={programs} onOpenProgram={onOpenProgram} onOpenGuide={onOpenGuide} />;
     if (node.tool === 'pain') return <PainTool exName={exName} onOpenGuide={onOpenGuide} />;
+    if (node.tool === 'quiz') return <QuizTool bodyStats={bodyStats} programs={programs} onOpenProgram={onOpenProgram} onGo={go} />;
+    if (node.tool === 'meal') return <MealTool bodyStats={bodyStats} onApplyMealPlan={onApplyMealPlan} />;
+    if (node.tool === 'goal') return <GoalTool bodyStats={bodyStats} />;
     return null;
   };
 
@@ -532,7 +795,7 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
             const prevId = path[lastIndex - 1]?.id;
             const cameFrom = prevId && (TREE[prevId]?.opt || []).some(o => o.n === path[lastIndex].id) ? prevId : null;
             const parent = cameFrom || PARENT[path[lastIndex].id];
-            const siblings = !node.opt && parent ? (TREE[parent].opt || []).filter(o => o.n !== path[lastIndex].id) : [];
+            const siblings = !node.opt && parent && parent !== 'start' ? (TREE[parent].opt || []).filter(o => o.n !== path[lastIndex].id) : []; // 첫 화면 주제 전체는 다시 늘어놓지 않는다
             return (
               <div className="flex flex-col gap-2.5 mt-auto pt-2 animate-fade-in">
                 {node.opt && (
@@ -573,7 +836,7 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
           )}
           <div className="flex items-center gap-2 bg-neutral-100 rounded-2xl px-3.5 py-2.5">
             <Search className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-            <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && results[0]) go(results[0].id, query); }} placeholder="고민을 낱말로 찾기 (예: 무릎, 단백질, 정체기)" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-neutral-400 min-w-0" />
+            <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && results[0]) go(results[0].id, query); }} placeholder="고민을 낱말로 찾기 (예: 무릎, 힙업, 야식, 홈트)" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-neutral-400 min-w-0" />
             {query && <button onClick={() => setQuery('')} aria-label="지우기"><X className="w-4 h-4 text-neutral-400" /></button>}
           </div>
         </div>

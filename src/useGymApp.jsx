@@ -1054,10 +1054,10 @@ export function useGymApp() {
   };
   const addFoodToMeal = () => {
     if(!selectedFood || !selectedMealId) return;
-    const factor = foodWeight / 100;
+    const factor = foodWeight / (selectedFood.per || 100);
     const foodItem = {
       id: Date.now().toString(), foodId: String(selectedFood.id), name: String(selectedFood.name), icon: String(selectedFood.icon),
-      weight: Number(foodWeight), calories: Math.round(selectedFood.calories * factor),
+      weight: Number(foodWeight), unit: String(selectedFood.unit || 'g'), calories: Math.round(selectedFood.calories * factor),
       protein: Number((selectedFood.protein * factor).toFixed(1)), carbs: Number((selectedFood.carbs * factor).toFixed(1)), fat: Number((selectedFood.fat * factor).toFixed(1)),
     };
     const newDietMeals = todayDiet.meals.map(meal => {
@@ -1068,7 +1068,26 @@ export function useGymApp() {
     setIsAddFoodModalOpen(false);
     setSelectedFood(null);
     setFoodWeight(100);
-    showToast(`${selectedFood.name} ${foodWeight}g이 식단에 추가되었습니다.`);
+    showToast(`${selectedFood.name} ${foodWeight}${selectedFood.unit || 'g'}을 식단에 추가했어요.`);
+  };
+  // AI 코치가 짠 하루 식단 예시를 보고 있는 날짜의 식단에 담는다 (끼니 순서대로, 모자라면 끼니를 늘린다)
+  const applyMealPlan = (plan) => {
+    const stamp = Date.now();
+    setCurrentUser(prev => {
+      const meals = ((prev.diet || {})[currentDate]?.meals || defaultMeals).map(m => ({ ...m, items: [...m.items] }));
+      plan.forEach((pm, i) => {
+        if (!meals[i]) meals.push({ id: `m${stamp}${i}`, name: `${i + 1}끼`, items: [] });
+        pm.items.forEach((it, k) => {
+          const f = it.food, factor = it.g / (f.per || 100);
+          meals[i].items.push({
+            id: `${stamp}${i}${k}`, foodId: String(f.id), name: String(f.name), icon: String(f.icon), weight: Number(it.g), unit: String(f.unit || 'g'),
+            calories: Math.round(f.calories * factor), protein: Number((f.protein * factor).toFixed(1)), carbs: Number((f.carbs * factor).toFixed(1)), fat: Number((f.fat * factor).toFixed(1)),
+          });
+        });
+      });
+      return { ...prev, diet: { ...(prev.diet || {}), [currentDate]: { meals } } };
+    });
+    showToast('식단 예시를 식단 플래너에 담았어요');
   };
   const calculateTotalMacros = (meals) => {
     let cal=0, p=0, c=0, f=0;
@@ -1585,6 +1604,7 @@ export function useGymApp() {
     removeDietMeal,
     removeFoodFromMeal,
     addFoodToMeal,
+    applyMealPlan,
     calculateTotalMacros,
     todayMacros,
     refreshFriends,

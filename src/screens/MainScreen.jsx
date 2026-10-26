@@ -24,6 +24,7 @@ const AiCoach = lazy(() => import('../aiCoach.jsx').then(m => ({ default: m.AiCo
 // 로그인 뒤 기본 화면: 상단 헤더·탭 전환·하단 메뉴·공용 팝업
 export function MainScreen() {
   const {
+    applyMealPlan,
     LegendArt,
     acceptFriend,
     activeTab,
@@ -572,6 +573,7 @@ export function MainScreen() {
           exercises={EXERCISE_OPTIONS}
           onOpenProgram={(id) => { const prog = PROGRAMS.find(p => p.id === id); if (prog) { setIsAiCoachOpen(false); setSelectedProgramModal(prog); } }}
           onOpenGuide={(id) => { if (EXERCISE_GUIDES[id]) setGuideExerciseId(id); }}
+          onApplyMealPlan={applyMealPlan}
         /></Suspense>
       )}
 

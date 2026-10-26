@@ -1,6 +1,6 @@
 import React from 'react';
 import { Camera, ChevronLeft, Minus, Plus, Search, Trash2, Utensils, X } from 'lucide-react';
-import { FOOD_DB } from '../data/catalog.js';
+import { FOOD_DB, FOOD_CATEGORIES, foodTags } from '../data/foods.js';
 import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { useApp } from '../appContext.js';
 
@@ -28,6 +28,14 @@ export function DietScreen() {
     todayDiet,
     todayMacros,
   } = useApp();
+  const foodQuery = String(foodSearchQuery || '').trim();
+  const foods = FOOD_DB.filter(f => (foodCategoryFilter === '전체' || (foodCategoryFilter === '고단백' ? foodTags(f).includes('고단백') : f.category === foodCategoryFilter))
+    && (!foodQuery || `${f.name} ${f.kw}`.includes(foodQuery)));
+  const pickFood = (food) => { setSelectedFood(food); setFoodWeight(food.serv?.[0]?.g || 100); };
+  const per = selectedFood?.per || 100;
+  const unit = selectedFood?.unit || 'g';
+  const step = (selectedFood?.serv?.[0]?.g || 100) <= 50 ? 10 : 50;
+  const TAG_STYLE = { 고단백: 'bg-blue-50 text-[#4768ff]', 저칼로리: 'bg-emerald-50 text-emerald-600', 고칼로리: 'bg-rose-50 text-rose-500', '지방 많음': 'bg-amber-50 text-amber-600' };
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 pb-32 flex flex-col relative animate-fade-in">
       <GlobalOverlays />
@@ -81,7 +89,7 @@ export function DietScreen() {
                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm">{String(item.icon)}</div>
                         <div>
                           <div className="font-black text-sm text-neutral-900">{String(item.name)}</div>
-                          <div className="text-[10px] font-bold text-neutral-500">{item.weight}g · 단백질 {item.protein}g</div>
+                          <div className="text-[10px] font-bold text-neutral-500">{item.weight}{item.unit || 'g'} · 단백질 {item.protein}g</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -112,48 +120,75 @@ export function DietScreen() {
                 <div className="p-4 bg-white sticky top-[65px] z-10 border-b border-neutral-50 shadow-[0_5px_10px_rgba(0,0,0,0.02)]">
                   <div className="bg-neutral-100 rounded-xl p-3 mb-3 flex items-center gap-2">
                     <Search className="w-5 h-5 text-neutral-400" />
-                    <input type="text" placeholder="음식 이름을 검색하세요 (ex. 닭가슴살)" value={foodSearchQuery} onChange={e => setFoodSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm font-bold text-neutral-900 placeholder:text-neutral-400" />
+                    <input type="text" placeholder="음식 이름을 검색하세요 (예: 닭가슴살, 김밥, 커피)" value={foodSearchQuery} onChange={e => setFoodSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm font-bold text-neutral-900 placeholder:text-neutral-400" />
                   </div>
                   <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                    {['전체', '단백질', '탄수화물', '지방', '채소'].map(cat => (
+                    {['전체', '고단백', ...FOOD_CATEGORIES].map(cat => (
                       <button key={cat} onClick={() => setFoodCategoryFilter(cat)} className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${foodCategoryFilter === cat ? 'bg-neutral-800 text-white border-neutral-800' : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'}`}>{cat}</button>
                     ))}
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50">
-                  {FOOD_DB.filter(f => (foodCategoryFilter === '전체' || String(f.category).includes(foodCategoryFilter)) && String(f.name).includes(foodSearchQuery)).map(food => (
-                    <div key={food.id} onClick={() => {setSelectedFood(food); setFoodWeight(100);}} className="flex items-center gap-4 bg-white p-3.5 rounded-2xl border border-neutral-100 hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer group active:scale-95">
-                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl shadow-inner border border-white/50 ${food.bgColor}`}>{String(food.icon)}</div>
-                      <div className="flex-1">
-                        <h3 className="font-black text-neutral-900 text-base">{String(food.name)}</h3>
-                        <div className="text-[10px] font-bold text-neutral-400 mt-0.5">{String(food.unit)} 기준 · {food.calories}kcal</div>
+                  <div className="text-[11px] font-bold text-neutral-400 px-1">{foods.length}개 · 영양 정보는 100g(음료 100ml) 기준이에요</div>
+                  {foods.map(food => {
+                    const sv = food.serv?.[0];
+                    return (
+                      <div key={food.id} onClick={() => pickFood(food)} className="flex items-center gap-3.5 bg-white p-3.5 rounded-2xl border border-neutral-100 hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer group active:scale-95">
+                        <div className={`w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center text-3xl shadow-inner border border-white/50 ${food.bgColor}`}>{String(food.icon)}</div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-black text-neutral-900 text-[15px] truncate">{String(food.name)}</h3>
+                          <div className="text-[10px] font-bold text-neutral-400 mt-0.5">100{food.unit} {food.calories}kcal · 단백질 {food.protein}g{sv ? ` · ${sv.l} ${Math.round(food.calories * sv.g / food.per)}kcal` : ''}</div>
+                          {foodTags(food).length > 0 && <div className="flex gap-1 mt-1">{foodTags(food).map(t => <span key={t} className={`text-[9px] font-black px-1.5 py-0.5 rounded ${TAG_STYLE[t]}`}>{t}</span>)}</div>}
+                        </div>
+                        <div className={`text-[10px] font-black bg-neutral-50 px-2 py-1 rounded-md flex-shrink-0 ${food.txColor}`}>{String(food.category)}</div>
                       </div>
-                      <div className={`text-xs font-black bg-neutral-50 px-2 py-1 rounded-md ${food.txColor}`}>{String(food.category)}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                  {foods.length === 0 && <div className="text-center text-sm font-bold text-neutral-400 py-10">찾는 음식이 없어요. 다른 이름(예: 닭, 밥, 커피)으로 찾아보세요.</div>}
                 </div>
               </>
             ) : (
-              <div className="flex-1 bg-neutral-50 p-6 flex flex-col items-center">
-                 <div className={`w-24 h-24 rounded-3xl flex items-center justify-center text-6xl shadow-md border-4 border-white mb-6 mt-4 ${selectedFood.bgColor}`}>{String(selectedFood.icon)}</div>
-                 <h3 className="text-2xl font-black text-neutral-900 mb-2">{String(selectedFood.name)}</h3>
-                 <p className="text-sm font-bold text-neutral-500 mb-10">얼마나 드셨나요?</p>
-                 <div className="bg-white p-6 rounded-3xl border border-neutral-100 shadow-sm w-full max-w-xs mb-8 flex justify-between items-center">
-                   <button onClick={() => setFoodWeight(Math.max(10, foodWeight - 50))} className="p-3 bg-neutral-100 rounded-2xl active:scale-90 transition-transform"><Minus className="w-5 h-5 text-neutral-600"/></button>
+              <div className="flex-1 bg-neutral-50 p-5 flex flex-col items-center overflow-y-auto">
+                 <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-5xl shadow-md border-4 border-white mb-3 mt-1 ${selectedFood.bgColor}`}>{String(selectedFood.icon)}</div>
+                 <h3 className="text-2xl font-black text-neutral-900 mb-1 text-center">{String(selectedFood.name)}</h3>
+                 <div className="flex flex-wrap justify-center gap-1 mb-4">
+                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-md bg-white ${selectedFood.txColor}`}>{selectedFood.category}</span>
+                   {foodTags(selectedFood).map(t => <span key={t} className={`text-[10px] font-black px-2 py-0.5 rounded-md ${TAG_STYLE[t]}`}>{t}</span>)}
+                 </div>
+                 {selectedFood.note && (
+                   <div className="w-full bg-white rounded-2xl border border-neutral-100 p-4 mb-4 shadow-sm">
+                     <div className="text-xs font-black text-neutral-900 mb-1.5">📋 영양 정보</div>
+                     <p className="text-[13px] font-bold text-neutral-600 leading-relaxed">{selectedFood.note}</p>
+                     <div className="grid grid-cols-4 gap-1 mt-3 text-center">
+                       {[['칼로리', `${selectedFood.calories}`, 'text-neutral-900'], ['탄수', `${selectedFood.carbs}g`, 'text-amber-500'], ['단백질', `${selectedFood.protein}g`, 'text-[#4768ff]'], ['지방', `${selectedFood.fat}g`, 'text-rose-500']].map(([k, v, c]) => (
+                         <div key={k} className="bg-neutral-50 rounded-lg py-1.5"><div className={`text-xs font-black ${c}`}>{v}</div><div className="text-[9px] font-bold text-neutral-400">{k}</div></div>
+                       ))}
+                     </div>
+                     <div className="text-[10px] font-bold text-neutral-400 mt-1.5 text-right">100{unit} 기준</div>
+                   </div>
+                 )}
+                 <p className="text-sm font-bold text-neutral-500 mb-2">얼마나 드셨나요?</p>
+                 <div className="flex flex-wrap justify-center gap-1.5 mb-3">
+                   {[...(selectedFood.serv || []), ...((selectedFood.serv || []).some(sv => sv.g === 100) ? [] : [{ l: `100${unit}`, g: 100 }])].map(sv => (
+                     <button key={sv.l} onClick={() => setFoodWeight(sv.g)} className={`px-3 py-1.5 rounded-full text-xs font-black border transition-all active:scale-95 ${foodWeight === sv.g ? 'bg-[#4768ff] text-white border-[#4768ff]' : 'bg-white text-neutral-600 border-neutral-200'}`}>{sv.l}{sv.l.startsWith('100') ? '' : ` · ${sv.g}${unit}`}</button>
+                   ))}
+                 </div>
+                 <div className="bg-white p-5 rounded-3xl border border-neutral-100 shadow-sm w-full max-w-xs mb-5 flex justify-between items-center">
+                   <button onClick={() => setFoodWeight(Math.max(step, foodWeight - step))} className="p-3 bg-neutral-100 rounded-2xl active:scale-90 transition-transform"><Minus className="w-5 h-5 text-neutral-600"/></button>
                    <div className="text-center">
                      <input type="number" value={foodWeight} onChange={e=>setFoodWeight(Number(e.target.value))} className="w-20 text-center font-black text-4xl text-[#4768ff] bg-transparent outline-none"/>
-                     <span className="text-lg font-black text-neutral-400 ml-1">g</span>
+                     <span className="text-lg font-black text-neutral-400 ml-1">{unit}</span>
                    </div>
-                   <button onClick={() => setFoodWeight(foodWeight + 50)} className="p-3 bg-neutral-100 rounded-2xl active:scale-90 transition-transform"><Plus className="w-5 h-5 text-neutral-600"/></button>
+                   <button onClick={() => setFoodWeight(foodWeight + step)} className="p-3 bg-neutral-100 rounded-2xl active:scale-90 transition-transform"><Plus className="w-5 h-5 text-neutral-600"/></button>
                  </div>
-                 <div className="w-full bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm flex justify-between items-center mt-auto mb-6">
-                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">칼로리</div><div className="font-black text-lg text-neutral-900">{Math.round(selectedFood.calories * (foodWeight/100))}</div></div>
+                 <div className="w-full bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm flex justify-between items-center mt-auto mb-5">
+                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">칼로리</div><div className="font-black text-lg text-neutral-900">{Math.round(selectedFood.calories * (foodWeight/per))}</div></div>
                    <div className="w-[1px] h-8 bg-neutral-100"></div>
-                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">탄수화물</div><div className="font-black text-lg text-amber-500">{(selectedFood.carbs * (foodWeight/100)).toFixed(1)}</div></div>
+                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">탄수화물</div><div className="font-black text-lg text-amber-500">{(selectedFood.carbs * (foodWeight/per)).toFixed(1)}</div></div>
                    <div className="w-[1px] h-8 bg-neutral-100"></div>
-                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">단백질</div><div className="font-black text-lg text-[#4768ff]">{(selectedFood.protein * (foodWeight/100)).toFixed(1)}</div></div>
+                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">단백질</div><div className="font-black text-lg text-[#4768ff]">{(selectedFood.protein * (foodWeight/per)).toFixed(1)}</div></div>
                    <div className="w-[1px] h-8 bg-neutral-100"></div>
-                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">지방</div><div className="font-black text-lg text-rose-500">{(selectedFood.fat * (foodWeight/100)).toFixed(1)}</div></div>
+                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">지방</div><div className="font-black text-lg text-rose-500">{(selectedFood.fat * (foodWeight/per)).toFixed(1)}</div></div>
                  </div>
                  <button onClick={addFoodToMeal} className="w-full bg-[#4768ff] text-white font-black py-4 rounded-xl shadow-[0_10px_25px_rgba(71,104,255,0.3)] hover:bg-blue-600 active:scale-95 transition-all text-lg">식단에 추가하기</button>
               </div>
