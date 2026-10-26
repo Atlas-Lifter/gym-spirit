@@ -1,5 +1,5 @@
 import React from 'react';
-import { BossArt } from '../BossArt.jsx';
+import { BossArt, rageName } from '../BossArt.jsx';
 import { FullBodyAvatar } from '../realAvatar.jsx';
 import { BOSS_KINDS, BOSS_ELEMENTS } from '../guildSystem.js';
 
@@ -12,6 +12,17 @@ export default function BossGallery() {
           <FullBodyAvatar key={g + pose} profile={{ gm: true, gender: g, hairStyle: g === 'female' ? 'long' : 'short' }} size="w-36 h-72" pose={pose} />
         ))}
       </div>
+      {/* 부활 단계별 분노 연출 미리보기 */}
+      {[BOSS_KINDS[0], BOSS_KINDS[1], BOSS_KINDS[9]].map((k, ki) => (
+        <div key={k.key} style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          {[1, 2, 3, 4, 5].map(st => (
+            <div key={st} style={{ width: 150, textAlign: 'center', background: `linear-gradient(${BOSS_ELEMENTS[ki % BOSS_ELEMENTS.length].bg[0]}, ${BOSS_ELEMENTS[ki % BOSS_ELEMENTS.length].bg[1]})`, borderRadius: 14, padding: 4 }}>
+              <BossArt kind={k.key} element={BOSS_ELEMENTS[ki % BOSS_ELEMENTS.length]} size={140} stage={st} />
+              <div style={{ fontSize: 11, fontWeight: 900 }}>{st}단계 {rageName(st)}</div>
+            </div>
+          ))}
+        </div>
+      ))}
       {BOSS_ELEMENTS.map(el => (
         <div key={el.key} style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 900, marginBottom: 6, color: el.glow }}>{el.name} · {el.season}</div>

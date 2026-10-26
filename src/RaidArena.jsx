@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { cleanAvatar } from './admin.js';
-import { BossArt } from './BossArt.jsx';
+import { BossArt, rageName } from './BossArt.jsx';
 import { FullBodyAvatar } from './realAvatar.jsx';
 
 // 주간 레이드 전투 장면
@@ -54,8 +54,8 @@ export const RaidArena = ({ raid, members = [], meId, todayIdx, isThisWeek = tru
         {/* 보스 */}
         <div className="absolute right-[-6px] bottom-1" style={{ animation: ko ? 'none' : 'ra-bob 2.6s ease-in-out infinite' }}>
           <div style={{ animation: !ko && fighters.length ? `ra-hit ${CYCLE / Math.max(1, shown.length)}s linear infinite, ra-flash ${CYCLE / Math.max(1, shown.length)}s linear infinite` : 'none' }}>
-            <div style={{ filter: stage > 1 ? `drop-shadow(0 0 ${Math.min(18, 4 + stage * 3)}px ${el.glow})` : 'none' }}>
-              <BossArt kind={boss.kind.key} element={el} size={164} />
+            <div style={{ filter: stage > 1 ? `drop-shadow(0 0 ${Math.min(18, 4 + stage * 3)}px ${stage >= 3 ? '#ff2d2d' : el.glow})` : 'none' }}>
+              <BossArt kind={boss.kind.key} element={el} size={164} stage={stage} />
             </div>
           </div>
         </div>
@@ -97,7 +97,7 @@ export const RaidArena = ({ raid, members = [], meId, todayIdx, isThisWeek = tru
           </>
         )}
         {/* 단계 표시 */}
-        <span className="absolute right-3 top-3 text-[11px] font-black px-2 py-0.5 rounded-full text-neutral-950" style={{ background: el.glow, boxShadow: `0 0 12px ${el.glow}` }}>★ {stage}단계</span>
+        <span className={`absolute right-3 top-3 text-[11px] font-black px-2 py-0.5 rounded-full ${stage >= 3 ? 'text-white' : 'text-neutral-950'}`} style={{ background: stage >= 3 ? '#dc2626' : el.glow, boxShadow: `0 0 12px ${stage >= 3 ? '#ff2d2d' : el.glow}` }}>★ {stage}단계{rageName(stage) ? ` · ${rageName(stage)}` : ''}</span>
         {raid.kills > 0 && <div className="absolute left-3 top-3 max-w-[60%] text-[11px] font-black text-yellow-300 leading-snug">💀 {raid.kills}번 쓰러뜨렸지만<br />더 강해져 부활했어요!</div>}
       </div>
 

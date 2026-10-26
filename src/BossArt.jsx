@@ -266,6 +266,94 @@ const Particles = ({ el }) => (
   </g>
 );
 
+// ── 부활 단계별 분노 연출 ─────────────────────────────────────────
+// 보스는 쓰러질 때마다 더 강해져 부활한다. 단계가 오를수록 더 난폭해 보이게:
+// 2단계 분노(붉은 눈·김·몸의 금) → 3단계 격노(뿔·불꽃 고리·몸이 붉고 커짐)
+// → 4단계 광폭(바닥 균열·붉은 불씨·몸 떨림) → 5단계 이상 폭주(검붉은 오라·번개·불꽃 왕관)
+export const RAGE_NAMES = ['', '분노', '격노', '광폭', '폭주'];
+export const rageOf = (stage = 1) => Math.max(0, Math.min(4, (Number(stage) || 1) - 1));
+export const rageName = (stage) => RAGE_NAMES[rageOf(stage)];
+const RAGE_RED = '#ff2d2d';
+
+// 몸 위의 금(균열): 몸 모양으로 잘라서 보스 종류와 상관없이 몸에만 보인다
+const CRACKS = [
+  'M46 70 L56 78 L52 88 L62 96', 'M112 64 L104 74 L110 84 L100 94', 'M70 108 L78 116 L74 126',
+  'M92 40 L86 50 L94 56', 'M36 100 L46 104 L42 114', 'M122 104 L114 110 L120 120', 'M60 46 L66 54 L60 62',
+];
+// 뿔: 끝이 그림 위쪽(약 y 14)에 머물러 몸이 커져도 잘리지 않게
+const Horns = ({ rage }) => {
+  const w = rage >= 4 ? 1.3 : rage >= 3 ? 1.15 : 1;
+  return (
+    <g>
+      {[[54, -1], [106, 1]].map(([x, dir]) => (
+        <path key={x} d={`M${x - 8 * dir} 44 C${x - 10 * dir} 32 ${x - 16 * dir * w} 24 ${x - 22 * dir * w} 14 C${x - 6 * dir} 20 ${x + 4 * dir} 28 ${x + 8 * dir} 44 Z`}
+          fill={rage >= 4 ? '#1c0606' : '#2a0b0b'} stroke={O} strokeWidth={2.5} strokeLinejoin="round" />
+      ))}
+      {[[54, -1], [106, 1]].map(([x, dir]) => <path key={`h${x}`} d={`M${x - 4 * dir} 38 C${x - 8 * dir} 30 ${x - 14 * dir * w} 24 ${x - 19 * dir * w} 17`} stroke={RAGE_RED} strokeWidth={1.5} fill="none" opacity=".75" />)}
+    </g>
+  );
+};
+const FlameRing = ({ rage, color }) => (
+  <g opacity={rage >= 4 ? 0.95 : 0.75}>
+    {Array.from({ length: 14 }).map((_, i) => {
+      const a = (i / 14) * Math.PI * 2;
+      const x = 80 + Math.cos(a) * 70, y = 88 + Math.sin(a) * 62;
+      const h = 10 + (i % 3) * 4 + rage * 2;
+      return (
+        <path key={i} d={`M${x - 5} ${y} C${x - 6} ${y - h * 0.5} ${x} ${y - h * 0.6} ${x} ${y - h} C${x + 1} ${y - h * 0.6} ${x + 6} ${y - h * 0.5} ${x + 5} ${y} Z`} fill={i % 2 ? color : RAGE_RED} opacity=".8">
+          <animate attributeName="opacity" values=".35;.9;.35" dur={`${0.8 + (i % 4) * 0.2}s`} repeatCount="indefinite" />
+        </path>
+      );
+    })}
+  </g>
+);
+const Steam = () => (
+  <g>
+    {[[52, 26, 0], [108, 24, 0.7], [80, 16, 1.3]].map(([x, y, d], i) => (
+      <circle key={i} cx={x} cy={y} r="5" fill="#fff" opacity="0">
+        <animate attributeName="cy" values={`${y};${y - 18}`} dur="1.6s" begin={`${d}s`} repeatCount="indefinite" />
+        <animate attributeName="r" values="3;8" dur="1.6s" begin={`${d}s`} repeatCount="indefinite" />
+        <animate attributeName="opacity" values=".7;0" dur="1.6s" begin={`${d}s`} repeatCount="indefinite" />
+      </circle>
+    ))}
+  </g>
+);
+const GroundCracks = () => (
+  <g style={{ filter: `drop-shadow(0 0 3px ${RAGE_RED})` }}>
+    <path d="M14 150 L32 146 L40 154 L58 148 M102 152 L118 146 L128 154 L148 149 M70 156 L80 148 L90 156" stroke={RAGE_RED} strokeWidth="2.5" fill="none" strokeLinecap="round">
+      <animate attributeName="opacity" values=".5;1;.5" dur="1.2s" repeatCount="indefinite" />
+    </path>
+  </g>
+);
+const RageEmbers = () => (
+  <g>
+    {[[24, 120, 0], [136, 110, 0.4], [44, 70, 0.9], [118, 60, 1.3], [80, 130, 0.6], [150, 140, 1.1], [10, 90, 1.6]].map(([x, y, d], i) => (
+      <rect key={i} x={x} y={y} width="3" height="3" fill={i % 2 ? '#fde047' : RAGE_RED} transform={`rotate(45 ${x} ${y})`} opacity="0">
+        <animate attributeName="y" values={`${y};${y - 40}`} dur="2s" begin={`${d}s`} repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0;1;0" dur="2s" begin={`${d}s`} repeatCount="indefinite" />
+      </rect>
+    ))}
+  </g>
+);
+const Lightning = () => (
+  <g style={{ filter: 'drop-shadow(0 0 4px #fca5a5)' }}>
+    {[['M20 6 L30 30 L22 32 L34 60', 0], ['M142 10 L130 34 L139 36 L126 62', 0.55]].map(([d, b], i) => (
+      <path key={i} d={d} stroke="#fff1f2" strokeWidth="2.5" fill="none" strokeLinejoin="round" opacity="0">
+        <animate attributeName="opacity" values="0;0;1;0;1;0;0" keyTimes="0;.6;.65;.7;.75;.8;1" dur="1.8s" begin={`${b}s`} repeatCount="indefinite" />
+      </path>
+    ))}
+  </g>
+);
+const FlameCrown = () => (
+  <g transform="translate(80 7)">
+    {[-16, -8, 0, 8, 16].map((dx, i) => (
+      <path key={i} d={`M${dx - 4} 12 C${dx - 5} 6 ${dx} 4 ${dx} ${i === 2 ? -8 : -2} C${dx + 1} 4 ${dx + 5} 6 ${dx + 4} 12 Z`} fill={i === 2 ? '#fde047' : RAGE_RED} stroke={O} strokeWidth="1.2">
+        <animate attributeName="opacity" values=".6;1;.6" dur={`${0.6 + i * 0.1}s`} repeatCount="indefinite" />
+      </path>
+    ))}
+  </g>
+);
+
 // 종류마다 몸통 기본색 (속성 색을 살짝 섞는다)
 const BASE = {
   sofa: ['#8b5e3c', '#5c3a22'], chicken: ['#d98a2b', '#8a4a12'], phone: ['#1e293b', '#0f172a'], alarm: ['#f59e0b', '#b45309'],
@@ -273,11 +361,16 @@ const BASE = {
   ogre: ['#a3a3a3', '#525252'], demon: ['#ef4444', '#991b1b'], dragon: ['#22c55e', '#14532d'], sloth: ['#a8a29e', '#57534e'], pizza: ['#fde047', '#f59e0b'],
 };
 
-export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, className = '' }) => {
+export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, stage = 1, className = '' }) => {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const el = element || { glow: '#34d399', eye: '#ecfdf5' };
+  const base = element || { glow: '#34d399', eye: '#ecfdf5' };
+  const rage = defeated ? 0 : rageOf(stage);
+  // 분노하면 눈이 붉게 타오르고, 폭주하면 오라가 검붉게 변한다
+  const el = rage ? { ...base, eye: rage >= 3 ? '#ffe4e6' : '#ff6b6b' } : base;
+  const auraColor = rage >= 4 ? '#7f1d1d' : rage >= 2 ? RAGE_RED : base.glow;
   const [c1, c2] = BASE[kind] || BASE.sofa;
   const draw = ART[kind] || ART.sofa;
+  const grow = 1 + rage * 0.025; // 너무 커지면 뿔이 그림 밖으로 잘린다
   return (
     <svg viewBox="0 0 160 160" width={size} height={size} className={className} style={defeated ? { filter: 'grayscale(1) brightness(.75)' } : undefined} aria-hidden="true">
       <defs>
@@ -286,9 +379,23 @@ export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, 
           <stop offset="1" stopColor={c2} />
         </linearGradient>
         <radialGradient id={`${id}-aura`} cx="50%" cy="55%" r="50%">
-          <stop offset="0" stopColor={el.glow} stopOpacity=".45" />
-          <stop offset="1" stopColor={el.glow} stopOpacity="0" />
+          <stop offset="0" stopColor={auraColor} stopOpacity={0.45 + rage * 0.1} />
+          <stop offset={rage >= 4 ? '.7' : '1'} stopColor={rage >= 4 ? '#000' : auraColor} stopOpacity={rage >= 4 ? 0.35 : 0} />
+          {rage >= 4 && <stop offset="1" stopColor="#000" stopOpacity="0" />}
         </radialGradient>
+        {/* 분노 단계만큼 몸을 붉고 어둡게 */}
+        <filter id={`${id}-rage`} x="0" y="0" width="100%" height="100%">
+          <feFlood floodColor="#b91c1c" floodOpacity={Math.min(0.6, rage * 0.16)} result="r" />
+          <feComposite in="r" in2="SourceAlpha" operator="in" result="rt" />
+          <feBlend in="rt" in2="SourceGraphic" mode="multiply" />
+        </filter>
+        {/* 몸 모양 그대로의 흰 마스크 (금이 몸 위에만 보이게) */}
+        {rage > 0 && (
+          <mask id={`${id}-body`} maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="160">
+            <g filter={`url(#${id}-white)`}>{draw(el, id)}</g>
+          </mask>
+        )}
+        <filter id={`${id}-white`}><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0" /></filter>
         <filter id={`${id}-glow`} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         {/* 속성 색을 몸 전체에 은은하게 입힌다 */}
         <filter id={`${id}-tint`} x="0" y="0" width="100%" height="100%">
@@ -297,10 +404,36 @@ export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, 
           <feBlend in="ct" in2="SourceGraphic" mode="soft-light" />
         </filter>
       </defs>
-      <circle cx="80" cy="88" r="76" fill={`url(#${id}-aura)`} />
+      <circle cx="80" cy="88" r={76 + rage * 2} fill={`url(#${id}-aura)`}>
+        {rage >= 2 && <animate attributeName="r" values={`${74 + rage * 2};${80 + rage * 2};${74 + rage * 2}`} dur={`${1.6 - rage * 0.2}s`} repeatCount="indefinite" />}
+      </circle>
+      {rage >= 2 && <FlameRing rage={rage} color={base.glow} />}
       <Ground el={el} />
-      <g transform={defeated ? 'rotate(-8 80 120)' : undefined} filter={el.particle ? `url(#${id}-tint)` : undefined}>{draw(el, id)}</g>
+      {rage >= 3 && <GroundCracks />}
+      <g transform={defeated ? 'rotate(-8 80 120)' : `translate(80 146) scale(${grow}) translate(-80 -146)`}>
+        <g>
+          {rage >= 3 && <animateTransform attributeName="transform" type="translate" values="0 0; 1.2 -0.6; -1 0.8; 0.8 0.4; 0 0" dur={rage >= 4 ? '.35s' : '.6s'} repeatCount="indefinite" />}
+          <g filter={rage ? `url(#${id}-rage)` : undefined}>
+            <g filter={el.particle ? `url(#${id}-tint)` : undefined}>{draw(el, id)}</g>
+          </g>
+          {/* 뿔은 몸 앞에 그려서 어떤 보스든 잘 보이게 */}
+          {rage >= 2 && <Horns rage={rage} />}
+          {rage > 0 && (
+            <g mask={`url(#${id}-body)`} style={{ filter: `drop-shadow(0 0 2px ${RAGE_RED})` }}>
+              {CRACKS.slice(0, 2 + rage).map((d, i) => (
+                <path key={i} d={d} stroke={rage >= 3 ? '#fde047' : RAGE_RED} strokeWidth={1.8 + rage * 0.4} fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <animate attributeName="opacity" values=".55;1;.55" dur={`${1.4 - rage * 0.2}s`} begin={`${i * 0.15}s`} repeatCount="indefinite" />
+                </path>
+              ))}
+            </g>
+          )}
+          {rage >= 1 && <Steam />}
+        </g>
+      </g>
+      {rage >= 4 && <FlameCrown />}
       {!defeated && el.particle && <Particles el={el} />}
+      {rage >= 3 && <RageEmbers />}
+      {rage >= 4 && <Lightning />}
       {defeated && <text x="80" y="92" textAnchor="middle" fontSize="40" fontWeight="900" fill="#fff" stroke={O} strokeWidth="3" paintOrder="stroke" transform="rotate(-12 80 92)">KO!</text>}
     </svg>
   );
