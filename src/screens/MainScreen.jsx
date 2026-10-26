@@ -1,4 +1,5 @@
 import React, { lazy, Suspense } from 'react';
+import { HERO_BG, TRON_GRID } from '../theme.js';
 import { BarChart2, Bell, Calculator, CalendarDays, Camera, ChevronLeft, ChevronRight, Clock, Dumbbell, Edit3, History, Info, LayoutGrid, Trophy, User, Users, X, Zap } from 'lucide-react';
 import { SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
 import { MUSCLE_SUBGROUPS } from '../data/anatomy.js';
@@ -104,13 +105,11 @@ export function MainScreen() {
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 pb-[80px] flex flex-col relative overflow-hidden">
       <GlobalOverlays />
-      <header className="px-4 pt-4 pb-1 relative z-20">
-        <div className="relative rounded-[28px] bg-[#070b0f] px-5 pt-5 pb-4 shadow-[0_12px_30px_rgba(7,11,15,0.22)]">
-        <div className="absolute inset-0 rounded-[28px] overflow-hidden pointer-events-none">
-          <div className="absolute -top-20 -left-12 w-56 h-56 rounded-full bg-emerald-500/30 blur-3xl" />
-          <div className="absolute -bottom-24 -right-10 w-64 h-64 rounded-full bg-blue-600/35 blur-3xl" />
-          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'linear-gradient(#34d399 1px, transparent 1px), linear-gradient(90deg, #34d399 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-          <div className="absolute bottom-0 left-8 right-8 h-px shadow-[0_0_10px_rgba(52,211,153,0.8)]" style={{ background: 'linear-gradient(90deg, transparent, #34d399 30%, #60a5fa 70%, transparent)' }} />
+      <header className="relative z-20">
+        <div className="relative rounded-b-[32px] px-5 pt-6 pb-5 shadow-[0_10px_28px_rgba(7,11,15,0.16)]" style={{ background: HERO_BG }}>
+        <div className="absolute inset-0 rounded-b-[32px] overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 opacity-[0.07]" style={TRON_GRID} />
+          <div className="absolute bottom-0 left-10 right-10 h-px shadow-[0_0_10px_rgba(52,211,153,0.8)]" style={{ background: 'linear-gradient(90deg, transparent, #34d399 30%, #60a5fa 70%, transparent)' }} />
         </div>
         <div className="relative flex justify-between items-center">
         {(() => {
@@ -342,9 +341,7 @@ export function MainScreen() {
         return (
           <div className="fixed inset-0 bg-black/40 z-[80] flex items-center justify-center p-4 backdrop-blur-[2px] animate-fade-in" onClick={() => setIsFullCalendarOpen(false)}>
             <div className="bg-white rounded-[28px] max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.3)] text-neutral-900 relative overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="relative bg-[#070b0f] px-4 pt-4 pb-4 overflow-hidden">
-                <div className="absolute -top-16 -left-10 w-44 h-44 rounded-full bg-emerald-500/30 blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-20 -right-10 w-52 h-52 rounded-full bg-blue-600/35 blur-3xl pointer-events-none" />
+              <div className="relative px-4 pt-4 pb-4 overflow-hidden" style={{ background: HERO_BG }}>
                 <div className="absolute bottom-0 left-6 right-6 h-px shadow-[0_0_10px_rgba(52,211,153,0.8)]" style={{ background: 'linear-gradient(90deg, transparent, #34d399 30%, #60a5fa 70%, transparent)' }} />
                 <div className="relative flex justify-between items-center">
                   <div className="flex items-center gap-1">

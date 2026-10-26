@@ -37,7 +37,7 @@ export function ProfileTab() {
   } = useApp();
   return (
     <div className="flex-1 bg-neutral-50 pb-28 overflow-y-auto animate-fade-in text-neutral-900">
-      <div className="bg-white p-6 pt-8 rounded-b-[40px] shadow-sm border-b border-neutral-100 mb-6 relative">
+      <div className="bg-white p-6 mx-4 mt-4 rounded-[32px] shadow-sm border border-neutral-100 mb-6 relative">
          <button onClick={handleLogout} className="absolute top-6 right-6 p-2 text-neutral-400 hover:bg-neutral-100 rounded-full transition-colors z-20"><LogOut className="w-5 h-5"/></button>
          <div className="flex flex-col items-center mb-6 relative">
            <div className="relative cursor-pointer group mb-4" onClick={() => setIsAvatarStudioOpen(true)}>

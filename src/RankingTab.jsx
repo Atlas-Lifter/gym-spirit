@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { createPortal } from 'react-dom';
 import { Search, Crown, Heart, UserPlus, Check, Clock, Download, ChevronDown, X, Lock } from 'lucide-react';
 import { GuildCenter, GuildBadge, GuildViewSheet } from './GuildCenter.jsx';
+import { HERO_BG } from './theme.js';
 
 // 랭킹 탭: 부드러운 전환(슬라이딩 탭, 순위 재정렬 애니메이션, 숫자 카운트업, 끌어서 닫는 시트)에 집중한 화면.
 
@@ -305,19 +306,19 @@ export const RankingTab = ({ friendUsers = [], globalEntries = [], me, meId, fri
       `}</style>
 
       {/* 헤더 */}
-      <div className="px-5 pt-6 pb-4 bg-gradient-to-b from-[#070b0f] via-[#111827] to-neutral-50">
+      <div className="px-5 pt-5 pb-4">
         <div className="flex items-end justify-between mb-1">
           <div>
-            <div className="text-[11px] font-black text-white/50">{weekLabel}</div>
-            <h2 className="text-2xl font-black text-white tracking-tight">{scope === 'guild' ? '길드' : '이번 주 랭킹'}</h2>
+            <div className="text-[11px] font-black text-neutral-400">{weekLabel}</div>
+            <h2 className="text-2xl font-black text-neutral-900 tracking-tight">{scope === 'guild' ? '길드' : '이번 주 랭킹'}</h2>
           </div>
-          <button onClick={onFindFriends} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 text-white text-xs font-black backdrop-blur active:scale-95 transition-transform"><Search className="w-3.5 h-3.5" /> 친구 찾기</button>
+          <button onClick={onFindFriends} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 text-xs font-black shadow-sm active:scale-95 transition-transform"><Search className="w-3.5 h-3.5" /> 친구 찾기</button>
         </div>
-        <p className="text-xs font-bold text-white/50 mb-4">시즌 마감까지 {daysLeft} · 월요일 0시에 새 시즌이 시작돼요</p>
+        <p className="text-xs font-bold text-neutral-400 mb-4">시즌 마감까지 {daysLeft} · 월요일 0시에 새 시즌이 시작돼요</p>
 
         {/* 내 순위 카드 */}
         {scope === 'friends' && !guest && (
-          <button onClick={() => setSelected(me)} className="w-full text-left rounded-[26px] p-4 bg-white/[0.07] border border-white/10 backdrop-blur-md text-white active:scale-[0.99] transition-transform">
+          <button onClick={() => setSelected(me)} className="w-full text-left rounded-[26px] p-4 border border-white/5 text-white shadow-[0_12px_28px_rgba(7,11,15,0.18)] active:scale-[0.99] transition-transform" style={{ background: HERO_BG }}>
             <div className="flex items-center gap-3">
               <Avatar user={me} size={54} ring={`linear-gradient(135deg, ${tier.ring}, #ffffff)`} Avatar3={Avatar3} />
               <div className="flex-1 min-w-0">
@@ -346,7 +347,7 @@ export const RankingTab = ({ friendUsers = [], globalEntries = [], me, meId, fri
           </button>
         )}
         {scope === 'global' && (myEntry ? (
-          <button onClick={() => open(myEntry)} className="w-full text-left rounded-[26px] p-4 bg-white/[0.07] border border-white/10 backdrop-blur-md text-white active:scale-[0.99] transition-transform">
+          <button onClick={() => open(myEntry)} className="w-full text-left rounded-[26px] p-4 border border-white/5 text-white shadow-[0_12px_28px_rgba(7,11,15,0.18)] active:scale-[0.99] transition-transform" style={{ background: HERO_BG }}>
             <div className="flex items-center gap-3">
               <Mark u={myEntry} size={54} ring="linear-gradient(135deg,#34d399,#ffffff)" />
               <div className="flex-1 min-w-0">
@@ -364,7 +365,7 @@ export const RankingTab = ({ friendUsers = [], globalEntries = [], me, meId, fri
             </div>
           </button>
         ) : !guest && (
-          <div className="rounded-[26px] p-4 bg-white/[0.07] border border-white/10 text-white">
+          <div className="rounded-[26px] p-4 border border-white/5 text-white shadow-[0_12px_28px_rgba(7,11,15,0.18)]" style={{ background: HERO_BG }}>
             <div className="text-sm font-black">아직 전체 랭킹에 등록하지 않았어요</div>
             <div className="text-[11px] font-bold text-white/50 mt-1 leading-relaxed">길드로 함께 참가하거나(길드원 평균 기록), 개인으로 참가할 수 있어요.</div>
             <button onClick={() => setScope('guild')} className="mt-3 px-4 py-2.5 rounded-xl bg-emerald-400 text-neutral-950 text-xs font-black shadow-[0_0_14px_rgba(52,211,153,.5)] active:scale-95 transition-transform">길드 · 개인 참가 하러 가기</button>

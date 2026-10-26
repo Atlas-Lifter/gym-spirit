@@ -5,6 +5,7 @@ import {
   GUILD_EMBLEMS, GUILD_COLORS, guildColor, GUILD_ROLES, COACH_MAX, MEMBER_TIERS, memberTier, nextMemberTier,
   guildLevelInfo, GUILD_SKILLS, skillLv, skillPoints, weeklyMissions, raidOf, guildErrorText, CHEER_DAILY, claimStreak, guildBadges,
 } from './guildSystem.js';
+import { HERO_BG, heroBg } from './theme.js';
 
 // 길드: 만들기·찾기·가입, 내 길드(레이드 보스·주간 미션·출석부·길드원 계급·스킬·관리)
 
@@ -265,9 +266,7 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
   if (!g) {
     return (
       <div className="space-y-3">
-        <div className="relative rounded-[28px] bg-[#070b0f] p-5 overflow-hidden text-white">
-          <div className="absolute -top-16 -left-10 w-48 h-48 rounded-full bg-emerald-500/30 blur-3xl" />
-          <div className="absolute -bottom-20 -right-10 w-56 h-56 rounded-full bg-blue-600/35 blur-3xl" />
+        <div className="relative rounded-[28px] p-5 overflow-hidden text-white" style={{ background: HERO_BG }}>
           <div className="relative">
             <div className="text-[11px] font-black tracking-[.25em] text-emerald-300">GUILD</div>
             <h3 className="text-xl font-black mt-1">함께 들면 더 무거워져요</h3>
@@ -383,9 +382,7 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
   return (
     <div className="space-y-3">
       {/* 길드 카드 */}
-      <div className="relative rounded-[28px] bg-[#070b0f] p-5 overflow-hidden text-white">
-        <div className="absolute -top-16 -left-10 w-52 h-52 rounded-full blur-3xl opacity-40" style={{ background: c.from }} />
-        <div className="absolute -bottom-20 -right-10 w-56 h-56 rounded-full bg-blue-600/30 blur-3xl" />
+      <div className="relative rounded-[28px] p-5 overflow-hidden text-white" style={{ background: heroBg(c.from) }}>
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'linear-gradient(#34d399 1px, transparent 1px), linear-gradient(90deg, #34d399 1px, transparent 1px)', backgroundSize: '26px 26px' }} />
         <div className="relative flex items-center gap-4">
           <GuildBadge emblem={g.emblem} color={g.color} size={64} glow />
@@ -450,8 +447,7 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
           </div>
 
           {/* 레이드 보스 */}
-          <div className="relative rounded-[28px] bg-gradient-to-br from-[#1a0b12] to-[#070b0f] p-5 overflow-hidden text-white">
-            <div className="absolute -top-10 right-0 w-40 h-40 rounded-full bg-rose-500/25 blur-3xl" />
+          <div className="relative rounded-[28px] p-5 overflow-hidden text-white" style={{ background: heroBg('#f43f5e', '#7c3aed') }}>
             <div className="relative flex items-center gap-4">
               <div className={`text-6xl ${raid.defeated ? 'grayscale opacity-50' : 'animate-[pulse_2.4s_ease-in-out_infinite]'}`}>{raid.boss.emoji}</div>
               <div className="flex-1 min-w-0">

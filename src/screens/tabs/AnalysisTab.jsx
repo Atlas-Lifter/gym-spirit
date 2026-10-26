@@ -66,7 +66,7 @@ export function AnalysisTab() {
   const trendMax = Math.max(...trendWeeks.map(w => w.sets), load.chronicSets, 10);
   return (
     <div className="flex-1 bg-neutral-50 text-neutral-900 pb-28 overflow-y-auto animate-fade-in">
-      <div className="bg-white px-6 py-6 shadow-sm mb-4 sticky top-0 z-20 border-b border-neutral-100 flex justify-between items-center">
+      <div className="bg-neutral-50/90 backdrop-blur-md px-6 pt-5 pb-3 mb-2 sticky top-0 z-20 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-black text-neutral-900 tracking-tight">{String(weekInfo.title)}</h2>
           <p className="text-sm font-bold text-neutral-400 mt-1">{String(weekInfo.subtitle)}</p>

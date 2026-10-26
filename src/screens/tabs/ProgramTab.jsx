@@ -14,9 +14,9 @@ export function ProgramTab() {
     setSelectedProgramModal,
   } = useApp();
   return (
-    <div className="flex-1 bg-white pb-28 overflow-y-auto animate-fade-in text-neutral-900">
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md z-20 px-5 pt-5 pb-3 border-b border-neutral-100">
-         <div className="bg-neutral-100 rounded-xl p-3.5 flex items-center gap-2 mb-4 shadow-inner">
+    <div className="flex-1 bg-neutral-50 pb-28 overflow-y-auto animate-fade-in text-neutral-900">
+      <div className="sticky top-0 bg-neutral-50/90 backdrop-blur-md z-20 px-5 pt-5 pb-3">
+         <div className="bg-white border border-neutral-100 rounded-xl p-3.5 flex items-center gap-2 mb-4 shadow-sm">
             <Search className="w-5 h-5 text-neutral-400" />
             <input type="text" placeholder="루틴 또는 코치 이름을 검색하세요" className="bg-transparent border-none outline-none w-full text-sm font-bold text-neutral-900 placeholder:text-neutral-400" />
          </div>
