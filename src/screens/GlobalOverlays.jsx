@@ -1,5 +1,4 @@
-import React from 'react';
-import { AdminConsole } from '../AdminConsole.jsx';
+import React, { lazy, Suspense } from 'react';
 import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, Share2, X, Zap } from 'lucide-react';
 import * as cloud from '../cloud.js';
 import { SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
@@ -14,6 +13,9 @@ import { FullBodyAvatar } from '../realAvatar.jsx';
 import { ALARM_SOUNDS, REPEAT_OPTIONS, REST_OPTIONS } from '../restAlarm.js';
 import { useApp } from '../appContext.js';
 
+
+// 운영자 콘솔 화면은 운영자 계정에서만 따로 내려받는다 (다른 회원의 앱에는 코드조차 오지 않는다)
+const AdminConsole = lazy(() => import('../AdminConsole.jsx').then(m => ({ default: m.AdminConsole })));
 // 어느 화면에서나 위에 뜨는 창들: 운동 설명서, 앱 설치 안내, 알림 등
 export function GlobalOverlays() {
   const {
@@ -84,7 +86,7 @@ export function GlobalOverlays() {
   return (
     <>
       <InstallSheet open={isInstallOpen} onClose={() => setIsInstallOpen(false)} onToast={showToast} />
-      {amAdmin && <AdminConsole open={isAdminConsoleOpen && adminMode} onClose={() => setIsAdminConsoleOpen(false)} api={adminApiImpl} onToast={showToast} onNoticeChanged={refreshNotice} />}
+      {amAdmin && adminMode && isAdminConsoleOpen && <Suspense fallback={null}><AdminConsole open onClose={() => setIsAdminConsoleOpen(false)} api={adminApiImpl} onToast={showToast} onNoticeChanged={refreshNotice} /></Suspense>}
       {guideExerciseId && (() => {
         const ex = EXERCISE_OPTIONS.find(e => e.id === guideExerciseId);
         const guide = EXERCISE_GUIDES[guideExerciseId];
