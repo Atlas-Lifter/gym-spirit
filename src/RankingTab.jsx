@@ -224,8 +224,10 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
   if (selected) lastSelected.current = selected;
   const myGuildId = guildData?.guild?.id || null;
 
+  // 운영자 모드(흰 정장)인 운영자는 랭킹에 나오지 않는다
+  const meHidden = isGmOn(me.id, me.profile);
   // 전체 랭킹 항목: 길드는 엠블럼, 개인은 아바타
-  const entries = useMemo(() => globalEntries.map(e => ({
+  const entries = useMemo(() => globalEntries.filter(e => !(e.kind === 'solo' && isGmOn(e.id, e.avatar))).map(e => ({
     id: e.id, kind: e.kind, name: e.name || '짐스피릿 유저', emblem: e.emblem, color: e.color, level: e.level, members: e.members,
     volume: Math.round(Number(e.volume) || 0), lift: Math.round(Number(e.lift) || 0),
     profile: e.avatar && Object.keys(e.avatar).length ? e.avatar : null, avatarColor: 'bg-neutral-700',
@@ -233,9 +235,9 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
   })), [globalEntries, myGuildId, meId]);
 
   const list = useMemo(() => {
-    const l = scope === 'friends' ? [...friendUsers, me] : scope === 'global' ? [...entries] : [];
+    const l = scope === 'friends' ? [...friendUsers.filter(u => !isGmOn(u.id, u.profile)), ...(meHidden ? [] : [me])] : scope === 'global' ? [...entries] : [];
     return l.sort((a, b) => b[metric] - a[metric]);
-  }, [friendUsers, entries, me, scope, metric]);
+  }, [friendUsers, entries, me, meHidden, scope, metric]);
   const myIndex = list.findIndex(u => u.isMe);
   const myEntry = myIndex >= 0 ? list[myIndex] : null;
   const above = myIndex > 0 ? list[myIndex - 1] : null;
@@ -335,14 +337,18 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
               </div>
               <div className="text-right">
                 <div className="text-[10px] font-bold text-white/50">친구 중</div>
-                <div className="text-3xl font-black leading-none">{myIndex + 1}<span className="text-sm text-white/60">위</span></div>
-                <div className="text-[10px] font-black text-emerald-300 mt-0.5">{percentile < 100 ? `상위 ${percentile}%` : '도전 중'}</div>
+                {meHidden ? (
+                  <><div className="text-lg font-black leading-none mt-1">랭킹 제외</div><div className="text-[10px] font-black text-white/50 mt-1">운영자 모드</div></>
+                ) : (
+                  <><div className="text-3xl font-black leading-none">{myIndex + 1}<span className="text-sm text-white/60">위</span></div>
+                  <div className="text-[10px] font-black text-emerald-300 mt-0.5">{percentile < 100 ? `상위 ${percentile}%` : '도전 중'}</div></>
+                )}
               </div>
             </div>
             <div className="mt-3">
               <div className="flex justify-between text-[10px] font-bold text-white/50 mb-1">
                 <span>{nt ? `${nt.icon} ${nt.name}까지 ${(nt.min - me.volume).toLocaleString()}kg` : '최고 티어 달성!'}</span>
-                <span>{above ? `${above.name}님까지 ${(above[metric] - me[metric]).toLocaleString()}${METRIC[metric].unit}` : myIndex === 0 && list.length > 1 ? '1위를 지키는 중' : ''}</span>
+                <span>{meHidden ? '일반 유저 모드로 바꾸면 다시 순위에 들어가요' : above ? `${above.name}님까지 ${(above[metric] - me[metric]).toLocaleString()}${METRIC[metric].unit}` : myIndex === 0 && list.length > 1 ? '1위를 지키는 중' : ''}</span>
               </div>
               <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-cyan-300 transition-all duration-700" style={{ width: `${Math.max(3, tierPct)}%` }} /></div>
             </div>
@@ -366,6 +372,11 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
               </div>
             </div>
           </button>
+        ) : meHidden ? (
+          <div className="rounded-[26px] p-4 border border-white/5 text-white shadow-[0_12px_28px_rgba(7,11,15,0.18)]" style={{ background: HERO_BG }}>
+            <div className="flex items-center gap-1.5 text-sm font-black">운영자 모드에서는 랭킹에 나오지 않아요 <GmBadge small /></div>
+            <div className="text-[11px] font-bold text-white/50 mt-1 leading-relaxed">개인 순위와 길드 평균·MVP에서 빠져 있어요. 일반 유저 모드로 바꾸면 다시 반영돼요.</div>
+          </div>
         ) : !guest && (
           <div className="rounded-[26px] p-4 border border-white/5 text-white shadow-[0_12px_28px_rgba(7,11,15,0.18)]" style={{ background: HERO_BG }}>
             <div className="text-sm font-black">아직 전체 랭킹에 등록하지 않았어요</div>
@@ -384,9 +395,10 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
             : <GuildCenter api={guildApi} data={guildData} loading={guildLoading} reload={reloadGuild} meId={meId} myGuildRank={myGuildRank} onToast={onToast} Avatar3={Avatar3} onClaimXp={onClaimXp} claimedKeys={claimedKeys} />
         ) : scope === 'friends' && guest ? (
           loginCard('친구 랭킹은 회원 전용이에요', '게스트 기록은 이 기기에만 있어요. 가입하고 친구를 추가하면 서로의 순위를 비교하고 응원할 수 있어요.')
-        ) : loading && list.length <= (scope === 'friends' ? 1 : 0) ? (
+        ) : loading ? (
+          /* 새 기록을 받아오는 동안은 지난 순위를 보여주지 않는다 (누른 순위와 시트 순위가 어긋나지 않게) */
           <div className="bg-white rounded-[28px] border border-neutral-100 p-10 flex justify-center"><div className="w-6 h-6 rounded-full border-2 border-neutral-200 border-t-emerald-500 animate-spin" /></div>
-        ) : list.length <= (scope === 'friends' ? 1 : 0) ? (
+        ) : list.length <= (scope === 'friends' && !meHidden ? 1 : 0) ? (
           <div className="bg-white rounded-[28px] border border-neutral-100 p-8 text-center">
             <div className="text-3xl mb-2">{scope === 'friends' ? '🤝' : '🏁'}</div>
             <p className="text-sm font-black text-neutral-900 mb-1">{scope === 'friends' ? '아직 함께하는 친구가 없어요' : '아직 랭킹에 등록한 길드나 개인이 없어요'}</p>

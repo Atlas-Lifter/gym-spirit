@@ -706,7 +706,8 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
           </div>
           <Segmented value={rankBy} onChange={setRankBy} options={[['volume', '이번 주 볼륨'], ['days', '출석'], ['contrib', '누적 기여'], ['lift', '3대']]} />
           <div className="bg-white rounded-[28px] border border-neutral-100 overflow-hidden">
-            {[...members].sort((a, b) => (Number(b[rankBy]) || 0) - (Number(a[rankBy]) || 0) || (b.contrib || 0) - (a.contrib || 0)).map((m, i) => {
+            {/* 운영자 모드인 운영자는 길드원 랭킹에서 빠진다 */}
+            {members.filter(m => !isGmOn(m.id, m.avatar)).sort((a, b) => (Number(b[rankBy]) || 0) - (Number(a[rankBy]) || 0) || (b.contrib || 0) - (a.contrib || 0)).map((m, i) => {
               const t = memberTier(m.contrib);
               const val = Number(m[rankBy]) || 0;
               const valText = rankBy === 'days' ? `${val}회` : rankBy === 'contrib' ? `${num(val)} XP` : `${num(val)}kg`;
