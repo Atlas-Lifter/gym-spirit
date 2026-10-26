@@ -78,6 +78,24 @@ export const ANATOMY_BACK_MUSCLES = [
 ];
 // 종목별 주동근(p) / 협응근(s). 여기 없는 종목은 target 문자열로 추정한다.
 export const EXERCISE_MUSCLE_OVERRIDES = {
+  // 사진으로 추가한 종목 중 부위 이름만으로는 근육이 정확히 안 나오는 것
+  back_ext: { p: ['erectors', 'glutes'], s: ['hamstrings'] },
+  superman: { p: ['erectors', 'glutes'], s: ['delt_rear'] },
+  good_morning: { p: ['hamstrings', 'erectors'], s: ['glutes'] },
+  sumo_dl: { p: ['glutes', 'quads', 'adductors'], s: ['hamstrings', 'erectors', 'traps'] },
+  jump_sq: { p: ['quads', 'glutes'], s: ['calves'] },
+  box_jump: { p: ['quads', 'glutes'], s: ['calves', 'hamstrings'] },
+  mountain: { p: ['abs'], s: ['delt_front', 'quads', 'obliques'] },
+  dead_bug: { p: ['abs'], s: ['obliques'] },
+  bench_dips: { p: ['triceps'], s: ['pec_lower', 'delt_front'] },
+  close_pushup: { p: ['triceps'], s: ['pec_lower', 'delt_front'] },
+  decline_pushup: { p: ['pec_upper'], s: ['delt_front', 'triceps'] },
+  incline_pushup: { p: ['pec_lower'], s: ['delt_front', 'triceps'] },
+  weighted_pu: { p: ['lats'], s: ['biceps', 'midback'] },
+  lr_front: { p: ['delt_front', 'delt_side'], s: ['traps'] },
+  rope_rd_row: { p: ['delt_rear', 'midback'], s: ['traps'] },
+  cable_hc: { p: ['biceps', 'forearm'], s: [] },
+  plate_twist: { p: ['obliques'], s: ['abs'] },
   sq: { p: ['quads', 'glutes'], s: ['hamstrings', 'adductors', 'erectors'] },
   fsq: { p: ['quads'], s: ['glutes', 'abs'] },
   zercher_sq: { p: ['quads'], s: ['glutes', 'abs', 'biceps'] },

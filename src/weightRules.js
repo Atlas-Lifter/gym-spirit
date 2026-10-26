@@ -11,11 +11,11 @@ export const STANDARD_BAR = 20;
 // 일반 헬스장에는 25kg 원판이 없어서 한쪽에 꽂는 가장 큰 원판은 20kg
 export const GYM_PLATES = [20, 15, 10, 5, 2.5, 1.25];
 
-const PLATE_MACHINES = ['lpd', 's_lpd', 'hack_sq', 'vsq', 'tbar', 'smith_sq', 'sip', 'smith_ohp'];
+const PLATE_MACHINES = ['lpd', 's_lpd', 'hack_sq', 'vsq', 'tbar', 'smith_sq', 'sip', 'smith_ohp', 'smith_bp', 'smith_row', 'inc_cpm', 'high_row', 'machine_shrug'];
 const ONE_END_BARBELL = ['landmine_p', 'meadows_row'];
 const ASSISTED = ['astpu'];
 // 맨몸 종목에서 실제로 드는 체중 비율
-const BODY_LOAD = { pu: 1, cu: 1, dips: 1, pushup: 0.65, inv_row: 0.5 };
+const BODY_LOAD = { pu: 1, cu: 1, dips: 1, pushup: 0.65, inv_row: 0.5, weighted_pu: 1, decline_pushup: 0.75, incline_pushup: 0.45, close_pushup: 0.65, bench_dips: 0.5 };
 
 const RULES = {
   barbell: { key: 'barbell', label: 'KG', hint: '봉 20kg 포함 총중량', placeholder: '20', bar: STANDARD_BAR, plates: 'both', step: 2.5 },

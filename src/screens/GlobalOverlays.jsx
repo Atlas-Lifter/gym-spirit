@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, Share2, X, Zap } from 'lucide-react';
 import * as cloud from '../cloud.js';
+import { EXERCISE_TIPS } from '../data/exerciseTips.js';
 import { ExercisePhotoPair, SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
 import { MUSCLE_LABELS, getExerciseMuscles } from '../data/anatomy.js';
 import { EXERCISE_OPTIONS, getExName } from '../data/catalog.js';
@@ -118,10 +119,13 @@ export function GlobalOverlays() {
       {amAdmin && adminMode && isAdminConsoleOpen && <Suspense fallback={null}><AdminConsole open onClose={() => setIsAdminConsoleOpen(false)} api={adminApiImpl} onToast={showToast} onNoticeChanged={refreshNotice} /></Suspense>}
       {guideExerciseId && (() => {
         const ex = EXERCISE_OPTIONS.find(e => e.id === guideExerciseId);
-        const guide = EXERCISE_GUIDES[guideExerciseId];
+        // 그림 설명서가 없는 종목(사진으로 추가한 종목)은 사진 + 짧은 설명으로 보여준다
+        const drawn = EXERCISE_GUIDES[guideExerciseId];
+        const tip = EXERCISE_TIPS[guideExerciseId];
+        const guide = drawn || (tip && { sum: tip.sum, warn: tip.warn, steps: [] });
         if (!ex || !guide) return null;
         const muscles = getExerciseMuscles(ex);
-        const pattern = { ...PATTERNS[guide.pt], ...(guide.eq ? { equip: guide.eq } : {}) };
+        const pattern = drawn ? { ...PATTERNS[guide.pt], ...(guide.eq ? { equip: guide.eq } : {}) } : null;
         const pickFromList = isAddExerciseModalOpen;
         return (
           <div className="fixed inset-0 bg-black/70 z-[96] flex flex-col justify-end animate-fade-in" onClick={() => setGuideExerciseId(null)}>
@@ -147,6 +151,16 @@ export function GlobalOverlays() {
 
                 <div>
                   <h3 className="text-sm font-black text-neutral-900 mb-3">운동 방법</h3>
+                  {!drawn && (
+                    <ol className="space-y-2">
+                      {tip.how.map((step, i) => (
+                        <li key={i} className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-4 flex gap-3">
+                          <span className="w-6 h-6 flex-shrink-0 rounded-full bg-neutral-900 text-white text-xs font-black flex items-center justify-center">{i + 1}</span>
+                          <p className="text-sm font-medium text-neutral-700 leading-relaxed">{step}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
                   <ol className="space-y-3">
                     {guide.steps.map(([frame, title, desc, ghost], i) => (
                       <li key={i} className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
@@ -177,7 +191,7 @@ export function GlobalOverlays() {
                     <p className="text-sm font-medium text-neutral-700 leading-relaxed">{guide.warn}</p>
                   </div>
                 )}
-                <p className="text-[11px] font-bold text-neutral-400 text-center pb-2">빨간색은 주로 쓰는 근육, 연한 빨간색은 함께 쓰는 근육입니다. 파란 화살표는 움직이는 방향입니다.</p>
+                <p className="text-[11px] font-bold text-neutral-400 text-center pb-2">빨간색은 주로 쓰는 근육, 연한 빨간색은 함께 쓰는 근육입니다.{drawn ? ' 파란 화살표는 움직이는 방향입니다.' : ''}</p>
               </div>
 
               <div className="p-4 bg-white border-t border-neutral-100 flex gap-2">
