@@ -12,6 +12,7 @@ import { useApp } from '../appContext.js';
 // 운동 기록 중 화면 (세트 입력·휴식 타이머·운동 완료)
 export function WorkoutScreen() {
   const {
+    requestSaveWorkout,
     addExerciseFromModal,
     addSet,
     adjustTimer,
@@ -192,7 +193,7 @@ export function WorkoutScreen() {
 
       <div className="max-w-md mx-auto w-full px-4 mb-6 relative z-10">
         <button onClick={() => { setSwapTargetExerciseId(null); setIsAddExerciseModalOpen(true); }} className="w-full bg-black text-yellow-300 font-black py-4 rounded-2xl mb-4 h-14 hover:bg-yellow-400/5 transition-colors active:scale-[0.98] shadow-[0_0_18px_rgba(250,204,21,0.25)] flex items-center justify-center gap-2 border border-yellow-400/50"><Plus className="w-5 h-5"/> 종목 추가하기</button>
-        <button onClick={triggerSaveWorkout} className={`w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 h-14 transition-all active:scale-[0.98] text-lg ${session.length > 0 ? 'bg-emerald-400 text-black hover:bg-emerald-300 shadow-[0_0_28px_rgba(16,185,129,0.6)]' : 'bg-neutral-900 text-neutral-600 border border-neutral-800 cursor-not-allowed'}`}><Save className="w-5 h-5 stroke-[3]"/> 훈련 완료 및 저장</button>
+        <button onClick={requestSaveWorkout} className={`w-full font-black py-4 rounded-2xl flex items-center justify-center gap-2 h-14 transition-all active:scale-[0.98] text-lg ${session.length > 0 ? 'bg-emerald-400 text-black hover:bg-emerald-300 shadow-[0_0_28px_rgba(16,185,129,0.6)]' : 'bg-neutral-900 text-neutral-600 border border-neutral-800 cursor-not-allowed'}`}><Save className="w-5 h-5 stroke-[3]"/> 훈련 완료 및 저장</button>
         {session.length > 0 && <button onClick={() => setIsExitConfirmOpen(true)} className="w-full mt-3 py-3 text-sm font-black text-rose-400/80 hover:text-rose-300 transition-colors">🏳️ 운동 그만두기</button>}
       </div>
 

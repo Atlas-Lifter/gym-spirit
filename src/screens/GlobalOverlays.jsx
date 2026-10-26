@@ -19,6 +19,10 @@ const AdminConsole = lazy(() => import('../AdminConsole.jsx').then(m => ({ defau
 // 어느 화면에서나 위에 뜨는 창들: 운동 설명서, 앱 설치 안내, 알림 등
 export function GlobalOverlays() {
   const {
+    saveCheck,
+    setSaveCheck,
+    saveAllAsDone,
+    saveTickedOnly,
     acceptFriend,
     activeUser,
     addExerciseFromModal,
@@ -243,6 +247,19 @@ export function GlobalOverlays() {
                   <span className={`w-12 h-7 rounded-full p-1 transition-colors ${timerSettings[key] ? 'bg-emerald-500' : 'bg-neutral-700'}`}><span className={`block w-5 h-5 rounded-full bg-white transition-transform ${timerSettings[key] ? 'translate-x-5' : ''}`} /></span>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+        {saveCheck && (
+          <div className="fixed inset-0 bg-black/70 z-[86] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setSaveCheck(null)}>
+            <div className="bg-[#060b10] border border-emerald-500/40 rounded-[32px] p-6 max-w-sm w-full text-white shadow-[0_0_30px_rgba(16,185,129,0.25)] animate-scale-up" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-black mb-2">완료 체크 안 한 세트가 {saveCheck.unticked}개 있어요</h3>
+              <p className="text-sm font-bold text-neutral-400 mb-6 leading-relaxed">볼륨·랭킹·길드 레이드에는 <span className="text-emerald-300">DONE을 체크한 세트만</span> 들어가요. 실제로 다 하셨다면 모두 완료로 저장해 주세요.</p>
+              <div className="flex flex-col gap-2">
+                <button onClick={saveAllAsDone} className="w-full py-3.5 bg-emerald-400 text-black font-black rounded-xl active:scale-95 transition-transform shadow-[0_0_18px_rgba(16,185,129,0.5)]">모두 완료로 저장하기</button>
+                {saveCheck.done > 0 && <button onClick={saveTickedOnly} className="w-full py-3.5 bg-black border border-emerald-500/40 text-emerald-300 font-black rounded-xl active:scale-95 transition-transform">체크한 {saveCheck.done}세트만 저장하기</button>}
+                <button onClick={() => setSaveCheck(null)} className="w-full py-3 text-neutral-400 font-black text-sm">계속 운동하기</button>
+              </div>
             </div>
           </div>
         )}

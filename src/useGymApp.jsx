@@ -528,6 +528,27 @@ export function useGymApp() {
     setSession([]); setWorkoutDurationSec(0); setWorkoutMinimized(false);
     start?.();
   };
+  // 완료 체크를 안 한 세트가 있으면 저장 전에 한 번 묻는다 (체크한 세트만 볼륨·랭킹에 들어가기 때문)
+  const [saveCheck, setSaveCheck] = useState(null);
+  const hasReps = (st) => Number(st.reps) > 0;
+  const requestSaveWorkout = () => {
+    const sets = session.flatMap(ex => ex.sets || []);
+    const unticked = sets.filter(st => !st.completed && hasReps(st)).length;
+    if (session.length > 0 && unticked > 0) { setSaveCheck({ unticked, done: sets.filter(st => st.completed).length }); return; }
+    triggerSaveWorkout();
+  };
+  const saveAllAsDone = () => {
+    const all = session.map(ex => ({ ...ex, sets: (ex.sets || []).map(st => (hasReps(st) ? { ...st, completed: true } : st)) }));
+    setSaveCheck(null);
+    setSession(all);
+    triggerSaveWorkout(all);
+  };
+  const saveTickedOnly = () => {
+    setSaveCheck(null);
+    const done = completedOnlySession();
+    if (!done.length) { showToast('완료 체크한 세트가 없어요. 세트 오른쪽 DONE을 눌러 주세요.'); return; }
+    triggerSaveWorkout(done);
+  };
   const completedOnlySession = () => session
   .map(ex => ({ ...ex, sets: (ex.sets || []).filter(st => st.completed) }))
   .filter(ex => ex.sets.length > 0);
@@ -1159,12 +1180,14 @@ export function useGymApp() {
     const count = {};
     pastWorkoutDates.slice(0, 20).forEach(d => (safeWorkouts[d] || []).forEach(ex => { const n = getExName(ex); count[n] = (count[n] || 0) + 1; }));
     const fav = Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
-    const lastDate = pastWorkoutDates[0];
+    // 최근 루틴은 볼륨과 같은 기준(완료 체크한 세트)으로 보여준다
+    const doneOf = (d) => (safeWorkouts[d] || []).map(ex => ({ ex, sets: (ex.sets || []).filter(st => st.completed) })).filter(x => x.sets.length);
+    const lastDate = pastWorkoutDates.find(d => doneOf(d).length > 0);
     const last_routine = lastDate ? {
       date: lastDate,
-      items: safeWorkouts[lastDate].slice(0, 12).map(ex => ({
+      items: doneOf(lastDate).slice(0, 12).map(({ ex, sets }) => ({
         id: String(getExId(ex)), name: getExName(ex), target: getExTarget(ex), tool: String(ex.exercise?.tool || ex.tool || ''),
-        sets: (ex.sets || []).slice(0, 10).map(st => ({ weight: String(st.weight || ''), reps: String(st.reps || '') })),
+        sets: sets.slice(0, 10).map(st => ({ weight: String(st.weight || ''), reps: String(st.reps || '') })),
       })),
     } : null;
     return {
@@ -1554,6 +1577,12 @@ export function useGymApp() {
     saveBodyGoal,
     saveBodyStats,
     triggerSaveWorkout,
+    requestSaveWorkout,
+    saveCheck,
+    setSaveCheck,
+    saveAllAsDone,
+    saveTickedOnly,
+    buildPublicProfile,
     minimizeWorkout,
     resumeWorkout,
     guardNewWorkout,

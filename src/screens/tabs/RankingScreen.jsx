@@ -29,6 +29,7 @@ export function RankingScreen() {
     showToast,
     stealRoutine,
     claimQuestRewards,
+    buildPublicProfile,
     rankingScope,
     setRankingScope,
   } = useApp();
@@ -40,8 +41,12 @@ export function RankingScreen() {
   const left = Math.ceil((new Date(sun.getFullYear(), sun.getMonth(), sun.getDate() + 1) - new Date()) / 86400000);
   const me = {
     id: rankingUser?.id || 'guest', name: currentUser?.profile?.nickname || '나',
-    volume: getWeeklyVolumeData(weekInfo.monday).total, lift: getTotalLift3(), avatarColor: 'bg-neutral-800', fav: '전신', isMe: true, profile: currentUser?.profile,
+    volume: getWeeklyVolumeData(weekInfo.monday).total, lift: getTotalLift3(), avatarColor: 'bg-neutral-800', isMe: true, profile: currentUser?.profile,
   };
+  // 내 시트에도 친구들이 보는 것과 같은 최근 루틴·최애 종목을 보여준다
+  const pub = buildPublicProfile();
+  me.routine = pub.last_routine;
+  me.fav = pub.fav || '-';
   return (
     <RankingTab
       initialScope={rankingScope}
