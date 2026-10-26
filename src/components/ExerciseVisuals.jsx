@@ -1,7 +1,8 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { ANATOMY_BACK_MUSCLES, ANATOMY_MUSCLES, ANATOMY_OUTLINE_HALF, ANATOMY_SKIN_HALF, MUSCLE_THUMB_VIEWBOX, getExerciseMuscleView, getExerciseMuscles } from '../data/anatomy.js';
 import { EXERCISE_OPTIONS } from '../data/catalog.js';
 import { EXERCISE_GUIDES } from '../exerciseGuides.js';
+import { exercisePhotos } from '../data/exercisePhotos.js';
 import { PATTERNS } from '../movementPatterns.jsx';
 import { PoseFigure } from '../poseFigure.jsx';
 
@@ -56,14 +57,53 @@ export const ExerciseMotionThumb = ({ exerciseId, size = 'w-14 h-14', showShadow
     </div>
   );
 };
-// 종목 썸네일: 실제 동작(사람·기구) 그림을 먼저, 그 옆에 해부도로 주동근(진한 빨강)·협응근(연한 빨강)을 보여준다
+// 실제 운동 사진 썸네일: 시작 자세와 끝 자세 사진이 번갈아 보여 어떤 기구·동작인지 바로 알 수 있다
+const PHOTO_ANIM = '@keyframes exPhotoSwap { 0%, 42% { opacity: 0; } 50%, 92% { opacity: 1; } 100% { opacity: 0; } } .ex-photo-b { animation: exPhotoSwap 2.6s ease-in-out infinite; } @media (prefers-reduced-motion: reduce) { .ex-photo-b { animation: none; } }';
+export const ExercisePhotoThumb = ({ exerciseId, size = 'w-14 h-14', showShadow = false, onError }) => {
+  const photos = exercisePhotos(exerciseId);
+  if (!photos) return null;
+  return (
+    // 사진은 가로로 긴(3:2) 원본 비율 그대로: 높이는 size의 h-*를 따르고 너비는 비율로 정한다 (사람과 기구가 잘리지 않게)
+    <div className={`${size.replace(/\bw-\S+/, '')} aspect-[3/2] relative bg-neutral-200 rounded-xl overflow-hidden border border-neutral-200 flex-shrink-0 ${showShadow ? 'shadow-md' : ''}`}>
+      <style>{PHOTO_ANIM}</style>
+      <img src={photos[0]} alt="" loading="lazy" decoding="async" onError={onError} className="absolute inset-0 w-full h-full object-cover" />
+      <img src={photos[1]} alt="" loading="lazy" decoding="async" className="ex-photo-b absolute inset-0 w-full h-full object-cover" />
+    </div>
+  );
+};
+// 운동 설명서 위쪽의 큰 사진 (시작 → 끝)
+export const ExercisePhotoPair = ({ exerciseId }) => {
+  const photos = exercisePhotos(exerciseId);
+  if (!photos) return null;
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {photos.map((src, i) => (
+        <div key={src} className="relative rounded-2xl overflow-hidden bg-neutral-200 aspect-[3/2]">
+          <img src={src} alt={i ? '끝 자세' : '시작 자세'} loading="lazy" className="w-full h-full object-cover" />
+          <span className="absolute top-2 left-2 text-[10px] font-black text-white bg-black/60 px-1.5 py-0.5 rounded-md">{i ? '② 끝 자세' : '① 시작 자세'}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+// 종목 썸네일: 실제 운동 사진(없으면 동작 그림)을 먼저, 그 옆에 해부도로 주동근(진한 빨강)·협응근(연한 빨강)을 보여준다
 export const SmartExerciseThumbnail = ({ exerciseId, target, size = "w-14 h-14", showShadow = true, motion = true }) => {
+  const [photoFailed, setPhotoFailed] = useState(false);
   const exercise = EXERCISE_OPTIONS.find(e => e.id === exerciseId) || { id: exerciseId, name: '', target: target || '전신' };
   const muscleBox = (
     <div className={`${size} bg-[#f3f4f7] rounded-xl flex items-center justify-center overflow-hidden border border-neutral-200 flex-shrink-0 ${showShadow ? 'shadow-md' : ''}`}>
       <ExerciseMuscleMap exercise={exercise} />
     </div>
   );
+  const photo = !photoFailed && exercisePhotos(exerciseId);
+  if (photo) {
+    return (
+      <div className="flex gap-1 flex-shrink-0">
+        <ExercisePhotoThumb exerciseId={exerciseId} size={size} showShadow={showShadow} onError={() => setPhotoFailed(true)} />
+        {muscleBox}
+      </div>
+    );
+  }
   if (!motion || !EXERCISE_GUIDES[exerciseId]) return muscleBox;
   return (
     <div className="flex gap-1 flex-shrink-0">

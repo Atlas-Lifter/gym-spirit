@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, Share2, X, Zap } from 'lucide-react';
 import * as cloud from '../cloud.js';
-import { SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
+import { ExercisePhotoPair, SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
 import { MUSCLE_LABELS, getExerciseMuscles } from '../data/anatomy.js';
 import { EXERCISE_OPTIONS, getExName } from '../data/catalog.js';
 import { EXERCISE_GUIDES } from '../exerciseGuides.js';
@@ -137,6 +137,7 @@ export function GlobalOverlays() {
               </div>
 
               <div className="flex-1 overflow-y-auto bg-neutral-50 px-5 py-5 space-y-5">
+                <ExercisePhotoPair exerciseId={ex.id} />
                 <p className="text-sm font-bold text-neutral-600 leading-relaxed">{guide.sum}</p>
 
                 <div className="flex flex-wrap gap-1.5">
