@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Crown, Heart, UserPlus, Check, Clock, Download, ChevronDown, X } from 'lucide-react';
+import { Search, Crown, Heart, UserPlus, Check, Clock, Download, ChevronDown, X, Lock } from 'lucide-react';
+import { GuildCenter, GuildBadge, GuildViewSheet } from './GuildCenter.jsx';
 
 // 랭킹 탭: 부드러운 전환(슬라이딩 탭, 순위 재정렬 애니메이션, 숫자 카운트업, 끌어서 닫는 시트)에 집중한 화면.
 
@@ -107,7 +108,7 @@ const HeartBurst = ({ burst }) => (
   </span>
 );
 
-const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCheer, onSteal, onFriend, onClose, Avatar3 }) => {
+const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCheer, onSteal, onFriend, onClose, Avatar3, limited }) => {
   const [burst, setBurst] = useState(0);
   const [confirmSteal, setConfirmSteal] = useState(false);
   const [pop, setPop] = useState(false);
@@ -136,7 +137,7 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
             {isMe && <span className="text-[10px] font-black bg-[#4768ff] text-white px-1.5 py-0.5 rounded-md">ME</span>}
           </div>
           <div className={`inline-flex items-center gap-1 mt-1 text-[11px] font-black px-2 py-0.5 rounded-lg bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name}</div>
-          <div className="text-xs font-bold text-neutral-400 mt-1">{METRIC[metric].label} {rank}위 · 최애 {user.fav || '-'}</div>
+          <div className="text-xs font-bold text-neutral-400 mt-1">{METRIC[metric].label} {rank}위{limited ? ' · 개인 참가' : ` · 최애 ${user.fav || '-'}`}{user.guild ? ` · ${user.guild.emblem} ${user.guild.name}` : ''}</div>
         </div>
         <button onClick={onClose} aria-label="닫기" className="p-2 rounded-full bg-neutral-100 text-neutral-500 active:scale-90 transition-transform self-start"><X className="w-4 h-4" /></button>
       </div>
@@ -150,6 +151,9 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
         ))}
       </div>
 
+      {limited ? (
+        <div className="mb-5 bg-neutral-50 border border-neutral-100 rounded-2xl px-4 py-3 text-xs font-bold text-neutral-500 flex items-center gap-2"><Lock className="w-4 h-4 text-neutral-400" /> 친구가 되면 최근 루틴을 보고 가져올 수 있어요</div>
+      ) : (
       <div className="mb-5">
         <div className="text-xs font-black text-neutral-500 mb-2">🔥 최근 루틴{routineDate && <span className="text-neutral-400 font-bold"> · {routineDate}</span>}</div>
         {routine.length === 0 && <div className="bg-neutral-50 border border-neutral-100 rounded-xl px-3.5 py-4 text-center text-xs font-bold text-neutral-400">아직 저장된 운동 기록이 없어요</div>}
@@ -162,6 +166,7 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
           ))}
         </div>
       </div>
+      )}
 
       {!isMe && (
         <>
@@ -170,9 +175,9 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
               <HeartBurst burst={burst} />
               <Heart className={`w-4 h-4 fill-current transition-transform ${pop ? 'scale-125' : ''}`} /> 응원하기
             </button>
-            <button disabled={!routine.length} onClick={() => setConfirmSteal(c => !c)} className={`flex-1 disabled:opacity-40 disabled:shadow-none py-3.5 rounded-2xl font-black text-sm active:scale-[0.97] transition-all flex items-center justify-center gap-1.5 ${confirmSteal ? 'bg-neutral-900 text-white' : 'bg-[#4768ff] text-white shadow-[0_10px_24px_rgba(71,104,255,0.3)]'}`}>
+            {!limited && <button disabled={!routine.length} onClick={() => setConfirmSteal(c => !c)} className={`flex-1 disabled:opacity-40 disabled:shadow-none py-3.5 rounded-2xl font-black text-sm active:scale-[0.97] transition-all flex items-center justify-center gap-1.5 ${confirmSteal ? 'bg-neutral-900 text-white' : 'bg-[#4768ff] text-white shadow-[0_10px_24px_rgba(71,104,255,0.3)]'}`}>
               <Download className="w-4 h-4" /> 루틴 가져오기
-            </button>
+            </button>}
           </div>
           <div className="grid transition-all duration-300 ease-out" style={{ gridTemplateRows: confirmSteal ? '1fr' : '0fr' }}>
             <div className="overflow-hidden">
@@ -199,29 +204,49 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
   );
 };
 
-export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3 }) => {
+// 랭킹 탭
+// · 전체 랭킹: 랭킹에 등록한 길드(소속 인원 평균)와 개인 참가자만
+// · 친구 랭킹: 서로 친구인 사람만 (친구가 아니면 기록이 보이지 않는다)
+// · 길드: 만들기·가입·내 길드
+export const RankingTab = ({ friendUsers = [], globalEntries = [], me, meId, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3, guildApi, guildData, guildLoading, reloadGuild, onToast }) => {
   const [scope, setScope] = useState('global');
   const [metric, setMetric] = useState('volume');
   const [selected, setSelected] = useState(null);
+  const [viewGuild, setViewGuild] = useState(null);
   const [meVisible, setMeVisible] = useState(true);
   const rowRefs = useRef(new Map());
   const rects = useRef(new Map());
   const meRowRef = useRef(null);
   const lastSelected = useRef(null); // 시트가 내려가는 동안에도 내용을 유지
   if (selected) lastSelected.current = selected;
+  const myGuildId = guildData?.guild?.id || null;
+
+  // 전체 랭킹 항목: 길드는 엠블럼, 개인은 아바타
+  const entries = useMemo(() => globalEntries.map(e => ({
+    id: e.id, kind: e.kind, name: e.name || '짐스피릿 유저', emblem: e.emblem, color: e.color, level: e.level, members: e.members,
+    volume: Math.round(Number(e.volume) || 0), lift: Math.round(Number(e.lift) || 0),
+    profile: e.avatar && Object.keys(e.avatar).length ? e.avatar : null, avatarColor: 'bg-neutral-700',
+    isMe: e.kind === 'guild' ? e.id === myGuildId : e.id === meId,
+  })), [globalEntries, myGuildId, meId]);
 
   const list = useMemo(() => {
-    let l = [...users, me];
-    if (scope === 'friends') l = l.filter(u => u.isMe || friends.includes(u.id));
+    const l = scope === 'friends' ? [...friendUsers, me] : scope === 'global' ? [...entries] : [];
     return l.sort((a, b) => b[metric] - a[metric]);
-  }, [users, me, scope, metric, friends]);
+  }, [friendUsers, entries, me, scope, metric]);
   const myIndex = list.findIndex(u => u.isMe);
+  const myEntry = myIndex >= 0 ? list[myIndex] : null;
   const above = myIndex > 0 ? list[myIndex - 1] : null;
   const tier = tierOf(me.volume), nt = nextTier(me.volume);
   const tierPct = nt ? ((me.volume - tier.min) / (nt.min - tier.min)) * 100 : 100;
   const topVal = list[0]?.[metric] || 1;
-  const percentile = list.length > 1 ? Math.max(1, Math.round(((myIndex + 1) / list.length) * 100)) : 100;
-  const myVal = useCountUp(me[metric]);
+  const percentile = list.length > 1 && myIndex >= 0 ? Math.max(1, Math.round(((myIndex + 1) / list.length) * 100)) : 100;
+  const myVal = useCountUp(scope === 'global' ? (myEntry?.[metric] || 0) : me[metric]);
+  const myGuildRank = useMemo(() => {
+    if (!myGuildId) return null;
+    const sorted = [...entries].sort((a, b) => b.volume - a.volume);
+    const i = sorted.findIndex(e => e.kind === 'guild' && e.id === myGuildId);
+    return i >= 0 ? i + 1 : null;
+  }, [entries, myGuildId]);
 
   // 정렬·필터가 바뀌기 직전 위치를 기억했다가, 바뀐 뒤 그 차이만큼 미끄러지게 한다 (FLIP)
   const snapshot = () => rowRefs.current.forEach((el, k) => { if (el && el.offsetParent) rects.current.set(k, el.getBoundingClientRect().top); });
@@ -251,10 +276,23 @@ export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers 
   }, [list]);
 
   const change = (setter) => (v) => { snapshot(); setter(v); };
+  const open = (u) => (u.kind === 'guild' ? setViewGuild(u.id) : setSelected(u));
   const podium = list.slice(0, 3);
   const order = [1, 0, 2].filter(i => podium[i]);
   const H = { 0: 'h-28', 1: 'h-20', 2: 'h-16' };
   const medal = ['🥇', '🥈', '🥉'];
+  const Mark = ({ u, size, ring }) => (u.kind === 'guild'
+    ? <GuildBadge emblem={u.emblem} color={u.color} size={size} glow={!!ring} />
+    : <Avatar user={u} size={size} ring={ring} Avatar3={Avatar3} />);
+  const sub = (u) => (u.kind === 'guild' ? `Lv.${u.level} · 👥 ${u.members}명 평균` : u.kind === 'solo' ? '개인 참가' : null);
+  const loginCard = (title, desc) => (
+    <div className="bg-white rounded-[28px] border border-neutral-100 p-8 text-center">
+      <div className="text-3xl mb-2">🔒</div>
+      <p className="text-sm font-black text-neutral-900 mb-1">{title}</p>
+      <p className="text-xs font-bold text-neutral-500 mb-4 leading-relaxed">{desc}</p>
+      <button onClick={onLogin} className="px-6 py-3 rounded-2xl bg-neutral-900 text-white text-sm font-black active:scale-95 transition-transform">회원가입 / 로그인</button>
+    </div>
+  );
 
   return (
     <div className="flex-1 bg-neutral-50 pb-32 overflow-y-auto text-neutral-900 rk-root">
@@ -267,80 +305,113 @@ export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers 
       `}</style>
 
       {/* 헤더 */}
-      <div className="px-5 pt-6 pb-4 bg-gradient-to-b from-[#111827] via-[#1f2937] to-neutral-50">
+      <div className="px-5 pt-6 pb-4 bg-gradient-to-b from-[#070b0f] via-[#111827] to-neutral-50">
         <div className="flex items-end justify-between mb-1">
           <div>
             <div className="text-[11px] font-black text-white/50">{weekLabel}</div>
-            <h2 className="text-2xl font-black text-white tracking-tight">이번 주 랭킹</h2>
+            <h2 className="text-2xl font-black text-white tracking-tight">{scope === 'guild' ? '길드' : '이번 주 랭킹'}</h2>
           </div>
           <button onClick={onFindFriends} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 text-white text-xs font-black backdrop-blur active:scale-95 transition-transform"><Search className="w-3.5 h-3.5" /> 친구 찾기</button>
         </div>
         <p className="text-xs font-bold text-white/50 mb-4">시즌 마감까지 {daysLeft} · 월요일 0시에 새 시즌이 시작돼요</p>
 
         {/* 내 순위 카드 */}
-        <button onClick={() => setSelected(me)} className="w-full text-left rounded-[26px] p-4 bg-white/[0.07] border border-white/10 backdrop-blur-md text-white active:scale-[0.99] transition-transform">
-          <div className="flex items-center gap-3">
-            <Avatar user={me} size={54} ring={`linear-gradient(135deg, ${tier.ring}, #ffffff)`} Avatar3={Avatar3} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-black truncate">{me.name}</span>
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name}</span>
+        {scope === 'friends' && !guest && (
+          <button onClick={() => setSelected(me)} className="w-full text-left rounded-[26px] p-4 bg-white/[0.07] border border-white/10 backdrop-blur-md text-white active:scale-[0.99] transition-transform">
+            <div className="flex items-center gap-3">
+              <Avatar user={me} size={54} ring={`linear-gradient(135deg, ${tier.ring}, #ffffff)`} Avatar3={Avatar3} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black truncate">{me.name}</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name}</span>
+                </div>
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-2xl font-black tabular-nums">{myVal.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-white/50">{METRIC[metric].unit} · {METRIC[metric].label}</span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-2xl font-black tabular-nums">{myVal.toLocaleString()}</span>
-                <span className="text-xs font-bold text-white/50">{METRIC[metric].unit} · {METRIC[metric].label}</span>
+              <div className="text-right">
+                <div className="text-[10px] font-bold text-white/50">친구 중</div>
+                <div className="text-3xl font-black leading-none">{myIndex + 1}<span className="text-sm text-white/60">위</span></div>
+                <div className="text-[10px] font-black text-emerald-300 mt-0.5">{percentile < 100 ? `상위 ${percentile}%` : '도전 중'}</div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-[10px] font-bold text-white/50">{scope === 'friends' ? '친구 중' : '전체'}</div>
-              <div className="text-3xl font-black leading-none">{myIndex + 1}<span className="text-sm text-white/60">위</span></div>
-              <div className="text-[10px] font-black text-emerald-300 mt-0.5">{percentile < 100 ? `상위 ${percentile}%` : '도전 중'}</div>
+            <div className="mt-3">
+              <div className="flex justify-between text-[10px] font-bold text-white/50 mb-1">
+                <span>{nt ? `${nt.icon} ${nt.name}까지 ${(nt.min - me.volume).toLocaleString()}kg` : '최고 티어 달성!'}</span>
+                <span>{above ? `${above.name}님까지 ${(above[metric] - me[metric]).toLocaleString()}${METRIC[metric].unit}` : myIndex === 0 && list.length > 1 ? '1위를 지키는 중' : ''}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-cyan-300 transition-all duration-700" style={{ width: `${Math.max(3, tierPct)}%` }} /></div>
             </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex justify-between text-[10px] font-bold text-white/50 mb-1">
-              <span>{nt ? `${nt.icon} ${nt.name}까지 ${(nt.min - me.volume).toLocaleString()}kg` : '최고 티어 달성!'}</span>
-              <span>{above ? `${above.name}님까지 ${(above[metric] - me[metric]).toLocaleString()}${METRIC[metric].unit}` : myIndex === 0 ? '1위를 지키는 중' : ''}</span>
+          </button>
+        )}
+        {scope === 'global' && (myEntry ? (
+          <button onClick={() => open(myEntry)} className="w-full text-left rounded-[26px] p-4 bg-white/[0.07] border border-white/10 backdrop-blur-md text-white active:scale-[0.99] transition-transform">
+            <div className="flex items-center gap-3">
+              <Mark u={myEntry} size={54} ring="linear-gradient(135deg,#34d399,#ffffff)" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5"><span className="font-black truncate">{myEntry.name}</span><span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white/15">{myEntry.kind === 'guild' ? '내 길드' : '개인 참가'}</span></div>
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-2xl font-black tabular-nums">{myVal.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-white/50">{METRIC[metric].unit} · {myEntry.kind === 'guild' ? `${myEntry.members}명 평균` : METRIC[metric].label}</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-bold text-white/50">전체</div>
+                <div className="text-3xl font-black leading-none">{myIndex + 1}<span className="text-sm text-white/60">위</span></div>
+                <div className="text-[10px] font-black text-emerald-300 mt-0.5">{percentile < 100 ? `상위 ${percentile}%` : '도전 중'}</div>
+              </div>
             </div>
-            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-cyan-300 transition-all duration-700" style={{ width: `${Math.max(3, tierPct)}%` }} /></div>
+          </button>
+        ) : !guest && (
+          <div className="rounded-[26px] p-4 bg-white/[0.07] border border-white/10 text-white">
+            <div className="text-sm font-black">아직 전체 랭킹에 등록하지 않았어요</div>
+            <div className="text-[11px] font-bold text-white/50 mt-1 leading-relaxed">길드로 함께 참가하거나(길드원 평균 기록), 개인으로 참가할 수 있어요.</div>
+            <button onClick={() => setScope('guild')} className="mt-3 px-4 py-2.5 rounded-xl bg-emerald-400 text-neutral-950 text-xs font-black shadow-[0_0_14px_rgba(52,211,153,.5)] active:scale-95 transition-transform">길드 · 개인 참가 하러 가기</button>
           </div>
-        </button>
+        ))}
       </div>
 
       <div className="px-5 space-y-3 -mt-1">
-        <Segmented options={[['global', '전체 랭킹'], ['friends', `친구 랭킹${friends.length ? ` ${friends.length}` : ''}`]]} value={scope} onChange={change(setScope)} />
-        <Segmented options={Object.entries(METRIC).map(([k, m]) => [k, `${m.icon} ${m.label}`])} value={metric} onChange={change(setMetric)} />
+        <Segmented options={[['global', '🏆 전체 랭킹'], ['friends', `🤝 친구${friends.length ? ` ${friends.length}` : ''}`], ['guild', `🛡️ 길드${guildData?.guild ? '' : ''}`]]} value={scope} onChange={change(setScope)} />
+        {scope !== 'guild' && <Segmented options={Object.entries(METRIC).map(([k, m]) => [k, `${m.icon} ${m.label}`])} value={metric} onChange={change(setMetric)} />}
 
-        {guest && (
-          <button onClick={onLogin} className="w-full flex items-center gap-3 bg-[#eef2ff] border border-[#dbe3ff] rounded-2xl px-4 py-3 text-left active:scale-[0.99] transition-transform">
-            <span className="text-xl">🔒</span>
-            <span className="flex-1 text-xs font-bold text-[#3550d6] leading-relaxed">게스트 기록은 이 기기에만 있어서 다른 사람에게 보이지 않아요. <b className="font-black">회원가입</b>하면 랭킹에 올라가고 친구와 응원을 주고받을 수 있어요.</span>
-          </button>
-        )}
-        {loading && list.length <= 1 ? (
-          <div className="bg-white rounded-[28px] border border-neutral-100 p-10 flex justify-center"><div className="w-6 h-6 rounded-full border-2 border-neutral-200 border-t-[#4768ff] animate-spin" /></div>
-        ) : list.length <= 1 ? (
+        {scope === 'guild' ? (
+          guest ? loginCard('길드는 회원 전용이에요', '가입하면 길드를 만들거나 들어가서 함께 레이드 보스를 잡고 랭킹에 도전할 수 있어요.')
+            : <GuildCenter api={guildApi} data={guildData} loading={guildLoading} reload={reloadGuild} meId={meId} myGuildRank={myGuildRank} onToast={onToast} Avatar3={Avatar3} />
+        ) : scope === 'friends' && guest ? (
+          loginCard('친구 랭킹은 회원 전용이에요', '게스트 기록은 이 기기에만 있어요. 가입하고 친구를 추가하면 서로의 순위를 비교하고 응원할 수 있어요.')
+        ) : loading && list.length <= (scope === 'friends' ? 1 : 0) ? (
+          <div className="bg-white rounded-[28px] border border-neutral-100 p-10 flex justify-center"><div className="w-6 h-6 rounded-full border-2 border-neutral-200 border-t-emerald-500 animate-spin" /></div>
+        ) : list.length <= (scope === 'friends' ? 1 : 0) ? (
           <div className="bg-white rounded-[28px] border border-neutral-100 p-8 text-center">
             <div className="text-3xl mb-2">{scope === 'friends' ? '🤝' : '🏁'}</div>
-            <p className="text-sm font-black text-neutral-900 mb-1">{scope === 'friends' ? '아직 함께하는 친구가 없어요' : '아직 함께 경쟁할 유저가 없어요'}</p>
-            <p className="text-xs font-bold text-neutral-500 mb-4">{scope === 'friends' ? '친구를 추가하면 서로의 순위를 비교하고 응원할 수 있어요.' : '친구에게 GYM SPIRIT을 알려 주면 이곳에서 함께 순위를 겨룰 수 있어요.'}</p>
+            <p className="text-sm font-black text-neutral-900 mb-1">{scope === 'friends' ? '아직 함께하는 친구가 없어요' : '아직 랭킹에 등록한 길드나 개인이 없어요'}</p>
+            <p className="text-xs font-bold text-neutral-500 mb-4">{scope === 'friends' ? '친구를 추가하면 서로의 기록을 보고 순위를 비교할 수 있어요.' : '길드를 만들어 랭킹에 등록하거나, 개인으로 참가해 첫 1위가 되어 보세요.'}</p>
             <div className="flex gap-2 justify-center">
-              {onInvite && <button onClick={onInvite} className="px-5 py-2.5 rounded-xl bg-[#4768ff] text-white text-xs font-black active:scale-95 transition-transform">친구 초대하기</button>}
-              <button onClick={onFindFriends} className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-xs font-black active:scale-95 transition-transform">친구 찾기</button>
+              {scope === 'friends' ? (
+                <>
+                  {onInvite && <button onClick={onInvite} className="px-5 py-2.5 rounded-xl bg-emerald-500 text-white text-xs font-black active:scale-95 transition-transform">친구 초대하기</button>}
+                  <button onClick={onFindFriends} className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-xs font-black active:scale-95 transition-transform">친구 찾기</button>
+                </>
+              ) : (
+                <button onClick={() => setScope('guild')} className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-xs font-black active:scale-95 transition-transform">길드 · 개인 참가</button>
+              )}
             </div>
           </div>
         ) : (
           <>
+            {scope === 'global' && <div className="text-[11px] font-bold text-neutral-400 px-1">🛡️ 길드는 소속 인원 평균 기록이에요 · 등록한 길드와 개인만 보여요</div>}
             {/* 시상대 */}
             <div key={`${scope}-${metric}`} className="bg-white rounded-[28px] border border-neutral-100 shadow-sm px-3 pt-5 pb-0 overflow-hidden">
               <div className="flex items-end justify-center gap-2">
                 {order.map(i => {
                   const u = podium[i];
                   return (
-                    <button key={u.id} onClick={() => setSelected(u)} className="flex-1 max-w-[120px] flex flex-col items-center rk-rise active:scale-95 transition-transform" style={{ animationDelay: `${[120, 0, 220][i]}ms` }}>
+                    <button key={u.id} onClick={() => open(u)} className="flex-1 max-w-[120px] flex flex-col items-center rk-rise active:scale-95 transition-transform" style={{ animationDelay: `${[120, 0, 220][i]}ms` }}>
                       {i === 0 && <Crown className="w-6 h-6 text-amber-400 mb-0.5 drop-shadow" />}
-                      <Avatar user={u} size={i === 0 ? 64 : 52} ring={i === 0 ? 'linear-gradient(135deg,#fde68a,#f59e0b)' : i === 1 ? 'linear-gradient(135deg,#e2e8f0,#94a3b8)' : 'linear-gradient(135deg,#fed7aa,#ea580c)'} Avatar3={Avatar3} />
-                      <span className="text-xs font-black text-neutral-900 mt-1.5 truncate max-w-full">{u.name}{u.isMe ? ' (나)' : ''}</span>
+                      <Mark u={u} size={i === 0 ? 64 : 52} ring={i === 0 ? 'linear-gradient(135deg,#fde68a,#f59e0b)' : i === 1 ? 'linear-gradient(135deg,#e2e8f0,#94a3b8)' : 'linear-gradient(135deg,#fed7aa,#ea580c)'} />
+                      <span className="text-xs font-black text-neutral-900 mt-1.5 truncate max-w-full">{u.name}{u.isMe ? (u.kind === 'guild' ? ' (내 길드)' : ' (나)') : ''}</span>
                       <span className="text-[10px] font-black text-neutral-400 tabular-nums">{u[metric].toLocaleString()}{METRIC[metric].unit}</span>
                       <div className={`w-full mt-2 rounded-t-2xl flex items-start justify-center pt-2 text-xl ${H[i]} ${i === 0 ? 'bg-gradient-to-b from-amber-200 to-amber-100' : i === 1 ? 'bg-gradient-to-b from-slate-200 to-slate-100' : 'bg-gradient-to-b from-orange-200 to-orange-100'}`}>{medal[i]}</div>
                     </button>
@@ -355,23 +426,24 @@ export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers 
                 const t = tierOf(u.volume);
                 const pct = (u[metric] / topVal) * 100;
                 return (
-                  <div key={u.id} ref={el => { rowRefs.current.set(u.id, el); if (u.isMe) meRowRef.current = el; }}
+                  <div key={`${u.kind || 'u'}-${u.id}`} ref={el => { rowRefs.current.set(u.id, el); if (u.isMe) meRowRef.current = el; }}
                     className={`will-change-transform ${idx < 3 ? 'hidden' : ''}`}>
-                    <button onClick={() => setSelected(u)} className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-neutral-100 ${u.isMe ? 'bg-[#eef2ff]' : 'hover:bg-neutral-50'} ${idx > 3 ? 'border-t border-neutral-50' : ''}`}>
-                      <span className={`w-7 text-center text-sm font-black tabular-nums ${u.isMe ? 'text-[#4768ff]' : 'text-neutral-400'}`}>{idx + 1}</span>
-                      <Avatar user={u} size={44} Avatar3={Avatar3} />
+                    <button onClick={() => open(u)} className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-neutral-100 ${u.isMe ? 'bg-emerald-50' : 'hover:bg-neutral-50'} ${idx > 3 ? 'border-t border-neutral-50' : ''}`}>
+                      <span className={`w-7 text-center text-sm font-black tabular-nums ${u.isMe ? 'text-emerald-600' : 'text-neutral-400'}`}>{idx + 1}</span>
+                      <Mark u={u} size={44} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-sm font-black text-neutral-900 truncate">{u.name}</span>
-                          {u.isMe && <span className="text-[9px] font-black bg-[#4768ff] text-white px-1.5 py-0.5 rounded">ME</span>}
-                          {friends.includes(u.id) && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">친구</span>}
+                          {u.isMe && <span className="text-[9px] font-black bg-emerald-500 text-white px-1.5 py-0.5 rounded">{u.kind === 'guild' ? '내 길드' : 'ME'}</span>}
+                          {!u.kind && friends.includes(u.id) && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">친구</span>}
                         </div>
+                        {sub(u) && <div className="text-[10px] font-bold text-neutral-400">{sub(u)}</div>}
                         <div className="flex items-center gap-2 mt-1">
-                          <div className="flex-1 h-1.5 rounded-full bg-neutral-100 overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.max(4, pct)}%`, background: u.isMe ? '#4768ff' : t.ring }} /></div>
+                          <div className="flex-1 h-1.5 rounded-full bg-neutral-100 overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.max(4, pct)}%`, background: u.isMe ? '#10b981' : u.kind === 'guild' ? '#2563eb' : t.ring }} /></div>
                           <span className="text-[10px] font-black text-neutral-500 tabular-nums w-16 text-right">{u[metric].toLocaleString()}{METRIC[metric].unit}</span>
                         </div>
                       </div>
-                      <span className="text-sm" title={t.name}>{t.icon}</span>
+                      {u.kind !== 'guild' && <span className="text-sm" title={t.name}>{t.icon}</span>}
                     </button>
                   </div>
                 );
@@ -383,7 +455,7 @@ export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers 
       </div>
 
       {/* 내 순위로 이동 */}
-      {myIndex >= 3 && (
+      {scope !== 'guild' && myIndex >= 3 && (
         <button onClick={() => meRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
           className={`fixed left-1/2 bottom-24 z-30 -translate-x-1/2 px-4 py-2.5 rounded-full bg-neutral-900 text-white text-xs font-black shadow-xl flex items-center gap-1.5 transition-all duration-300 ${meVisible ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
           내 순위 {myIndex + 1}위 <ChevronDown className="w-3.5 h-3.5" />
@@ -393,9 +465,11 @@ export const RankingTab = ({ users, me, friends = [], sentRequests = [], cheers 
       <Sheet open={!!selected} onClose={() => setSelected(null)}>
         {lastSelected.current && (
           <UserSheet user={lastSelected.current} rank={list.findIndex(u => u.id === lastSelected.current.id) + 1 || '-'} metric={metric} me={me} friends={friends} sentRequests={sentRequests} cheers={cheers}
+            limited={lastSelected.current.kind === 'solo' && !friends.includes(lastSelected.current.id) && !lastSelected.current.isMe}
             onCheer={onCheer} onSteal={(u) => { setSelected(null); onSteal(u); }} onFriend={onFriend} onClose={() => setSelected(null)} Avatar3={Avatar3} />
         )}
       </Sheet>
+      {guildApi && <GuildViewSheet guildId={viewGuild} api={guildApi} canJoin={!guest && !myGuildId} onJoined={reloadGuild} onClose={() => setViewGuild(null)} onToast={onToast} Avatar3={Avatar3} />}
     </div>
   );
 };

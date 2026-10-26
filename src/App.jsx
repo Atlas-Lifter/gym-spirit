@@ -906,7 +906,12 @@ export default function App() {
   const [signupNickname, setSignupNickname] = useState('');
   const [recoveryMode, setRecoveryMode] = useState(false); // 비밀번호 재설정 메일로 들어온 경우
   const [friendState, setFriendState] = useState({ friends: [], sent: [], incoming: [] });
-  const [rankProfiles, setRankProfiles] = useState([]); // 랭킹에 보이는 회원들
+  const [friendRank, setFriendRank] = useState([]); // 친구 랭킹 (나 + 서로 친구인 사람)
+  const [globalEntries, setGlobalEntries] = useState([]); // 전체 랭킹 (등록한 길드 + 개인 참가)
+  const [guildData, setGuildData] = useState(null); // 내 길드 화면 정보
+  const [guildLoading, setGuildLoading] = useState(false);
+  const [devMock, setDevMock] = useState(null); // 개발 서버에서 ?mockguild 로 길드 화면을 미리 보는 가짜 서버
+  const lastContrib = useRef({});
   const [extraProfiles, setExtraProfiles] = useState({}); // 친구·요청 보낸 사람 프로필
   const [rankLoading, setRankLoading] = useState(false);
   const [editingNick, setEditingNick] = useState(null);
@@ -1219,7 +1224,7 @@ export default function App() {
       } catch (e) {}
       setCloudUser(null);
       setCloudReady(false);
-      setRankProfiles([]);
+      setFriendRank([]); setGuildData(null); lastContrib.current = {};
     }
     setCurrentUser(null);
     setCurrentScreen('auth');
@@ -2047,19 +2052,59 @@ export default function App() {
     });
   }, [cloudUser]);
 
-  // 랭킹 탭을 열 때마다 최신 순위와 이번 주 응원 수를 불러온다
+  // 개발 서버에서 주소 끝에 ?mockguild 를 붙이면 로그인 없이 길드·랭킹 화면을 가짜 데이터로 확인할 수 있다 (배포본에는 포함되지 않음)
+  useEffect(() => {
+    if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mockguild')) import('./guildMock.js').then(m => setDevMock(m.createGuildMock()));
+  }, []);
+  const rankingUser = devMock ? { id: devMock.meId } : cloudUser;
+  const guildApiImpl = devMock ? devMock.guildApi : cloud.guildApi;
+
+  const reloadGuild = async () => {
+    if (!rankingUser) { setGuildData(null); return; }
+    setGuildLoading(true);
+    try {
+      const [mine, global] = await Promise.all([guildApiImpl.my(), devMock ? devMock.globalRanking() : cloud.fetchGlobalRanking()]);
+      setGuildData(mine); setGlobalEntries(global || []);
+    } catch (e) { setGuildData(null); }
+    finally { setGuildLoading(false); }
+  };
+
+  // 랭킹 탭을 열 때마다 전체 랭킹·친구 랭킹·내 길드·이번 주 응원 수를 불러온다
   useEffect(() => {
     if (activeTab !== 'ranking') return undefined;
     let alive = true;
     setRankLoading(true);
-    Promise.all([cloud.fetchRanking(), cloud.fetchCheerCounts()])
-      .then(([profs, cheers]) => { if (!alive) return; setRankProfiles(profs.map(p => cloud.toRankUser(p))); setCheersData(cheers); })
-      .catch(() => { if (alive) showToast('랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.'); })
-      .finally(() => { if (alive) setRankLoading(false); });
+    const src = devMock
+      ? [devMock.globalRanking(), devMock.friendRanking(), Promise.resolve({}), devMock.guildApi.my()]
+      : [cloud.fetchGlobalRanking(), cloudUser ? cloud.fetchFriendRanking() : [], cloud.fetchCheerCounts(), cloudUser ? cloud.guildApi.my() : null];
+    Promise.allSettled(src).then(([g, f, c, m]) => {
+      if (!alive) return;
+      if (g.status === 'fulfilled') setGlobalEntries(g.value || []);
+      if (f.status === 'fulfilled') setFriendRank((f.value || []).map(cloud.friendRowToRankUser));
+      if (c.status === 'fulfilled') setCheersData(c.value || {});
+      if (m.status === 'fulfilled') setGuildData(m.value);
+      if ([g, f, m].some(r => r.status === 'rejected')) showToast('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+    }).finally(() => { if (alive) setRankLoading(false); });
     return () => { alive = false; };
-  }, [activeTab, cloudUser]);
+  }, [activeTab, cloudUser, devMock]);
 
-  const profilesById = { ...Object.fromEntries(rankProfiles.map(u => [u.id, u])), ...extraProfiles };
+  // 오늘·어제 운동을 저장하면 길드 경험치로 반영 (길드가 없으면 DB가 무시한다)
+  useEffect(() => {
+    if (!cloudReady || !cloudUser || currentUser?.cloudId !== cloudUser.id) return undefined;
+    const t = setTimeout(() => {
+      [0, 1].forEach(back => {
+        const d = new Date(); d.setDate(d.getDate() - back);
+        const key = formatDate(d);
+        const vol = Math.round((safeWorkouts[key] || []).reduce((sum, ex) => sum + (ex.sets || []).reduce((a, st) => a + (st.completed && st.reps ? setVolume(ex, st) : 0), 0), 0));
+        if (!vol || lastContrib.current[key] === vol) return;
+        lastContrib.current[key] = vol;
+        cloud.guildApi.contribute(key, vol).catch(() => { delete lastContrib.current[key]; });
+      });
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [currentUser, cloudReady, cloudUser]);
+
+  const profilesById = { ...extraProfiles, ...Object.fromEntries(friendRank.map(u => [u.id, u])) };
 
   const globalOverlays = (
     <>
@@ -3497,13 +3542,20 @@ export default function App() {
           const mon = new Date(weekInfo.monday), sun = new Date(mon); sun.setDate(sun.getDate() + 6);
           const left = Math.ceil((new Date(sun.getFullYear(), sun.getMonth(), sun.getDate() + 1) - new Date()) / 86400000);
           const me = {
-            id: cloudUser?.id || 'guest', name: currentUser?.profile?.nickname || '나',
+            id: rankingUser?.id || 'guest', name: currentUser?.profile?.nickname || '나',
             volume: getWeeklyVolumeData(weekInfo.monday).total, lift: getTotalLift3(), avatarColor: 'bg-neutral-800', fav: '전신', isMe: true, profile: currentUser?.profile,
           };
           return (
             <RankingTab
-              users={rankProfiles.filter(u => u.id !== cloudUser?.id)}
+              friendUsers={friendRank.filter(u => u.id !== rankingUser?.id)}
+              globalEntries={globalEntries}
               me={me}
+              meId={rankingUser?.id}
+              guildApi={guildApiImpl}
+              guildData={guildData}
+              guildLoading={guildLoading}
+              reloadGuild={reloadGuild}
+              onToast={showToast}
               friends={friendState.friends}
               sentRequests={friendState.sent}
               cheers={cheersData}
@@ -3514,7 +3566,7 @@ export default function App() {
               onFriend={sendFriendRequest}
               onFindFriends={() => setIsFriendSearchModalOpen(true)}
               onInvite={inviteFriends}
-              guest={!cloudUser}
+              guest={!rankingUser}
               onLogin={goToSignup}
               loading={rankLoading}
               Avatar3={FullBodyAvatar}

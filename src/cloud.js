@@ -8,7 +8,8 @@ const SUPABASE_KEY = 'sb_publishable_chMnSPGH1m0CN0oDwg26-Q_wy5nUHVO';
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 export const SITE_URL = 'https://gym-spirit.vercel.app';
 
-const PROFILE_COLS = 'id, nickname, avatar, week_start, weekly_volume, lift3, fav, last_routine';
+// 다른 사람 프로필은 닉네임·아바타만 읽는다 (운동 기록은 친구 랭킹·길드 함수로만)
+const PROFILE_COLS = 'id, nickname, avatar';
 
 // 이번 주 월요일 (YYYY-MM-DD, 기기 시간 기준)
 export const mondayKey = (d = new Date()) => {
@@ -86,24 +87,15 @@ export const savePublicProfile = async (uid, fields) => {
   if (error) throw error;
 };
 
-// 랭킹 화면에서 쓰는 모양으로 변환 (이번 주 기록이 없으면 볼륨 0)
-export const toRankUser = (p, week = mondayKey()) => ({
+// 친구 찾기·요청 목록에서 쓰는 모양 (운동 기록은 없음: volume·lift = null)
+export const toRankUser = (p) => ({
   id: p.id,
   name: p.nickname || '짐스피릿 유저',
-  volume: p.week_start === week ? Math.round(Number(p.weekly_volume) || 0) : 0,
-  lift: Math.round(Number(p.lift3) || 0),
-  fav: p.fav || '',
+  volume: null,
+  lift: null,
   profile: p.avatar && Object.keys(p.avatar).length ? p.avatar : null,
-  routine: p.last_routine || null,
   avatarColor: 'bg-neutral-700',
 });
-
-export const fetchRanking = async () => {
-  const { data, error } = await supabase.from('profiles').select(PROFILE_COLS)
-    .order('weekly_volume', { ascending: false }).limit(300);
-  if (error) throw error;
-  return data || [];
-};
 
 export const fetchProfiles = async (ids) => {
   if (!ids.length) return [];
@@ -182,6 +174,52 @@ export const removeFriend = async (uid, otherId) => {
   const { error } = await supabase.from('friend_requests').delete()
     .or(`and(from_id.eq.${uid},to_id.eq.${otherId}),and(from_id.eq.${otherId},to_id.eq.${uid})`);
   if (error) throw error;
+};
+
+// ── 랭킹 · 길드 (DB 함수로만 읽고 쓴다: supabase/guilds.sql) ──
+const rpc = async (fn, args) => {
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) throw error;
+  return data;
+};
+
+// 전체 랭킹: 등록한 길드(소속 인원 평균)와 개인 참가자
+export const fetchGlobalRanking = async () => (await rpc('global_ranking')) || [];
+// 친구 랭킹: 나와 서로 친구인 사람만
+export const fetchFriendRanking = async () => (await rpc('friend_ranking')) || [];
+
+export const friendRowToRankUser = (r) => ({
+  id: r.id,
+  name: r.nickname || '짐스피릿 유저',
+  volume: Math.round(Number(r.volume) || 0),
+  lift: Math.round(Number(r.lift) || 0),
+  fav: r.fav || '',
+  profile: r.avatar && Object.keys(r.avatar).length ? r.avatar : null,
+  routine: r.last_routine || null,
+  guild: r.guild_name ? { name: r.guild_name, emblem: r.guild_emblem } : null,
+  avatarColor: 'bg-neutral-700',
+});
+
+export const guildApi = {
+  my: () => rpc('my_guild'),
+  search: (q) => rpc('search_guilds', { p_q: q || '' }),
+  view: (id) => rpc('guild_public', { p_guild: id }),
+  create: ({ name, emblem, color, intro, joinMode }) => rpc('create_guild', { p_name: name, p_emblem: emblem, p_color: color, p_intro: intro, p_join_mode: joinMode }),
+  update: ({ name, emblem, color, intro, joinMode }) => rpc('update_guild', { p_name: name, p_emblem: emblem, p_color: color, p_intro: intro, p_join_mode: joinMode }),
+  join: (id) => rpc('join_guild', { p_guild: id }),
+  joinByCode: (code) => rpc('join_guild_by_code', { p_code: code }),
+  cancelRequest: () => rpc('cancel_guild_request'),
+  respond: (userId, accept) => rpc('respond_guild_request', { p_user: userId, p_accept: accept }),
+  leave: () => rpc('leave_guild'),
+  kick: (userId) => rpc('kick_guild_member', { p_user: userId }),
+  setRole: (userId, role) => rpc('set_guild_role', { p_user: userId, p_role: role }),
+  transfer: (userId) => rpc('transfer_guild_leader', { p_user: userId }),
+  disband: () => rpc('disband_guild'),
+  setRanked: (on) => rpc('set_guild_ranked', { p_on: on }),
+  setSolo: (on) => rpc('set_solo_ranked', { p_on: on }),
+  contribute: (day, volume) => rpc('guild_contribute', { p_day: day, p_volume: volume }),
+  upgradeSkill: (key) => rpc('upgrade_guild_skill', { p_key: key }),
+  claim: (key) => rpc('claim_guild_reward', { p_key: key }),
 };
 
 // 나와 관련된 친구 요청이 생기거나 바뀌면 바로 알려준다 (실시간)
