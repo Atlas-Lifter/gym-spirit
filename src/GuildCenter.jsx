@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GmBadge } from './GmBadge.jsx';
 import { cleanAvatar, isGmOn } from './admin.js';
-import { Search, Plus, KeyRound, Share2, X, Check, ChevronRight, LogOut, Trash2, Pencil, Users, Send, Megaphone } from 'lucide-react';
+import { Search, Plus, KeyRound, Share2, X, Check, ChevronRight, LogOut, Trash2, Pencil, Users, Send, Megaphone, Copy, ClipboardPaste } from 'lucide-react';
 import { Sheet, Segmented, Avatar } from './RankingTab.jsx';
 import {
   GUILD_EMBLEMS, GUILD_COLORS, guildColor, GUILD_ROLES, COACH_MAX, MEMBER_TIERS, memberTier, nextMemberTier,
@@ -22,6 +22,19 @@ const ago = (iso) => {
   if (m < 1440) return `${Math.floor(m / 60)}시간 전`;
   return `${Math.floor(m / 1440)}일 전`;
 };
+// 클립보드: 최신 방식이 안 되면 예전 방식으로 복사한다
+export const copyText = async (text) => {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+    } catch (e2) { return false; }
+  }
+};
+export const GUILD_LINK = (code) => `https://gym-spirit.vercel.app/?guild=${code}`;
+const cleanCode = (v) => String(v || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 6);
+
 const memberUser = (m) => ({ id: m.id, name: m.nickname || '짐스피릿 유저', profile: m.avatar && Object.keys(m.avatar).length ? cleanAvatar(m.id, m.avatar) : null, avatarColor: 'bg-neutral-700' });
 
 export const GuildBadge = ({ emblem, color, size = 48, glow }) => {
@@ -255,6 +268,21 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
     finally { setBusy(null); }
   };
 
+  const joinWithCode = (c) => {
+    const v = cleanCode(c);
+    if (v.length !== 6 || busy === 'code') return;
+    run('code', () => api.joinByCode(v), '🎉 초대 코드로 길드에 가입했어요!').then(ok => { if (!ok) setCode(''); });
+  };
+  const pasteCode = async () => {
+    let text = '';
+    try { text = await navigator.clipboard.readText(); } catch (e) { onToast('붙여넣기 권한이 없어요. 코드 칸을 길게 눌러 붙여넣어 주세요'); return; }
+    // 초대 링크(…?guild=ABC123)를 통째로 붙여넣어도 코드만 꺼낸다
+    const m = String(text).match(/guild=([0-9A-Za-z]{6})/) || String(text).match(/\b([0-9A-Za-z]{6})\b/);
+    const v = cleanCode(m ? m[1] : text);
+    setCode(v);
+    if (v.length === 6) joinWithCode(v); else onToast('클립보드에 초대 코드가 없어요');
+  };
+
   if (loading && !data) {
     return <div className="bg-white rounded-[28px] border border-neutral-100 p-10 flex justify-center"><div className="w-6 h-6 rounded-full border-2 border-neutral-200 border-t-emerald-500 animate-spin" /></div>;
   }
@@ -281,9 +309,13 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
               <button onClick={() => setCodeOpen(o => !o)} className="flex-1 py-3 rounded-2xl bg-white/10 text-white text-sm font-black flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"><KeyRound className="w-4 h-4" /> 초대 코드</button>
             </div>
             {codeOpen && (
-              <div className="flex gap-2 mt-2">
-                <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} maxLength={6} placeholder="6자리 코드" className="flex-1 min-w-0 bg-white/10 rounded-xl px-3 py-2.5 text-sm font-black tracking-[.3em] outline-none placeholder:tracking-normal placeholder:text-white/40" />
-                <button disabled={code.trim().length < 6 || busy === 'code'} onClick={() => run('code', () => api.joinByCode(code), '초대 코드로 길드에 가입했어요!')} className="px-4 rounded-xl bg-white text-neutral-900 text-sm font-black disabled:opacity-40">가입</button>
+              <div className="mt-2">
+                <div className="flex gap-2">
+                  <input autoFocus value={code} onChange={e => { const v = cleanCode(e.target.value); setCode(v); if (v.length === 6) joinWithCode(v); }} inputMode="text" autoCapitalize="characters" autoComplete="off" placeholder="6자리 코드" className="flex-1 min-w-0 bg-white/10 rounded-xl px-3 py-2.5 text-sm font-black tracking-[.3em] outline-none placeholder:tracking-normal placeholder:text-white/40" />
+                  <button disabled={busy === 'code'} onClick={pasteCode} className="px-3 rounded-xl bg-white/15 text-white text-xs font-black flex items-center gap-1"><ClipboardPaste className="w-3.5 h-3.5" /> 붙여넣기</button>
+                  <button disabled={code.length < 6 || busy === 'code'} onClick={() => joinWithCode(code)} className="px-4 rounded-xl bg-white text-neutral-900 text-sm font-black disabled:opacity-40">{busy === 'code' ? '가입 중…' : '가입'}</button>
+                </div>
+                <div className="text-[10px] font-bold text-white/45 mt-1.5">초대 코드 6자리를 입력하거나 붙여넣으면 승인 없이 바로 가입돼요</div>
               </div>
             )}
           </div>
@@ -379,10 +411,14 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
     if (await run('post', () => api.post(body, asNotice), asNotice ? '📢 공지를 올렸어요' : null)) { setDraft(''); setAsNotice(false); }
   };
 
+  // 초대 링크를 열면 코드가 자동으로 들어가 바로 가입할 수 있다
   const share = async () => {
     const text = `GYM SPIRIT '${g.name}' 길드에 들어와요! 💪 초대 코드: ${g.invite_code}`;
-    if (navigator.share) { try { await navigator.share({ title: g.name, text, url: 'https://gym-spirit.vercel.app' }); } catch (e) {} return; }
-    try { await navigator.clipboard.writeText(`${text} https://gym-spirit.vercel.app`); onToast('초대 문구를 복사했어요'); } catch (e) { onToast(`초대 코드: ${g.invite_code}`); }
+    if (navigator.share) { try { await navigator.share({ title: g.name, text, url: GUILD_LINK(g.invite_code) }); } catch (e) {} return; }
+    onToast((await copyText(`${text}\n${GUILD_LINK(g.invite_code)}`)) ? '초대 문구와 링크를 복사했어요' : `초대 코드: ${g.invite_code}`);
+  };
+  const copyCode = async () => {
+    onToast((await copyText(g.invite_code)) ? `📋 초대 코드 ${g.invite_code}를 복사했어요` : `초대 코드: ${g.invite_code}`);
   };
   const memberAction = async (kind, m, role) => {
     const map = {
@@ -423,10 +459,11 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
           <Bar pct={lv.max ? 100 : (lv.into / lv.need) * 100} track="bg-white/10" from={c.from} to="#60a5fa" />
         </div>
         <div className="relative flex items-center gap-2 mt-3">
-          <div className="flex-1 flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
+          <button onClick={copyCode} aria-label="초대 코드 복사" className="flex-1 flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-xl px-3 py-2 text-left active:scale-[0.98] transition-transform">
             <span className="text-[10px] font-bold text-white/50">초대 코드</span>
             <span className="text-sm font-black tracking-[.25em]">{g.invite_code}</span>
-          </div>
+            <span className="ml-auto flex items-center gap-1 text-[10px] font-black text-emerald-300"><Copy className="w-3.5 h-3.5" /> 복사</span>
+          </button>
           <button onClick={share} className="px-3 py-2 rounded-xl bg-white text-neutral-900 text-xs font-black flex items-center gap-1 active:scale-95 transition-transform"><Share2 className="w-3.5 h-3.5" /> 초대</button>
         </div>
       </div>

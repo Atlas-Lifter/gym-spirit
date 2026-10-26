@@ -82,10 +82,35 @@ export function GlobalOverlays() {
     setIsAdminConsoleOpen,
     adminApiImpl,
     refreshNotice,
+    pendingGuildCode,
+    clearPendingGuild,
+    joinPendingGuild,
+    currentUser,
+    devMock,
   } = useApp();
   return (
     <>
       <InstallSheet open={isInstallOpen} onClose={() => setIsInstallOpen(false)} onToast={showToast} />
+      {/* 길드 초대 링크로 들어왔을 때 */}
+      {pendingGuildCode && currentUser && currentScreen !== 'auth' && (
+        <div className="fixed inset-0 z-[95] bg-black/55 flex items-end justify-center animate-fade-in" onClick={clearPendingGuild}>
+          <div className="w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 text-neutral-900 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="text-4xl mb-2">🛡️</div>
+            <h3 className="text-xl font-black">길드 초대가 도착했어요</h3>
+            <p className="text-sm font-bold text-neutral-500 mt-1">초대 코드로 가입하면 승인 없이 바로 길드원이 돼요.</p>
+            <div className="my-5 py-4 rounded-2xl bg-neutral-50 border border-neutral-100 text-center">
+              <div className="text-[11px] font-bold text-neutral-400">초대 코드</div>
+              <div className="text-2xl font-black tracking-[.3em]">{pendingGuildCode}</div>
+            </div>
+            {cloudUser || devMock ? (
+              <button onClick={joinPendingGuild} className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-blue-600 text-white font-black active:scale-[0.98] transition-transform">길드 가입하기</button>
+            ) : (
+              <button onClick={goToSignup} className="w-full py-4 rounded-2xl bg-neutral-900 text-white font-black">회원가입 / 로그인하고 가입하기</button>
+            )}
+            <button onClick={clearPendingGuild} className="w-full py-3 mt-2 text-sm font-black text-neutral-400">다음에 할게요</button>
+          </div>
+        </div>
+      )}
       {amAdmin && adminMode && isAdminConsoleOpen && <Suspense fallback={null}><AdminConsole open onClose={() => setIsAdminConsoleOpen(false)} api={adminApiImpl} onToast={showToast} onNoticeChanged={refreshNotice} /></Suspense>}
       {guideExerciseId && (() => {
         const ex = EXERCISE_OPTIONS.find(e => e.id === guideExerciseId);

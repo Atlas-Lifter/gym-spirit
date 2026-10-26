@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as cloud from './cloud.js';
 import { setAdminIds } from './admin.js';
+import { guildErrorText } from './guildSystem.js';
 import { DEFAULT_COVER_PHOTOS } from './coverPhotos.js';
 import { MUSCLE_SUBGROUPS, getExerciseMuscles } from './data/anatomy.js';
 import { ACC_COLORS, BOTTOM_COLORS, EXERCISE_OPTIONS, PROGRAMS, SHIRT_COLORS, SKIN_COLORS, getExId, getExName, getExTarget, ruleOfEx, toolOfEx } from './data/catalog.js';
@@ -1179,6 +1180,29 @@ export function useGymApp() {
   const rankingUser = devMock ? { id: devMock.meId } : cloudUser;
   const guildApiImpl = devMock ? devMock.guildApi : cloud.guildApi;
 
+  // 길드 초대 링크(?guild=코드)로 들어오면 코드를 기억했다가, 앱에 들어온 뒤 가입할지 묻는다 (회원가입을 거쳐도 유지)
+  const [pendingGuildCode, setPendingGuildCode] = useState(() => {
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get('guild');
+      if (fromUrl) {
+        localStorage.setItem('gymspirit_pending_guild', fromUrl);
+        const u = new URL(window.location.href); u.searchParams.delete('guild'); window.history.replaceState(null, '', u.toString());
+      }
+      return String(localStorage.getItem('gymspirit_pending_guild') || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 6);
+    } catch (e) { return ''; }
+  });
+  const [rankingScope, setRankingScope] = useState('global'); // 랭킹 탭을 열 때 처음 보여줄 화면
+  const clearPendingGuild = () => { setPendingGuildCode(''); try { localStorage.removeItem('gymspirit_pending_guild'); } catch (e) {} };
+  const joinPendingGuild = async () => {
+    const code = pendingGuildCode;
+    clearPendingGuild();
+    try {
+      await guildApiImpl.joinByCode(code);
+      showToast('🎉 초대받은 길드에 가입했어요!');
+      setRankingScope('guild'); setActiveTab('ranking'); reloadGuild();
+    } catch (e) { showToast(guildErrorText(e)); }
+  };
+
   // 운영자: 운영자 명단과 전체 공지를 불러온다 (운영자 기능은 DB 함수가 다시 확인한다)
   const [adminIdList, setAdminIdList] = useState(null); // null = 아직 못 불러옴
   const [appNotice, setAppNotice] = useState(null);
@@ -1389,6 +1413,11 @@ export function useGymApp() {
     guildLoading,
     setGuildLoading,
     devMock,
+    pendingGuildCode,
+    clearPendingGuild,
+    joinPendingGuild,
+    rankingScope,
+    setRankingScope,
     adminIdList,
     appNotice,
     refreshNotice,

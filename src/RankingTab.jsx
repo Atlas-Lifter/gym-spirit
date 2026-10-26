@@ -211,8 +211,8 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
 // · 전체 랭킹: 랭킹에 등록한 길드(소속 인원 평균)와 개인 참가자만
 // · 친구 랭킹: 서로 친구인 사람만 (친구가 아니면 기록이 보이지 않는다)
 // · 길드: 만들기·가입·내 길드
-export const RankingTab = ({ onClaimXp, claimedKeys = [], friendUsers = [], globalEntries = [], me, meId, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3, guildApi, guildData, guildLoading, reloadGuild, onToast }) => {
-  const [scope, setScope] = useState('global');
+export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [], friendUsers = [], globalEntries = [], me, meId, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3, guildApi, guildData, guildLoading, reloadGuild, onToast }) => {
+  const [scope, setScope] = useState(initialScope);
   const [metric, setMetric] = useState('volume');
   const [selected, setSelected] = useState(null);
   const [viewGuild, setViewGuild] = useState(null);

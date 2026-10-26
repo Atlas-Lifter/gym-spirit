@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { RankingTab } from '../../RankingTab.jsx';
 import { FullBodyAvatar } from '../../realAvatar.jsx';
 import { useApp } from '../../appContext.js';
@@ -29,7 +29,11 @@ export function RankingScreen() {
     showToast,
     stealRoutine,
     claimQuestRewards,
+    rankingScope,
+    setRankingScope,
   } = useApp();
+  // 초대 링크로 가입한 직후 한 번만 길드 화면으로 연다
+  useEffect(() => { if (rankingScope !== 'global') setRankingScope('global'); }, []);
   const weekInfo = getAnalysisWeekInfo(new Date());
   const mon = new Date(weekInfo.monday), sun = new Date(mon);
   sun.setDate(sun.getDate() + 6);
@@ -40,6 +44,7 @@ export function RankingScreen() {
   };
   return (
     <RankingTab
+      initialScope={rankingScope}
       onClaimXp={(item) => claimQuestRewards([item])}
       claimedKeys={Object.keys(currentUser?.questState?.claimed || {})}
       friendUsers={/* 서로 친구 수락한 사람만 (대기 중 요청은 제외) */ friendRank.filter(u => u.id !== rankingUser?.id && (devMock || friendState.friends.includes(u.id)))}
