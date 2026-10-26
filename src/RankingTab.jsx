@@ -8,10 +8,11 @@ import { HERO_BG } from './theme.js';
 
 // 랭킹 탭: 부드러운 전환(슬라이딩 탭, 순위 재정렬 애니메이션, 숫자 카운트업, 끌어서 닫는 시트)에 집중한 화면.
 
+// 주간 볼륨 티어 (순위 메달 🥇🥈🥉과 헷갈리지 않게 메달 모양은 쓰지 않는다)
 const TIERS = [
-  { name: '브론즈', min: 0, icon: '🥉', ring: '#c2410c', bg: 'from-orange-100 to-orange-50', text: 'text-orange-800' },
-  { name: '실버', min: 10000, icon: '🥈', ring: '#64748b', bg: 'from-slate-100 to-slate-50', text: 'text-slate-700' },
-  { name: '골드', min: 20000, icon: '🏅', ring: '#d97706', bg: 'from-amber-100 to-amber-50', text: 'text-amber-700' },
+  { name: '브론즈', min: 0, icon: '🟤', ring: '#c2410c', bg: 'from-orange-100 to-orange-50', text: 'text-orange-800' },
+  { name: '실버', min: 10000, icon: '⚪', ring: '#64748b', bg: 'from-slate-100 to-slate-50', text: 'text-slate-700' },
+  { name: '골드', min: 20000, icon: '🟡', ring: '#d97706', bg: 'from-amber-100 to-amber-50', text: 'text-amber-700' },
   { name: '플래티넘', min: 40000, icon: '✨', ring: '#0d9488', bg: 'from-teal-100 to-teal-50', text: 'text-teal-700' },
   { name: '다이아몬드', min: 60000, icon: '💎', ring: '#0891b2', bg: 'from-cyan-100 to-cyan-50', text: 'text-cyan-700' },
   { name: '그랜드마스터', min: 80000, icon: '👑', ring: '#e11d48', bg: 'from-rose-100 to-rose-50', text: 'text-rose-700' },
@@ -139,7 +140,7 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
             <h3 className="text-xl font-black text-neutral-900 truncate">{user.name}</h3>{isGmOn(user.id, user.profile) && <GmBadge />}
             {isMe && <span className="text-[10px] font-black bg-[#4768ff] text-white px-1.5 py-0.5 rounded-md">ME</span>}
           </div>
-          <div className={`inline-flex items-center gap-1 mt-1 text-[11px] font-black px-2 py-0.5 rounded-lg bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name}</div>
+          <div className={`inline-flex items-center gap-1 mt-1 text-[11px] font-black px-2 py-0.5 rounded-lg bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name} 티어</div>
           <div className="text-xs font-bold text-neutral-400 mt-1">{METRIC[metric].label} {rank}위{limited ? ' · 개인 참가' : ` · 최애 ${user.fav || '-'}`}{user.guild ? ` · ${user.guild.emblem} ${user.guild.name}` : ''}</div>
         </div>
         <button onClick={onClose} aria-label="닫기" className="p-2 rounded-full bg-neutral-100 text-neutral-500 active:scale-90 transition-transform self-start"><X className="w-4 h-4" /></button>
@@ -328,7 +329,7 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="font-black truncate">{me.name}</span>{isGmOn(me.id, me.profile) && <GmBadge small />}
-                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name}</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name} 티어</span>
                 </div>
                 <div className="flex items-baseline gap-1 mt-0.5">
                   <span className="text-2xl font-black tabular-nums">{myVal.toLocaleString()}</span>
@@ -347,7 +348,7 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
             </div>
             <div className="mt-3">
               <div className="flex justify-between text-[10px] font-bold text-white/50 mb-1">
-                <span>{nt ? `${nt.icon} ${nt.name}까지 ${(nt.min - me.volume).toLocaleString()}kg` : '최고 티어 달성!'}</span>
+                <span>{nt ? `${nt.icon} ${nt.name} 티어까지 ${(nt.min - me.volume).toLocaleString()}kg` : '최고 티어 달성!'}</span>
                 <span>{meHidden ? '일반 유저 모드로 바꾸면 다시 순위에 들어가요' : above ? `${above.name}님까지 ${(above[metric] - me[metric]).toLocaleString()}${METRIC[metric].unit}` : myIndex === 0 && list.length > 1 ? '1위를 지키는 중' : ''}</span>
               </div>
               <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-cyan-300 transition-all duration-700" style={{ width: `${Math.max(3, tierPct)}%` }} /></div>
