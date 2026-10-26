@@ -182,6 +182,35 @@ export function useGymApp() {
     }
     return () => clearInterval(sessionTimerRef.current);
   }, [currentScreen, workoutMinimized]);
+  // 진행 중인 운동을 기기에 저장 (앱이 꺼지거나 새로고침돼도 이어서 할 수 있게)
+  const ACTIVE_WORKOUT_KEY = 'gymspirit_active_workout';
+  const activeWorkoutRestored = useRef(null);
+  const prevSessionLen = useRef(0);
+  useEffect(() => {
+    if (currentScreen === 'auth' || !currentUser?.email || activeWorkoutRestored.current === currentUser.email) return;
+    activeWorkoutRestored.current = currentUser.email;
+    try {
+      const saved = JSON.parse(localStorage.getItem(ACTIVE_WORKOUT_KEY) || 'null');
+      if (!saved || saved.email !== currentUser.email || !Array.isArray(saved.session) || !saved.session.length || session.length) return;
+      if (Date.now() - saved.savedAt > 12 * 3600 * 1000) { localStorage.removeItem(ACTIVE_WORKOUT_KEY); return; }
+      setSession(saved.session);
+      if (saved.date) setCurrentDate(saved.date);
+      setWorkoutDurationSec(Math.min(4 * 3600, Math.max(0, Math.round((Date.now() - saved.startedAt) / 1000))));
+      setWorkoutMinimized(true);
+      showToast('진행 중이던 운동을 불러왔어요. 아래 바를 누르면 이어서 할 수 있어요.');
+    } catch (e) {}
+  }, [currentScreen, currentUser?.email]);
+  useEffect(() => {
+    const len = session.length;
+    try {
+      if (len > 0 && currentUser?.email) {
+        localStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify({ email: currentUser.email, date: currentDate, session, startedAt: Date.now() - workoutDurationSec * 1000, savedAt: Date.now() }));
+      } else if (len === 0 && prevSessionLen.current > 0) {
+        localStorage.removeItem(ACTIVE_WORKOUT_KEY);
+      }
+    } catch (e) {}
+    prevSessionLen.current = len;
+  }, [session, currentDate]);
   useEffect(() => {
     if (isTimerActive && timeLeft > 0) {
       timerRef.current = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
@@ -455,6 +484,7 @@ export function useGymApp() {
     const src = Array.isArray(source) ? source : session;
     if (!src || src.length === 0) { showToast("운동 기록이 없습니다. 먼저 종목을 추가해주세요."); return; }
     setWorkoutMinimized(false);
+    try { localStorage.removeItem(ACTIVE_WORKOUT_KEY); } catch (e) {}
     const cleanSession = src.map(ex => ({
       id: String(ex.id || Date.now()),
       exercise: { id: String(getExId(ex)), name: String(getExName(ex)), target: String(getExTarget(ex)), tool: String(ex.exercise?.tool || ex.tool || '바벨') },
