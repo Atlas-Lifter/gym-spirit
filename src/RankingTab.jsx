@@ -209,7 +209,7 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
 // · 전체 랭킹: 랭킹에 등록한 길드(소속 인원 평균)와 개인 참가자만
 // · 친구 랭킹: 서로 친구인 사람만 (친구가 아니면 기록이 보이지 않는다)
 // · 길드: 만들기·가입·내 길드
-export const RankingTab = ({ friendUsers = [], globalEntries = [], me, meId, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3, guildApi, guildData, guildLoading, reloadGuild, onToast }) => {
+export const RankingTab = ({ onClaimXp, claimedKeys = [], friendUsers = [], globalEntries = [], me, meId, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3, guildApi, guildData, guildLoading, reloadGuild, onToast }) => {
   const [scope, setScope] = useState('global');
   const [metric, setMetric] = useState('volume');
   const [selected, setSelected] = useState(null);
@@ -379,7 +379,7 @@ export const RankingTab = ({ friendUsers = [], globalEntries = [], me, meId, fri
 
         {scope === 'guild' ? (
           guest ? loginCard('길드는 회원 전용이에요', '가입하면 길드를 만들거나 들어가서 함께 레이드 보스를 잡고 랭킹에 도전할 수 있어요.')
-            : <GuildCenter api={guildApi} data={guildData} loading={guildLoading} reload={reloadGuild} meId={meId} myGuildRank={myGuildRank} onToast={onToast} Avatar3={Avatar3} />
+            : <GuildCenter api={guildApi} data={guildData} loading={guildLoading} reload={reloadGuild} meId={meId} myGuildRank={myGuildRank} onToast={onToast} Avatar3={Avatar3} onClaimXp={onClaimXp} claimedKeys={claimedKeys} />
         ) : scope === 'friends' && guest ? (
           loginCard('친구 랭킹은 회원 전용이에요', '게스트 기록은 이 기기에만 있어요. 가입하고 친구를 추가하면 서로의 순위를 비교하고 응원할 수 있어요.')
         ) : loading && list.length <= (scope === 'friends' ? 1 : 0) ? (

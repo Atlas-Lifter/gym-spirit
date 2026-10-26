@@ -28,6 +28,7 @@ export function RankingScreen() {
     setIsFriendSearchModalOpen,
     showToast,
     stealRoutine,
+    claimQuestRewards,
   } = useApp();
   const weekInfo = getAnalysisWeekInfo(new Date());
   const mon = new Date(weekInfo.monday), sun = new Date(mon);
@@ -39,6 +40,8 @@ export function RankingScreen() {
   };
   return (
     <RankingTab
+      onClaimXp={(item) => claimQuestRewards([item])}
+      claimedKeys={Object.keys(currentUser?.questState?.claimed || {})}
       friendUsers={/* 서로 친구 수락한 사람만 (대기 중 요청은 제외) */ friendRank.filter(u => u.id !== rankingUser?.id && (devMock || friendState.friends.includes(u.id)))}
       globalEntries={globalEntries}
       me={me}

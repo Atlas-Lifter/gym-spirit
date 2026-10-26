@@ -89,7 +89,9 @@ export const createGuildMock = () => {
         return { id: u, nickname: users[u].nickname, avatar: null, role: x.role, contrib: x.contrib, volume: users[u].volume, lift: users[u].lift, days: mine7.length,
           week_days: mine7.map(a => ((new Date(`${a.day}T00:00:00`).getDay() + 6) % 7) + 1),
           cheers: cheers.filter(c => c.guild === g.id && c.to === u && c.day >= key(ws)).length,
-          cheered_today: cheers.some(c => c.from === ME && c.to === u && c.day === today) };
+          cheered_today: cheers.some(c => c.from === ME && c.to === u && c.day === today),
+          guild_volume: mine7.reduce((sum, a) => sum + a.volume, 0),
+          week_log: mine7.map(a => ({ dow: ((new Date(`${a.day}T00:00:00`).getDay() + 6) % 7) + 1, volume: a.volume })) };
       }).sort((a, b) => (b.role === 'leader') - (a.role === 'leader') || (b.role === 'coach') - (a.role === 'coach') || b.contrib - a.contrib);
       return wait({
         guild: { ...g, level: guildLevelInfo(g.xp).level, cap: cap(g) }, my_role: m.role, members: ms,
@@ -104,7 +106,7 @@ export const createGuildMock = () => {
           const top = Object.entries(by).sort((a, b) => b[1].v - a[1].v)[0];
           return top ? { nickname: users[top[0]].nickname, avatar: null, volume: top[1].v, days: top[1].d } : null;
         })(),
-        last_week: { mvp: { nickname: users.u1?.nickname || '새벽헬창', avatar: null, volume: 52300 }, volume: 88400, claims: ['volume', 'raid'] },
+        last_week: { week_start: lastWs, mvp: { nickname: users.u1?.nickname || '새벽헬창', avatar: null, volume: 52300 }, mvp_id: 'u1', volume: 160000, my_volume: 21000, claims: ['volume', 'raid'] },
         stats: { raids: 1, missions: claims.filter(c => c.guild === g.id && c.key !== 'raid').length + 3, cheers: cheers.filter(c => c.guild === g.id).length,
           posts: posts.filter(p => p.guild === g.id).length, claim_weeks: [...new Set([lastWs, ...claims.filter(c => c.guild === g.id).map(c => c.week)])] },
       });

@@ -4,7 +4,8 @@ import { FullBodyAvatar } from './realAvatar.jsx';
 
 // 주간 레이드 전투 장면
 // 요일을 고르면 그날 운동한 길드원 캐릭터가 보스 앞에서 덤벨을 던지며 싸운다. 아무도 안 했으면 보스만 여유롭게 서 있다.
-// 피해 숫자는 그 길드원의 이번 주 하루 평균 볼륨 (실제 레이드 피해는 길드 이번 주 볼륨 합계)
+// 피해 숫자는 그 길드원이 그날 길드에 기록한 볼륨 (실제 레이드 피해는 길드 이번 주 볼륨 합계)
+// 보스는 죽지 않고 쓰러질 때마다 더 강해져 부활한다 (단계가 오를수록 오라가 커진다)
 
 const DAY_NAMES = ['월', '화', '수', '목', '금', '토', '일'];
 const CYCLE = 1.8; // 초: 한 번 공격하는 주기
@@ -23,8 +24,12 @@ export const RaidArena = ({ raid, members = [], meId, todayIdx, isThisWeek = tru
   const extra = fighters.length - shown.length;
   const { boss } = raid;
   const el = boss.element;
-  const ko = raid.defeated;
-  const dmgOf = (m) => Math.round((m.volume || 0) / Math.max(1, m.days || 1));
+  const ko = false; // 보스는 쓰러져도 바로 부활한다
+  const stage = raid.stage || 1;
+  const dmgOf = (m) => {
+    const log = (m.week_log || []).find(x => x.dow === day + 1);
+    return log ? log.volume : Math.round((m.guild_volume ?? m.volume ?? 0) / Math.max(1, m.days || 1));
+  };
 
   return (
     <div>
@@ -48,7 +53,9 @@ export const RaidArena = ({ raid, members = [], meId, todayIdx, isThisWeek = tru
         {/* 보스 */}
         <div className="absolute right-[-6px] bottom-1" style={{ animation: ko ? 'none' : 'ra-bob 2.6s ease-in-out infinite' }}>
           <div style={{ animation: !ko && fighters.length ? `ra-hit ${CYCLE / Math.max(1, shown.length)}s linear infinite, ra-flash ${CYCLE / Math.max(1, shown.length)}s linear infinite` : 'none' }}>
-            <BossArt kind={boss.kind.key} element={el} size={164} defeated={ko} />
+            <div style={{ filter: stage > 1 ? `drop-shadow(0 0 ${Math.min(18, 4 + stage * 3)}px ${el.glow})` : 'none' }}>
+              <BossArt kind={boss.kind.key} element={el} size={164} />
+            </div>
           </div>
         </div>
 
@@ -88,7 +95,9 @@ export const RaidArena = ({ raid, members = [], meId, todayIdx, isThisWeek = tru
             {[0, 0.8, 1.6].map((d, i) => <span key={i} className="absolute text-sm font-black text-white/70" style={{ right: 52 + i * 8, top: 26 - i * 4, animation: `ra-zz 2.4s ease-out ${d}s infinite` }}>z</span>)}
           </>
         )}
-        {ko && <div className="absolute left-3 top-3 text-xs font-black text-yellow-300">🎉 길드가 보스를 쓰러뜨렸어요!</div>}
+        {/* 단계 표시 */}
+        <span className="absolute right-3 top-3 text-[11px] font-black px-2 py-0.5 rounded-full text-neutral-950" style={{ background: el.glow, boxShadow: `0 0 12px ${el.glow}` }}>★ {stage}단계</span>
+        {raid.kills > 0 && <div className="absolute left-3 top-3 max-w-[60%] text-[11px] font-black text-yellow-300 leading-snug">💀 {raid.kills}번 쓰러뜨렸지만<br />더 강해져 부활했어요!</div>}
       </div>
 
       {/* 요일 고르기 */}

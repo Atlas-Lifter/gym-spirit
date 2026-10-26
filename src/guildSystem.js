@@ -111,11 +111,35 @@ export const bossOfWeek = (weekStart) => {
   return { week, kind, element, name: `${element.name}의 ${kind.name}`, line: kind.line };
 };
 
+// 보스는 죽지 않는다: 쓰러지면 HP가 50%씩 더 늘어난 다음 단계로 바로 부활한다 (1단계 = 길드원 수 × 25,000)
+export const RAID_BASE_HP = 25000;
+export const stageHp = (members, stage) => Math.round(RAID_BASE_HP * Math.max(1, members) * (1 + 0.5 * (stage - 1)));
+export const raidStages = (damage, members) => {
+  let left = Math.max(0, damage), stage = 1;
+  while (left >= stageHp(members, stage) && stage < 99) { left -= stageHp(members, stage); stage += 1; }
+  const hp = stageHp(members, stage);
+  return { stage, kills: stage - 1, hp, into: left, left: hp - left, pct: (left / hp) * 100 };
+};
+
 export const raidOf = (week, skills) => {
   const n = Math.max(1, week?.members || 1);
-  const hp = 25000 * n;
   const dmg = Math.round((week?.volume || 0) * (1 + 0.1 * skillLv(skills, 'rack')));
-  return { boss: bossOfWeek(week?.week_start), hp, dmg, left: Math.max(0, hp - dmg), pct: Math.min(100, (dmg / hp) * 100), defeated: dmg >= hp, reward: 500 };
+  const st = raidStages(dmg, n);
+  // defeated: 1단계를 한 번이라도 쓰러뜨렸는지 (길드 경험치 보상 조건, DB와 같음)
+  return { boss: bossOfWeek(week?.week_start), dmg, ...st, defeated: st.kills >= 1, reward: 500 };
+};
+
+// 주간 개인 경험치 정산: 참여 50 + 내가 준 피해 200kg당 1 (최대 500) + 보스를 쓰러뜨린 단계마다 120 + 주간 MVP 100
+// 그 주에 이 길드에서 한 번이라도 운동(피해)했을 때만 받는다
+export const raidPersonalReward = ({ kills = 0, myDamage = 0, mvp = false }) => {
+  if (!(myDamage > 0)) return { total: 0, items: [] };
+  const items = [
+    { label: '참여', xp: 50 },
+    { label: `내 피해 ${Math.round(myDamage).toLocaleString()}kg`, xp: Math.min(500, Math.floor(myDamage / 200)) },
+    { label: `보스 ${kills}단계 처치`, xp: kills * 120 },
+    ...(mvp ? [{ label: '주간 MVP', xp: 100 }] : []),
+  ].filter(it => it.xp > 0);
+  return { total: items.reduce((a, it) => a + it.xp, 0), items };
 };
 
 // DB 오류 → 안내 문장

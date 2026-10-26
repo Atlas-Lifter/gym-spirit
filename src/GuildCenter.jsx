@@ -4,6 +4,7 @@ import { Sheet, Segmented, Avatar } from './RankingTab.jsx';
 import {
   GUILD_EMBLEMS, GUILD_COLORS, guildColor, GUILD_ROLES, COACH_MAX, MEMBER_TIERS, memberTier, nextMemberTier,
   guildLevelInfo, GUILD_SKILLS, skillLv, skillPoints, weeklyMissions, raidOf, guildErrorText, CHEER_DAILY, claimStreak, guildBadges,
+  raidStages, raidPersonalReward, bossOfWeek,
 } from './guildSystem.js';
 import { HERO_BG, heroBg } from './theme.js';
 import { RaidArena } from './RaidArena.jsx';
@@ -214,7 +215,7 @@ const MemberSheet = ({ member, myRole, meId, coachCount, busy, onAction, onClose
   );
 };
 
-export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onToast, Avatar3 }) => {
+export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onToast, Avatar3, onClaimXp, claimedKeys = [] }) => {
   const [tab, setTab] = useState('home');
   const [busy, setBusy] = useState(null);
   const [formMode, setFormMode] = useState(null); // 'create' | 'edit'
@@ -358,6 +359,16 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
   const streak = claimStreak(stats.claim_weeks || [], week.week_start);
   const badges = guildBadges({ level: lv.level, members: members.length, stats, streak, rank: g.ranked ? myGuildRank : null });
   const cheersLeft = Math.max(0, CHEER_DAILY - (data.my_cheers_today || 0));
+  // 레이드 개인 보상: 이번 주 예상치와 지난주 정산 (guilds_v3.sql 이후 정확한 '내 피해'를 쓴다)
+  const myDamageNow = me ? (me.guild_volume ?? me.volume ?? 0) : 0;
+  const rewardNow = raidPersonalReward({ kills: raid.kills, myDamage: myDamageNow, mvp: data.mvp && me && data.mvp.nickname === me.nickname });
+  const lw = data.last_week || {};
+  const lwHasData = lw.my_volume !== undefined && !!lw.week_start;
+  const lwRaid = lwHasData ? raidStages(Math.round((lw.volume || 0) * (1 + 0.1 * skillLv(g.skills, 'rack'))), members.length) : null;
+  const lwBoss = lwHasData ? bossOfWeek(String(lw.week_start)) : null;
+  const lwReward = lwHasData ? raidPersonalReward({ kills: lwRaid.kills, myDamage: lw.my_volume, mvp: lw.mvp_id === meId }) : null;
+  const lwKey = lwHasData ? `raid-${lw.week_start}` : '';
+  const lwClaimed = lwKey && claimedKeys.includes(lwKey);
   const lastWeek = data.last_week || {};
   const cheer = (m) => run(`cheer-${m.id}`, () => api.cheer(m.id), `👏 ${m.nickname}님을 응원했어요! 길드 +10 XP`);
   const sendPost = async () => {
@@ -448,6 +459,23 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
             </div>
           </div>
 
+          {/* 지난주 레이드 정산 */}
+          {lwHasData && lwReward.total > 0 && (
+            <div className={`rounded-[24px] p-4 border ${lwClaimed ? 'bg-white border-neutral-100' : 'bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-black text-amber-700">📜 지난주 레이드 정산</div>
+                  <div className="text-sm font-black text-neutral-900 truncate">{lwBoss.name} · {lwRaid.stage}단계 도달</div>
+                  <div className="text-[11px] font-bold text-neutral-500">{lwRaid.kills}번 처치 · 내 피해 {num(lw.my_volume)}kg</div>
+                </div>
+                {lwClaimed
+                  ? <span className="text-[11px] font-black text-neutral-400 flex items-center gap-0.5"><Check className="w-3.5 h-3.5" /> 받음</span>
+                  : <button onClick={() => onClaimXp && onClaimXp({ key: lwKey, label: `${lwBoss.name} 레이드`, xp: lwReward.total })} className="px-3 py-2.5 rounded-xl bg-amber-400 text-neutral-950 text-xs font-black shadow-[0_0_14px_rgba(251,191,36,.6)] whitespace-nowrap active:scale-95 transition-transform">+{num(lwReward.total)} XP 받기</button>}
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">{lwReward.items.map(it => <span key={it.label} className="text-[10px] font-bold text-amber-800 bg-amber-100/70 px-1.5 py-0.5 rounded">{it.label} +{it.xp}</span>)}</div>
+            </div>
+          )}
+
           {/* 레이드 보스 */}
           <div className="relative rounded-[28px] p-4 overflow-hidden text-white" style={{ background: heroBg(raid.boss.element.glow, '#0b0f14') }}>
             <div className="relative flex items-center gap-1.5 flex-wrap">
@@ -455,16 +483,27 @@ export const GuildCenter = ({ api, data, loading, reload, meId, myGuildRank, onT
               <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-white/10">{raid.boss.week}주차</span>
               <span className="text-[10px] font-black px-1.5 py-0.5 rounded" style={{ background: `${raid.boss.element.glow}26`, color: raid.boss.element.glow }}>{raid.boss.element.season}</span>
             </div>
-            <div className="relative text-xl font-black mt-1">{raid.boss.name}</div>
+            <div className="relative text-xl font-black mt-1">{raid.boss.name} <span className="text-sm" style={{ color: raid.boss.element.glow }}>· {raid.stage}단계</span></div>
             <div className="relative text-[11px] font-bold text-white/55">{raid.boss.line}</div>
             <RaidArena raid={raid} members={members} meId={meId} todayIdx={todayIdx} />
             <div className="relative mt-3">
               <div className="flex justify-between text-[10px] font-bold text-white/60 mb-1">
-                <span>HP {num(raid.left)} / {num(raid.hp)}</span>
-                <span>{raid.defeated ? '처치!' : `${Math.ceil(100 - raid.pct)}% 남음`}</span>
+                <span>{raid.stage}단계 HP {num(raid.left)} / {num(raid.hp)}</span>
+                <span>{Math.ceil(100 - raid.pct)}% 남음</span>
               </div>
               <div className="h-3 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-orange-400 transition-all duration-700" style={{ width: `${100 - raid.pct}%` }} /></div>
-              <p className="text-[11px] font-bold text-white/50 mt-2">길드원 이번 주 볼륨 합계가 그대로 피해가 돼요{skillLv(g.skills, 'rack') ? ` (파워랙 +${skillLv(g.skills, 'rack') * 10}%)` : ''} · 누적 피해 {num(raid.dmg)}</p>
+              <p className="text-[11px] font-bold text-white/50 mt-2">길드원 이번 주 볼륨 합계가 그대로 피해가 돼요{skillLv(g.skills, 'rack') ? ` (파워랙 +${skillLv(g.skills, 'rack') * 10}%)` : ''} · 누적 피해 {num(raid.dmg)} · 쓰러뜨리면 HP +50%로 부활해요</p>
+            </div>
+            {/* 이번 주 예상 개인 보상 */}
+            <div className="relative mt-3 rounded-2xl bg-white/[0.06] border border-white/10 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black text-white/80">🎁 이번 주 내 예상 보상</span>
+                <span className="text-sm font-black text-yellow-300">{rewardNow.total ? `+${num(rewardNow.total)} XP` : '–'}</span>
+              </div>
+              {rewardNow.total ? (
+                <div className="flex flex-wrap gap-1 mt-1.5">{rewardNow.items.map(it => <span key={it.label} className="text-[10px] font-bold text-white/60 bg-white/5 px-1.5 py-0.5 rounded">{it.label} +{it.xp}</span>)}</div>
+              ) : <div className="text-[10px] font-bold text-white/45 mt-1">이번 주에 운동을 저장하면 보스에게 피해를 주고 보상이 쌓여요</div>}
+              <div className="text-[10px] font-bold text-white/40 mt-1.5">월요일 0시에 이번 주가 끝나면 단계·내 피해에 따라 프로필 경험치로 정산돼요</div>
             </div>
             {raid.defeated && (claims.includes('raid')
               ? <div className="relative mt-3 py-2.5 rounded-xl bg-white/10 text-center text-xs font-black text-white/60">✅ 처치 보상 수령 완료</div>
