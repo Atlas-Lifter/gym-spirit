@@ -1239,8 +1239,10 @@ export function useGymApp() {
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState(false);
   const refreshNotice = () => (devMock ? devMock.notice() : cloud.fetchActiveNotice()).then(setAppNotice).catch(() => {});
   useEffect(() => {
-    (devMock ? devMock.adminIds() : cloud.fetchAdminIds()).then(ids => { setAdminIds(ids); setAdminIdList(ids); }).catch(() => {});
+    let alive = true; // 먼저 보낸 요청이 늦게 도착해 덮어쓰지 않게
+    (devMock ? devMock.adminIds() : cloud.fetchAdminIds()).then(ids => { if (!alive) return; setAdminIds(ids); setAdminIdList(ids); }).catch(() => {});
     refreshNotice();
+    return () => { alive = false; };
   }, [devMock]);
   const amAdmin = !!rankingUser && !!adminIdList?.includes(rankingUser.id);
   const adminMode = amAdmin && !!currentUser?.adminMode;

@@ -392,7 +392,7 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
 
         {scope === 'guild' ? (
           guest ? loginCard('길드는 회원 전용이에요', '가입하면 길드를 만들거나 들어가서 함께 레이드 보스를 잡고 랭킹에 도전할 수 있어요.')
-            : <GuildCenter api={guildApi} data={guildData} loading={guildLoading} reload={reloadGuild} meId={meId} myGuildRank={myGuildRank} onToast={onToast} Avatar3={Avatar3} onClaimXp={onClaimXp} claimedKeys={claimedKeys} />
+            : <GuildCenter api={guildApi} data={guildData} loading={guildLoading} reload={reloadGuild} meId={meId} meHidden={meHidden} myGuildRank={myGuildRank} onToast={onToast} Avatar3={Avatar3} onClaimXp={onClaimXp} claimedKeys={claimedKeys} />
         ) : scope === 'friends' && guest ? (
           loginCard('친구 랭킹은 회원 전용이에요', '게스트 기록은 이 기기에만 있어요. 가입하고 친구를 추가하면 서로의 순위를 비교하고 응원할 수 있어요.')
         ) : loading ? (
