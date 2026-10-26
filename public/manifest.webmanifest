@@ -1,0 +1,17 @@
+{
+  "name": "GYM SPIRIT - 운동 기록·랭킹",
+  "short_name": "GYM SPIRIT",
+  "description": "운동 기록부터 주간 랭킹, 친구·길드까지. 가장 완벽한 운동 일지",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070b0f",
+  "theme_color": "#070b0f",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -25,6 +25,7 @@ import { weightRule, platesFor, setLoad, nextWeight, formatPlates, sideWeight } 
 import { DEFAULT_TIMER_SETTINGS, ALARM_SOUNDS, REPEAT_OPTIONS, REST_OPTIONS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { FriendCenter } from './FriendCenter.jsx';
 import * as cloud from './cloud.js';
+import { useWakeLock, InstallSheet, InstallBanner, InstallCard } from './pwa.jsx';
 import { FullBodyAvatar, AVATAR_SKIN_TONES, AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS } from './realAvatar.jsx';
 
 const formatDate = (date) => {
@@ -912,6 +913,7 @@ export default function App() {
   const [guildLoading, setGuildLoading] = useState(false);
   const [devMock, setDevMock] = useState(null); // 개발 서버에서 ?mockguild 로 길드 화면을 미리 보는 가짜 서버
   const lastContrib = useRef({});
+  const [isInstallOpen, setIsInstallOpen] = useState(false); // 홈 화면 앱 설치 안내
   const [extraProfiles, setExtraProfiles] = useState({}); // 친구·요청 보낸 사람 프로필
   const [rankLoading, setRankLoading] = useState(false);
   const [editingNick, setEditingNick] = useState(null);
@@ -2106,8 +2108,12 @@ export default function App() {
 
   const profilesById = { ...extraProfiles, ...Object.fromEntries(friendRank.map(u => [u.id, u])) };
 
+  // 운동 기록 중에는 화면이 꺼지지 않게
+  useWakeLock(currentScreen === 'workout');
+
   const globalOverlays = (
     <>
+      <InstallSheet open={isInstallOpen} onClose={() => setIsInstallOpen(false)} onToast={showToast} />
       {guideExerciseId && (() => {
         const ex = EXERCISE_OPTIONS.find(e => e.id === guideExerciseId);
         const guide = EXERCISE_GUIDES[guideExerciseId];
@@ -3034,6 +3040,7 @@ export default function App() {
         {activeTab === 'workout' && (
           <div className="flex flex-col h-full animate-fade-in">
             <div className="flex-1 bg-neutral-50 text-neutral-900 p-5 pb-32 min-h-[60vh]">
+              <InstallBanner onOpen={() => setIsInstallOpen(true)} />
               <div className="flex gap-3 mb-8 mt-2">
                 <div onClick={() => setCurrentScreen('diet')} className="flex-1 bg-white p-4 rounded-[24px] border border-neutral-100 flex items-center gap-3 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer active:scale-95 group">
                   <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 group-hover:scale-110 transition-all"><Utensils className="w-5 h-5 text-emerald-600" /></div>
@@ -3616,6 +3623,8 @@ export default function App() {
                  </div>
                </div>
                <button onClick={openBodyStatsModal} className="w-full bg-neutral-100 text-neutral-600 font-black py-4 rounded-2xl text-sm hover:bg-neutral-200 transition-colors active:scale-[0.98] mb-6">스탯 입력 및 수정하기</button>
+
+               <div className="mb-4"><InstallCard onOpen={() => setIsInstallOpen(true)} /></div>
 
                <QuestCenter
                  workouts={safeWorkouts}
