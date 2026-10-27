@@ -166,7 +166,8 @@ const ROWS = [
 
 export const FOOD_DB = ROWS.map(([id, name, category, icon, calories, protein, carbs, fat, serv, note, kw = '', unit = 'g']) => {
   const [bgColor, txColor] = CAT_STYLE[category];
-  return { id, name, category, icon, calories, protein, carbs, fat, per: 100, unit, serv: serv.map(([l, g]) => ({ l, g })), note, kw, bgColor, txColor };
+  // 사진: public/foods/<id>.jpg (Gemini로 만든 음식 사진)
+  return { id, name, category, icon, img: `/foods/${id}.jpg`, calories, protein, carbs, fat, per: 100, unit, serv: serv.map(([l, g]) => ({ l, g })), note, kw, bgColor, txColor };
 });
 
 // 음식 특징 표시: 100g 기준 칼로리 중 단백질 비율 등으로 판단

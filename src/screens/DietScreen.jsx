@@ -2,6 +2,7 @@ import React from 'react';
 import { Camera, ChevronLeft, Minus, Plus, Search, Trash2, Utensils, X } from 'lucide-react';
 import { FOOD_DB, FOOD_CATEGORIES, foodTags } from '../data/foods.js';
 import { GlobalOverlays } from './GlobalOverlays.jsx';
+import { FoodImage } from '../components/FoodImage.jsx';
 import { useApp } from '../appContext.js';
 
 // 식단 플래너 화면
@@ -86,7 +87,7 @@ export function DietScreen() {
                   {meal.items.map(item => (
                     <div key={item.id} className="flex justify-between items-center bg-neutral-50 p-3 rounded-2xl border border-neutral-100 group hover:border-rose-100 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm">{String(item.icon)}</div>
+                        <FoodImage id={item.foodId} icon={String(item.icon)} className="w-11 h-11" bg="bg-white" />
                         <div>
                           <div className="font-black text-sm text-neutral-900">{String(item.name)}</div>
                           <div className="text-[10px] font-bold text-neutral-500">{item.weight}{item.unit || 'g'} · 단백질 {item.protein}g</div>
@@ -134,7 +135,7 @@ export function DietScreen() {
                     const sv = food.serv?.[0];
                     return (
                       <div key={food.id} onClick={() => pickFood(food)} className="flex items-center gap-3.5 bg-white p-3.5 rounded-2xl border border-neutral-100 hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer group active:scale-95">
-                        <div className={`w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center text-3xl shadow-inner border border-white/50 ${food.bgColor}`}>{String(food.icon)}</div>
+                        <FoodImage id={food.id} icon={food.icon} className="w-16 h-16" rounded="rounded-2xl" bg={food.bgColor} />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-black text-neutral-900 text-[15px] truncate">{String(food.name)}</h3>
                           <div className="text-[10px] font-bold text-neutral-400 mt-0.5">100{food.unit} {food.calories}kcal · 단백질 {food.protein}g{sv ? ` · ${sv.l} ${Math.round(food.calories * sv.g / food.per)}kcal` : ''}</div>
@@ -149,7 +150,7 @@ export function DietScreen() {
               </>
             ) : (
               <div className="flex-1 bg-neutral-50 p-5 flex flex-col items-center overflow-y-auto">
-                 <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-5xl shadow-md border-4 border-white mb-3 mt-1 ${selectedFood.bgColor}`}>{String(selectedFood.icon)}</div>
+                 <div className="mb-3 mt-1 shadow-lg rounded-[28px] border-4 border-white"><FoodImage id={selectedFood.id} icon={selectedFood.icon} className="w-36 h-36" rounded="rounded-3xl" bg={selectedFood.bgColor} /></div>
                  <h3 className="text-2xl font-black text-neutral-900 mb-1 text-center">{String(selectedFood.name)}</h3>
                  <div className="flex flex-wrap justify-center gap-1 mb-4">
                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md bg-white ${selectedFood.txColor}`}>{selectedFood.category}</span>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, ChevronLeft, ChevronRight, MessageSquare, RotateCw, Star, Search, BookOpen, Calculator, Activity, Dumbbell } from 'lucide-react';
 import { COACH_TREE } from './coachTree.js';
 import { FOOD_DB, foodTags } from './data/foods.js';
+import { FoodImage } from './components/FoodImage.jsx';
 
 // ── 기본 트리에 붙이는 확장: 계산기·도구 노드, 답변별 바로가기 버튼 ─────────────
 const TOOL_NODES = {
@@ -543,7 +544,7 @@ const MealTool = ({ bodyStats, onApplyMealPlan }) => {
               <div className="flex justify-between items-baseline mb-1.5"><span className="text-sm font-black text-neutral-900">{name}</span><span className="text-[11px] font-black text-neutral-500">{Math.round(m.kcal)}kcal · 단백질 {Math.round(m.p)}g</span></div>
               {items.map(it => (
                 <div key={it.food.id} className="flex items-center gap-2 text-xs font-bold text-neutral-700 py-0.5">
-                  <span>{it.food.icon}</span><span className="flex-1 truncate">{it.food.name}</span><span className="text-neutral-400">{it.g}{it.food.unit}</span><span className="w-14 text-right">{Math.round(nutri(it.food, it.g).kcal)}kcal</span>
+                  <FoodImage id={it.food.id} icon={it.food.icon} className="w-7 h-7" rounded="rounded-md" /><span className="flex-1 truncate">{it.food.name}</span><span className="text-neutral-400">{it.g}{it.food.unit}</span><span className="w-14 text-right">{Math.round(nutri(it.food, it.g).kcal)}kcal</span>
                 </div>
               ))}
             </div>
