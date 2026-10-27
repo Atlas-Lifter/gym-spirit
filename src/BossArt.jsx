@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
 
 // 길드 레이드 보스 그림 (13종 × 속성 색). viewBox 160×160, 바닥 그림자는 y≈150.
 // 굵은 외곽선 + 그라데이션 + 빛나는 눈으로 '헬스 방해꾼'을 만화 보스처럼 그린다.
@@ -361,8 +361,18 @@ const BASE = {
   ogre: ['#a3a3a3', '#525252'], demon: ['#ef4444', '#991b1b'], dragon: ['#22c55e', '#14532d'], sloth: ['#a8a29e', '#57534e'], pizza: ['#fde047', '#f59e0b'],
 };
 
+// 보스 일러스트 (Gemini로 만든 그림, 배경을 지운 webp): public/bosses/<종류>-<속성>-<1~4단계>.webp
+// 부활 단계 1·2·3은 같은 번호 그림, 4단계 이상은 4번(최종 형태) 그림에 효과가 더 강해진다
+const BOSS_IMG_KINDS = new Set(['sofa', 'chicken', 'phone', 'alarm', 'cola', 'ramen', 'bed', 'goblin', 'ogre', 'demon', 'dragon', 'sloth', 'pizza']);
+// 아직 그림이 없는 조합 (이 경우엔 기존 벡터 그림으로 보여준다)
+const BOSS_IMG_MISSING = new Set(['demon-toxic']);
+export const bossImage = (kind, elementKey, stage = 1) => (BOSS_IMG_KINDS.has(kind) && elementKey && !BOSS_IMG_MISSING.has(`${kind}-${elementKey}`) ? `/bosses/${kind}-${elementKey}-${Math.max(1, Math.min(4, Number(stage) || 1))}.webp` : null);
+
 export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, stage = 1, className = '' }) => {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const [imgFailed, setImgFailed] = useState(null);
+  const img = bossImage(kind, element?.key, stage);
+  const useImg = img && imgFailed !== img;
   const base = element || { glow: '#34d399', eye: '#ecfdf5' };
   const rage = defeated ? 0 : rageOf(stage);
   // 분노하면 눈이 붉게 타오르고, 폭주하면 오라가 검붉게 변한다
@@ -390,7 +400,7 @@ export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, 
           <feBlend in="rt" in2="SourceGraphic" mode="multiply" />
         </filter>
         {/* 몸 모양 그대로의 흰 마스크 (금이 몸 위에만 보이게) */}
-        {rage > 0 && (
+        {rage > 0 && !useImg && (
           <mask id={`${id}-body`} maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="160">
             <g filter={`url(#${id}-white)`}>{draw(el, id)}</g>
           </mask>
@@ -410,6 +420,14 @@ export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, 
       {rage >= 2 && <FlameRing rage={rage} color={base.glow} />}
       <Ground el={el} />
       {rage >= 3 && <GroundCracks />}
+      {useImg ? (
+        <g transform={defeated ? 'rotate(-8 80 120)' : undefined}>
+          <g>
+            {rage >= 3 && <animateTransform attributeName="transform" type="translate" values="0 0; 1.2 -0.6; -1 0.8; 0.8 0.4; 0 0" dur={rage >= 4 ? '.35s' : '.6s'} repeatCount="indefinite" />}
+            <image href={img} x="0" y="-4" width="160" height="160" preserveAspectRatio="xMidYMax meet" onError={() => setImgFailed(img)} />
+          </g>
+        </g>
+      ) : (
       <g transform={defeated ? 'rotate(-8 80 120)' : `translate(80 146) scale(${grow}) translate(-80 -146)`}>
         <g>
           {rage >= 3 && <animateTransform attributeName="transform" type="translate" values="0 0; 1.2 -0.6; -1 0.8; 0.8 0.4; 0 0" dur={rage >= 4 ? '.35s' : '.6s'} repeatCount="indefinite" />}
@@ -430,7 +448,8 @@ export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, 
           {rage >= 1 && <Steam />}
         </g>
       </g>
-      {rage >= 4 && <FlameCrown />}
+      )}
+      {rage >= 4 && !useImg && <FlameCrown />}
       {!defeated && el.particle && <Particles el={el} />}
       {rage >= 3 && <RageEmbers />}
       {rage >= 4 && <Lightning />}
