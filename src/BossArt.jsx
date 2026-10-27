@@ -364,9 +364,7 @@ const BASE = {
 // 보스 일러스트 (Gemini로 만든 그림, 배경을 지운 webp): public/bosses/<종류>-<속성>-<1~4단계>.webp
 // 부활 단계 1·2·3은 같은 번호 그림, 4단계 이상은 4번(최종 형태) 그림에 효과가 더 강해진다
 const BOSS_IMG_KINDS = new Set(['sofa', 'chicken', 'phone', 'alarm', 'cola', 'ramen', 'bed', 'goblin', 'ogre', 'demon', 'dragon', 'sloth', 'pizza']);
-// 아직 그림이 없는 조합 (이 경우엔 기존 벡터 그림으로 보여준다)
-const BOSS_IMG_MISSING = new Set(['demon-toxic']);
-export const bossImage = (kind, elementKey, stage = 1) => (BOSS_IMG_KINDS.has(kind) && elementKey && !BOSS_IMG_MISSING.has(`${kind}-${elementKey}`) ? `/bosses/${kind}-${elementKey}-${Math.max(1, Math.min(4, Number(stage) || 1))}.webp` : null);
+export const bossImage = (kind, elementKey, stage = 1) => (BOSS_IMG_KINDS.has(kind) && elementKey ? `/bosses/${kind}-${elementKey}-${Math.max(1, Math.min(4, Number(stage) || 1))}.webp` : null);
 
 export const BossArt = ({ kind = 'sofa', element, size = 150, defeated = false, stage = 1, className = '' }) => {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
