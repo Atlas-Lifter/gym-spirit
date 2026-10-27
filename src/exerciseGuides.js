@@ -1,8 +1,10 @@
 // 종목별 운동 설명서. 단계는 [그림 프레임, 제목, 설명, (이전 자세 잔상 프레임)].
 // pt는 movementPatterns.jsx의 동작 패턴, eq는 그 패턴의 기구를 바꿀 때만 쓴다.
+import { PHOTO_GUIDES } from './data/photoGuides.js';
+
 const G = (pt, sum, steps, tips, warn, extra = {}) => ({ pt, sum, steps, tips, warn, ...extra });
 
-export const EXERCISE_GUIDES = {
+const BASE_GUIDES = {
   // ---------------- 하체 ----------------
   sq: G('squat_back', '바벨을 등에 지고 앉았다 일어나는 하체 운동의 기본. 허벅지 앞쪽과 엉덩이를 함께 키웁니다.', [
     ['start', '바벨 걸치기', '랙에서 바벨을 목 바로 아래 승모근 위에 올리고 어깨너비보다 조금 넓게 잡은 뒤 한두 걸음 뒤로 나옵니다.'],
@@ -651,3 +653,6 @@ export const EXERCISE_GUIDES = {
     ['up', '리듬 유지', '20~30초 쉬지 않고 흔든 뒤 쉬는 식으로 반복합니다.', 'down'],
   ], ['허리가 아니라 어깨와 팔로 흔드세요.'], '허리를 숙인 채 오래 하면 허리에 부담이 갑니다.'),
 };
+
+// 사진으로 추가한 종목도 같은 단계별 그림 설명서로 (기존 설명서가 있으면 그쪽이 우선)
+export const EXERCISE_GUIDES = { ...PHOTO_GUIDES, ...BASE_GUIDES };
