@@ -174,14 +174,25 @@ export function useGymApp() {
       } catch (e) {}
     }
   }, [currentUser]);
+  // 운동 시간·휴식 타이머는 1초씩 더하고 빼지 않고 실제 시각으로 계산한다.
+  // (앱을 내려두면 휴대폰이 타이머를 늦추거나 멈춰서, 1초씩 세면 30초가 지나도 몇 초만 흐른 것처럼 보였다)
+  const durRef = useRef(workoutDurationSec); durRef.current = workoutDurationSec;
+  const durStartRef = useRef(0);
+  const durSetRef = useRef(null);
   useEffect(() => {
     if (currentScreen === 'workout') setWorkoutMinimized(false);
-    if (currentScreen === 'workout' || workoutMinimized) {
-      sessionTimerRef.current = setInterval(() => setWorkoutDurationSec(prev => prev + 1), 1000);
-    } else {
-      clearInterval(sessionTimerRef.current);
-    }
-    return () => clearInterval(sessionTimerRef.current);
+    if (!(currentScreen === 'workout' || workoutMinimized)) return undefined;
+    // 바깥에서 운동 시간을 바꿨으면(새 운동 0초, 불러온 운동 등) 그 값부터 다시 잰다
+    const rebase = () => { durStartRef.current = Date.now() - durRef.current * 1000; durSetRef.current = durRef.current; };
+    if (!durStartRef.current || durSetRef.current !== durRef.current) rebase();
+    const tick = () => {
+      if (durSetRef.current !== durRef.current) rebase();
+      const sec = Math.max(0, Math.floor((Date.now() - durStartRef.current) / 1000));
+      if (sec !== durRef.current) { durRef.current = sec; durSetRef.current = sec; setWorkoutDurationSec(sec); }
+    };
+    sessionTimerRef.current = setInterval(tick, 500);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(sessionTimerRef.current); document.removeEventListener('visibilitychange', tick); };
   }, [currentScreen, workoutMinimized]);
   // 진행 중인 운동을 기기에 저장 (앱이 꺼지거나 새로고침돼도 이어서 할 수 있게)
   const ACTIVE_WORKOUT_KEY = 'gymspirit_active_workout';
@@ -212,25 +223,50 @@ export function useGymApp() {
     } catch (e) {}
     prevSessionLen.current = len;
   }, [session, currentDate]);
+  // 휴식 타이머: '끝나는 시각'을 정해 두고 남은 시간을 계산한다
+  const timeLeftRef = useRef(timeLeft); timeLeftRef.current = timeLeft;
+  const restEndRef = useRef(0);
+  const restSetRef = useRef(null);
+  const overtimeStartRef = useRef(0);
   useEffect(() => {
-    if (isTimerActive && timeLeft > 0) {
-      timerRef.current = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    } else if (timeLeft === 0 && isTimerActive) {
+    if (!isTimerActive) return undefined;
+    // 시작·다시 시작할 때, 그리고 바깥에서 남은 시간을 바꿨을 때(+30초 등) 그 값부터 다시 잰다
+    const rebase = () => { restEndRef.current = Date.now() + timeLeftRef.current * 1000; restSetRef.current = timeLeftRef.current; };
+    rebase();
+    const tick = () => {
+      if (restSetRef.current !== timeLeftRef.current) rebase();
+      const left = Math.max(0, Math.ceil((restEndRef.current - Date.now()) / 1000));
+      if (left !== timeLeftRef.current) { timeLeftRef.current = left; restSetRef.current = left; setTimeLeft(left); }
+    };
+    timerRef.current = setInterval(tick, 250);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(timerRef.current); document.removeEventListener('visibilitychange', tick); };
+  }, [isTimerActive]);
+  useEffect(() => {
+    if (timeLeft === 0 && isTimerActive) {
       setIsTimerActive(false);
       clearInterval(timerRef.current);
-      try {
-        alarmStopRef.current?.();
-        setAlarmRinging(true);
-        alarmStopRef.current = playAlarm(timerSettings, () => { setAlarmRinging(false); alarmStopRef.current = null; });
-      } catch(e) { console.error("오디오 알림 실패", e); }
-      showToast("⏱️ 휴식 종료! 다음 세트를 준비하세요.");
-      setOvertimeSec(0);
+      // 휴식은 원래 끝났어야 할 시각에 끝난 것으로 보고, 초과 시간도 그때부터 센다
+      const endedAt = restEndRef.current || Date.now();
+      overtimeStartRef.current = endedAt;
+      const lateSec = Math.floor((Date.now() - endedAt) / 1000);
+      if (lateSec <= 5) {
+        try {
+          alarmStopRef.current?.();
+          setAlarmRinging(true);
+          alarmStopRef.current = playAlarm(timerSettings, () => { setAlarmRinging(false); alarmStopRef.current = null; });
+        } catch(e) { console.error("오디오 알림 실패", e); }
+        showToast("⏱️ 휴식 종료! 다음 세트를 준비하세요.");
+      } else {
+        // 앱을 내려둔 사이에 끝났으면 알람 대신 얼마나 지났는지 알려 준다
+        showToast(`⏱️ 휴식이 ${lateSec < 60 ? `${lateSec}초` : `${Math.floor(lateSec / 60)}분 ${lateSec % 60}초`} 전에 끝났어요.`);
+      }
+      setOvertimeSec(Math.max(0, lateSec));
     }
     // 끝나기 3초 전부터 카운트다운
     if (isTimerActive && timeLeft > 0 && timeLeft <= 3 && timerSettings.countdown) {
       try { playTick(timerSettings.volume, timeLeft === 1); } catch (e) {}
     }
-    return () => clearInterval(timerRef.current);
   }, [isTimerActive, timeLeft]);
   // 분석 탭의 회복도는 시간이 지나며 바뀌므로 1분마다 다시 그린다
   const [, setNowTick] = useState(0);
@@ -243,8 +279,13 @@ export function useGymApp() {
   const overtimeOn = overtimeSec !== null;
   useEffect(() => {
     if (!overtimeOn) return undefined;
-    const t = setInterval(() => setOvertimeSec(prev => (prev === null ? null : prev >= 1800 ? null : prev + 1)), 1000);
-    return () => clearInterval(t);
+    const tick = () => {
+      const sec = Math.max(0, Math.floor((Date.now() - (overtimeStartRef.current || Date.now())) / 1000));
+      setOvertimeSec(prev => (prev === null ? null : sec >= 1800 ? null : sec));
+    };
+    const t = setInterval(tick, 500);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); };
   }, [overtimeOn]);
   // 사진 표지: 흐린 사진을 배경으로 깔고, 선명한 사진은 오른쪽에 두어 왼쪽 글자와 겹치지 않게 한다. 사진이 없으면 3D 일러스트
   const LegendArt = ({ id }) => (DEFAULT_COVER_PHOTOS[id]
