@@ -33,6 +33,9 @@ drop policy if exists "own rest alarm" on public.rest_alarms;
 create policy "own rest alarm" on public.rest_alarms
   for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+-- 회원이 앱에서 자기 줄을 쓰고 지울 수 있게 (어느 줄인지는 위 정책이 막는다)
+grant select, insert, update, delete on public.push_subscriptions, public.rest_alarms to authenticated;
+
 -- 끝난 알람을 꺼내서 보낸다. 너무 늦어진 알람(2분 넘게 지난 것)은 보내지 않고 지운다
 create or replace function public.dispatch_rest_alarms()
 returns void language plpgsql security definer set search_path = public, extensions as $$

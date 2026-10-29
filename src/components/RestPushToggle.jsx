@@ -18,7 +18,7 @@ export function RestPushToggle({ uid, showToast, onInstall }) {
     else if (r === 'login') showToast('휴식 종료 알림은 회원가입 후 쓸 수 있어요.');
     else if (r === 'denied') showToast('알림이 꺼져 있어요. 휴대폰 설정에서 GYM SPIRIT 알림을 허용해 주세요.');
     else if (r === 'unsupported') showToast('이 브라우저는 알림을 지원하지 않아요.');
-    else showToast('알림을 켜지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+    else showToast(`알림을 켜지 못했어요. (${String(r).replace(/^error:/, '')})`);
   };
 
   const desc = !uid ? '회원가입 후 쓸 수 있어요'
