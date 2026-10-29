@@ -493,12 +493,22 @@ export function useGymApp() {
     const cleanSession = src.map(ex => ({
       id: String(ex.id || Date.now()),
       exercise: { id: String(getExId(ex)), name: String(getExName(ex)), target: String(getExTarget(ex)), tool: String(ex.exercise?.tool || ex.tool || '바벨') },
-      sets: (ex.sets || []).map(s => ({ id: String(s.id || Date.now()), type: String(s.type || '-'), weight: String(s.weight || '0'), reps: String(s.reps || '0'), rpe: String(s.rpe || ''), completed: Boolean(s.completed) }))
+      sets: (ex.sets || []).map(s => ({ id: String(s.id || Date.now()), type: String(s.type || '-'), weight: String(s.weight || '0'), reps: String(s.reps || '0'), rpe: String(s.rpe || ''), completed: Boolean(s.completed), ...(s.completed && s.doneAt ? { doneAt: String(s.doneAt) } : {}) }))
     }));
     const dateKey = String(currentDate);
+    // 운동이 끝난 시각 = 마지막으로 완료 체크한 세트 시각 (자정을 넘겨 끝난 운동도 그대로).
+    // 그 날짜와 동떨어진 시각(지난 날짜를 나중에 적은 경우)은 쓰지 않고, 이미 저장된 시각이 있으면 그대로 둔다
+    const nowMs = Date.now();
+    const [dy, dm, dd] = dateKey.split('-').map(Number);
+    const dayStart = new Date(dy, dm - 1, dd).getTime();
+    const lastDone = cleanSession.flatMap(ex => ex.sets).filter(st => st.completed && st.doneAt)
+      .map(st => new Date(st.doneAt).getTime()).filter(t => !isNaN(t) && t >= dayStart && t <= dayStart + 36 * 3600 * 1000 && t <= nowMs)
+      .reduce((a, b) => Math.max(a, b), 0);
     setCurrentUser(prev => {
       const existingWorkouts = prev.workouts || {};
-      const workoutTimes = dateKey === formatDate(new Date()) ? { ...(prev.workoutTimes || {}), [dateKey]: new Date().toISOString() } : (prev.workoutTimes || {});
+      const prevTimes = prev.workoutTimes || {};
+      const endAt = lastDone ? new Date(lastDone).toISOString() : prevTimes[dateKey] || (dateKey === formatDate(new Date()) ? new Date().toISOString() : null);
+      const workoutTimes = endAt ? { ...prevTimes, [dateKey]: endAt } : prevTimes;
       const updatedUser = { ...prev, workouts: { ...existingWorkouts, [dateKey]: cleanSession }, workoutTimes };
       try {
         const db = JSON.parse(localStorage.getItem('gymwork_pro_users_v21')) || {};
@@ -543,7 +553,8 @@ export function useGymApp() {
     triggerSaveWorkout();
   };
   const saveAllAsDone = () => {
-    const all = session.map(ex => ({ ...ex, sets: (ex.sets || []).map(st => (hasReps(st) ? { ...st, completed: true } : st)) }));
+    const at = new Date().toISOString();
+    const all = session.map(ex => ({ ...ex, sets: (ex.sets || []).map(st => (hasReps(st) && !st.completed ? { ...st, completed: true, doneAt: at } : st)) }));
     setSaveCheck(null);
     setSession(all);
     triggerSaveWorkout(all);
@@ -746,7 +757,10 @@ export function useGymApp() {
               justCompleted = !s.completed;
               // 완료할 때 RPE를 비워 뒀으면 추천값을 자동으로 넣는다 (직접 적은 값은 그대로)
               const auto = justCompleted && !String(s.rpe || '').trim() ? suggestRpe(ex, s) : null;
-              return { ...s, completed: !s.completed, ...(auto !== null ? { rpe: String(auto), rpeAuto: true } : {}) };
+              const next = { ...s, completed: !s.completed, ...(auto !== null ? { rpe: String(auto), rpeAuto: true } : {}) };
+              // 완료한 시각을 남겨 두고, 회복 카운트다운은 마지막으로 완료한 세트 시각부터 센다
+              if (justCompleted) next.doneAt = new Date().toISOString(); else delete next.doneAt;
+              return next;
             }
             return s;
           }) };

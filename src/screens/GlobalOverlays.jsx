@@ -1,8 +1,9 @@
-import React, { lazy, Suspense } from 'react';
-import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, Share2, X, Zap } from 'lucide-react';
+import React, { lazy, Suspense, useRef } from 'react';
+import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, X, Zap } from 'lucide-react';
 import * as cloud from '../cloud.js';
 import { EXERCISE_TIPS } from '../data/exerciseTips.js';
 import { ExercisePhotoPair, SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
+import { WorkoutCardActions } from '../components/WorkoutCardActions.jsx';
 import { MUSCLE_LABELS, getExerciseMuscles } from '../data/anatomy.js';
 import { EXERCISE_OPTIONS, getExName } from '../data/catalog.js';
 import { EXERCISE_GUIDES } from '../exerciseGuides.js';
@@ -93,6 +94,7 @@ export function GlobalOverlays() {
     currentUser,
     devMock,
   } = useApp();
+  const cardAvatarRef = useRef(null);
   return (
     <>
       <InstallSheet open={isInstallOpen} onClose={() => setIsInstallOpen(false)} onToast={showToast} />
@@ -397,7 +399,7 @@ export function GlobalOverlays() {
                      </div>
                      <div className="w-9 h-9 bg-neutral-900/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10"><Dumbbell className={`w-5 h-5 ${photoCardTheme === 'neon' ? 'text-emerald-400' : photoCardTheme === 'cyber' ? 'text-purple-400' : 'text-blue-600'}`}/></div>
                   </div>
-                  <div className="relative z-10 flex justify-center my-2"><div className="w-36 h-48 drop-shadow-2xl"><FullBodyAvatar profile={activeUser?.profile} bodyStats={activeUser?.bodyStats} size="w-full h-full" pose="flex" /></div></div>
+                  <div className="relative z-10 flex justify-center my-2"><div ref={cardAvatarRef} className="w-36 h-48 drop-shadow-2xl"><FullBodyAvatar profile={activeUser?.profile} bodyStats={activeUser?.bodyStats} size="w-full h-full" pose="flex" /></div></div>
                   <div className="relative z-10 space-y-3">
                      <div className={`grid grid-cols-2 gap-2 p-3 rounded-2xl border backdrop-blur-md ${photoCardTheme === 'clean' ? 'bg-neutral-50 border-neutral-200' : 'bg-neutral-900/60 border-white/10'}`}>
                         <div className="text-center"><span className="text-[9px] font-bold opacity-60 block">총 운동 볼륨</span><span className="text-lg font-black">{photoCardData.totalVolume.toLocaleString()}kg</span></div>
@@ -410,10 +412,7 @@ export function GlobalOverlays() {
                      </div>
                   </div>
                </div>
-               <div className="flex gap-2 w-full mt-4">
-                 <button onClick={() => { showToast("📸 오운완 카드가 이미지로 저장되었습니다!"); setIsPhotoCardModalOpen(false); }} className="flex-1 bg-emerald-500 text-neutral-950 font-black py-3.5 rounded-2xl shadow-lg hover:bg-emerald-400 transition-all flex items-center justify-center gap-2 active:scale-95 text-sm"><Share2 className="w-4 h-4"/> 카드 공유/저장</button>
-                 <button onClick={() => setIsPhotoCardModalOpen(false)} className="p-3.5 bg-neutral-900 text-neutral-400 hover:text-white rounded-2xl border border-neutral-800 transition-colors"><X className="w-5 h-5"/></button>
-               </div>
+               <WorkoutCardActions theme={photoCardTheme} data={photoCardData} avatarRef={cardAvatarRef} showToast={showToast} onClose={() => setIsPhotoCardModalOpen(false)} />
             </div>
           </div>
         )}
