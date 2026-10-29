@@ -821,7 +821,15 @@ export function useGymApp() {
       workoutCount: sessionData.length,
       totalVolume: totalVol,
       durationStr: `${Math.floor(workoutDurationSec / 60)}분`,
-      exercises: sessionData.map(e => getExName(e))
+      exercises: sessionData.map(e => getExName(e)),
+      // 종목별 세트 수 (완료한 세트, 하나도 없으면 적어 둔 세트). 같은 종목은 합친다
+      items: Object.values(sessionData.reduce((acc, ex) => {
+        const sets = ex.sets || [];
+        const done = sets.filter(st => st.completed).length || sets.length;
+        const name = String(getExName(ex));
+        acc[name] = { name, sets: (acc[name]?.sets || 0) + done };
+        return acc;
+      }, {})).filter(it => it.sets > 0),
     });
     setIsPhotoCardModalOpen(true);
   };

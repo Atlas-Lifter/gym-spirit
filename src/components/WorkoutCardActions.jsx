@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Download, Share2, X } from 'lucide-react';
 import { isIOS, renderWorkoutCard, saveCardToPhotos, shareCard } from '../lib/workoutCard.js';
 
-// 오운완 카드 아래 버튼: 사진첩에 저장 / 공유.
+// 오운완 카드 미리보기(저장될 이미지 그대로)와 버튼: 사진첩에 저장 / 공유.
 // 카드 이미지는 창이 열리거나 테마를 바꿀 때 미리 만들어 둔다 (아이폰은 버튼을 누른 순간에 바로 공유 창을 열어야 해서)
 export function WorkoutCardActions({ theme, data, avatarRef, showToast, onClose }) {
   const [blob, setBlob] = useState(null);
@@ -35,8 +35,21 @@ export function WorkoutCardActions({ theme, data, avatarRef, showToast, onClose 
     } finally { setBusy(false); }
   };
 
+  // 테마를 바꾸는 동안에는 새 이미지가 나올 때까지 이전 이미지를 그대로 둔다
+  const [shown, setShown] = useState(null);
+  useEffect(() => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    setShown(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+  }, [blob]);
+  useEffect(() => () => setShown(prev => { if (prev) URL.revokeObjectURL(prev); return null; }), []);
+
   return (
     <>
+      {/* 저장될 이미지를 그대로 보여 준다 */}
+      <div className="w-full aspect-[9/14] rounded-[28px] overflow-hidden shadow-2xl border border-white/10 bg-neutral-900 relative">
+        {shown ? <img src={shown} alt="오운완 카드" className="w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center text-xs font-black text-neutral-500 animate-pulse">카드 만드는 중…</div>}
+      </div>
       <div className="flex gap-2 w-full mt-4">
         <button onClick={() => run(saveCardToPhotos)} disabled={busy} className="flex-1 bg-emerald-500 text-neutral-950 font-black py-3.5 rounded-2xl shadow-lg hover:bg-emerald-400 transition-all flex items-center justify-center gap-2 active:scale-95 text-sm disabled:opacity-60"><Download className="w-4 h-4"/> 사진첩에 저장</button>
         <button onClick={() => run(shareCard)} disabled={busy} className="flex-1 bg-neutral-800 text-white font-black py-3.5 rounded-2xl border border-neutral-700 hover:bg-neutral-700 transition-all flex items-center justify-center gap-2 active:scale-95 text-sm disabled:opacity-60"><Share2 className="w-4 h-4"/> 공유</button>

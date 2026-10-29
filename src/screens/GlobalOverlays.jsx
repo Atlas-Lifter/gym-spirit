@@ -389,29 +389,8 @@ export function GlobalOverlays() {
                   <button onClick={() => setPhotoCardTheme('clean')} className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${photoCardTheme === 'clean' ? 'bg-white text-neutral-950 shadow' : 'text-neutral-400'}`}>클린 화이트</button>
                   <button onClick={() => setPhotoCardTheme('cyber')} className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${photoCardTheme === 'cyber' ? 'bg-purple-500 text-white shadow' : 'text-neutral-400'}`}>사이버 보라</button>
                </div>
-               <div className={`w-full aspect-[9/14] rounded-[36px] p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden border transition-all ${photoCardTheme === 'neon' ? 'bg-neutral-950 text-white border-emerald-500/30' : photoCardTheme === 'clean' ? 'bg-white text-neutral-900 border-neutral-200' : 'bg-gradient-to-br from-neutral-950 via-purple-950 to-neutral-900 text-white border-purple-500/40'}`}>
-                  <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl pointer-events-none ${photoCardTheme === 'neon' ? 'bg-emerald-500/20' : photoCardTheme === 'clean' ? 'bg-blue-500/10' : 'bg-purple-500/30'}`}></div>
-                  <div className="flex justify-between items-start relative z-10">
-                     <div>
-                       <div className="text-[11px] font-black uppercase tracking-widest opacity-60">GYM SPIRIT</div>
-                       <h3 className="text-2xl font-black tracking-tight mt-0.5">오운완 인증🔥</h3>
-                       <p className="text-xs font-bold opacity-70">{photoCardData.date}</p>
-                     </div>
-                     <div className="w-9 h-9 bg-neutral-900/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10"><Dumbbell className={`w-5 h-5 ${photoCardTheme === 'neon' ? 'text-emerald-400' : photoCardTheme === 'cyber' ? 'text-purple-400' : 'text-blue-600'}`}/></div>
-                  </div>
-                  <div className="relative z-10 flex justify-center my-2"><div ref={cardAvatarRef} className="w-36 h-48 drop-shadow-2xl"><FullBodyAvatar profile={activeUser?.profile} bodyStats={activeUser?.bodyStats} size="w-full h-full" pose="flex" /></div></div>
-                  <div className="relative z-10 space-y-3">
-                     <div className={`grid grid-cols-2 gap-2 p-3 rounded-2xl border backdrop-blur-md ${photoCardTheme === 'clean' ? 'bg-neutral-50 border-neutral-200' : 'bg-neutral-900/60 border-white/10'}`}>
-                        <div className="text-center"><span className="text-[9px] font-bold opacity-60 block">총 운동 볼륨</span><span className="text-lg font-black">{photoCardData.totalVolume.toLocaleString()}kg</span></div>
-                        <div className="text-center"><span className="text-[9px] font-bold opacity-60 block">수행 종목</span><span className="text-lg font-black">{photoCardData.workoutCount}개 종목</span></div>
-                     </div>
-                     <div className="flex flex-wrap gap-1">
-                        {photoCardData.exercises.slice(0, 4).map((exName, idx) => (
-                          <span key={`card-ex-${idx}`} className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${photoCardTheme === 'clean' ? 'bg-neutral-100 border-neutral-200 text-neutral-700' : 'bg-white/10 border-white/10 text-neutral-200'}`}>{exName}</span>
-                        ))}
-                     </div>
-                  </div>
-               </div>
+               {/* 카드 이미지에 옮겨 그릴 아바타 (화면 밖에 그려 둔다) */}
+               <div ref={cardAvatarRef} aria-hidden="true" className="fixed -left-[9999px] top-0 w-36 h-72 pointer-events-none"><FullBodyAvatar profile={activeUser?.profile} bodyStats={activeUser?.bodyStats} size="w-full h-full" pose="flex" /></div>
                <WorkoutCardActions theme={photoCardTheme} data={photoCardData} avatarRef={cardAvatarRef} showToast={showToast} onClose={() => setIsPhotoCardModalOpen(false)} />
             </div>
           </div>
