@@ -4,6 +4,7 @@ import * as cloud from '../cloud.js';
 import { EXERCISE_TIPS } from '../data/exerciseTips.js';
 import { ExercisePhotoPair, SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
 import { WorkoutCardActions } from '../components/WorkoutCardActions.jsx';
+import { RestPushToggle } from '../components/RestPushToggle.jsx';
 import { MUSCLE_LABELS, getExerciseMuscles } from '../data/anatomy.js';
 import { EXERCISE_OPTIONS, getExName } from '../data/catalog.js';
 import { EXERCISE_GUIDES } from '../exerciseGuides.js';
@@ -264,6 +265,7 @@ export function GlobalOverlays() {
                   <span className={`w-12 h-7 rounded-full p-1 transition-colors ${timerSettings[key] ? 'bg-emerald-500' : 'bg-neutral-700'}`}><span className={`block w-5 h-5 rounded-full bg-white transition-transform ${timerSettings[key] ? 'translate-x-5' : ''}`} /></span>
                 </button>
               ))}
+              <RestPushToggle uid={cloudUser?.id} showToast={showToast} onInstall={() => setIsInstallOpen(true)} />
             </div>
           </div>
         )}

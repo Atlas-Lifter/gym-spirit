@@ -11,6 +11,7 @@ import { useWakeLock } from './pwa.jsx';
 import { MAX_LEVEL, levelInfo, xpForLevel } from './questSystem.js';
 import { CARDIO_DAMAGE_PER_MIN } from './data/cardio.js';
 import { computeRecovery } from './recovery.js';
+import { syncRestAlarm } from './lib/push.js';
 import { DEFAULT_TIMER_SETTINGS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { estimateFromLifts } from './strengthRatios.js';
 import { nextWeight, setLoad } from './weightRules.js';
@@ -229,9 +230,13 @@ export function useGymApp() {
   const restSetRef = useRef(null);
   const overtimeStartRef = useRef(0);
   useEffect(() => {
-    if (!isTimerActive) return undefined;
+    // 휴식 종료 푸시 알림을 켠 회원은 끝나는 시각을 서버에도 적어 둔다 (멈추거나 끝나면 지운다)
+    if (!isTimerActive) { syncRestAlarm(cloudUser?.id, null); return undefined; }
     // 시작·다시 시작할 때, 그리고 바깥에서 남은 시간을 바꿨을 때(+30초 등) 그 값부터 다시 잰다
-    const rebase = () => { restEndRef.current = Date.now() + timeLeftRef.current * 1000; restSetRef.current = timeLeftRef.current; };
+    const rebase = () => {
+      restEndRef.current = Date.now() + timeLeftRef.current * 1000; restSetRef.current = timeLeftRef.current;
+      syncRestAlarm(cloudUser?.id, restEndRef.current);
+    };
     rebase();
     const tick = () => {
       if (restSetRef.current !== timeLeftRef.current) rebase();
