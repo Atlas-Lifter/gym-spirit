@@ -1,6 +1,10 @@
 // 오운완 카드를 실제 이미지(PNG)로 그리고, 휴대폰 사진첩에 저장하거나 공유한다.
-// 화면의 카드와 같은 모양을 캔버스에 직접 그린다 (아바타는 화면에 있는 SVG를 그대로 옮겨 그림)
+// 화면의 카드와 같은 모양을 캔버스에 직접 그린다 (아바타는 실사 아바타 조각을 겹쳐 그림)
 
+import { drawPhotoAvatar } from '../photoAvatar.jsx';
+import MANIFEST from '../data/avatarManifest.json';
+
+const MANIFEST_PANEL = MANIFEST.panel;
 const W = 1080, H = 1680;
 
 const THEMES = {
@@ -149,7 +153,7 @@ const svgToImage = (svg) => new Promise((resolve) => {
 });
 
 // 오운완 카드 PNG를 만든다
-export const renderWorkoutCard = async ({ theme = 'neon', data, avatarSvg }) => {
+export const renderWorkoutCard = async ({ theme = 'neon', data, avatarSvg, avatar }) => {
   const t = THEMES[theme] || THEMES.neon;
   try { await document.fonts?.ready; } catch (e) {}
   const font = getComputedStyle(document.body).fontFamily || 'sans-serif';
@@ -196,8 +200,16 @@ export const renderWorkoutCard = async ({ theme = 'neon', data, avatarSvg }) => 
   });
   ctx.restore();
 
-  // 아바타
-  const img = await svgToImage(avatarSvg);
+  // 아바타: 실사 아바타(avatar = avatarSpec 결과)를 그리고, 못 그리면 화면의 그림 아바타(SVG)를 옮겨 그린다
+  let drawn = false;
+  if (avatar) {
+    try {
+      const h = AV.h, w = h * (MANIFEST_PANEL[0] / MANIFEST_PANEL[1]);
+      await drawPhotoAvatar(ctx, avatar, (W - w) / 2, AV.top, h);
+      drawn = true;
+    } catch (e) { drawn = false; }
+  }
+  const img = drawn ? null : await svgToImage(avatarSvg);
   if (img) {
     const h = AV.h, w = h * (img.width / img.height);
     ctx.save();

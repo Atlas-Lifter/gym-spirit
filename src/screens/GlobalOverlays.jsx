@@ -391,7 +391,7 @@ export function GlobalOverlays() {
                </div>
                {/* 카드 이미지에 옮겨 그릴 아바타 (화면 밖에 그려 둔다) */}
                <div ref={cardAvatarRef} aria-hidden="true" className="fixed -left-[9999px] top-0 w-36 h-72 pointer-events-none"><FullBodyAvatar profile={activeUser?.profile} bodyStats={activeUser?.bodyStats} size="w-full h-full" pose="flex" /></div>
-               <WorkoutCardActions theme={photoCardTheme} data={photoCardData} avatarRef={cardAvatarRef} showToast={showToast} onClose={() => setIsPhotoCardModalOpen(false)} />
+               <WorkoutCardActions theme={photoCardTheme} data={photoCardData} avatarRef={cardAvatarRef} profile={activeUser?.profile} bodyStats={activeUser?.bodyStats} showToast={showToast} onClose={() => setIsPhotoCardModalOpen(false)} />
             </div>
           </div>
         )}

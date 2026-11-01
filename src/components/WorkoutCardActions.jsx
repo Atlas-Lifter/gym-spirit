@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Download, Share2, X } from 'lucide-react';
 import { isIOS, renderWorkoutCard, saveCardToPhotos, shareCard } from '../lib/workoutCard.js';
+import { avatarSpec } from '../photoAvatar.jsx';
 
 // 오운완 카드 미리보기(저장될 이미지 그대로)와 버튼: 사진첩에 저장 / 공유.
 // 카드 이미지는 창이 열리거나 테마를 바꿀 때 미리 만들어 둔다 (아이폰은 버튼을 누른 순간에 바로 공유 창을 열어야 해서)
-export function WorkoutCardActions({ theme, data, avatarRef, showToast, onClose }) {
+export function WorkoutCardActions({ theme, data, avatarRef, profile, bodyStats, showToast, onClose }) {
   const [blob, setBlob] = useState(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -14,7 +15,7 @@ export function WorkoutCardActions({ theme, data, avatarRef, showToast, onClose 
   useEffect(() => {
     let alive = true;
     setBlob(null);
-    const p = renderWorkoutCard({ theme, data, avatarSvg: avatarRef.current?.querySelector('svg') });
+    const p = renderWorkoutCard({ theme, data, avatar: avatarSpec(profile, bodyStats), avatarSvg: avatarRef.current?.querySelector('svg') });
     pending.current = p;
     p.then((b) => { if (alive) setBlob(b); }).catch(() => {});
     return () => { alive = false; };

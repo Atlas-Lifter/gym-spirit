@@ -3,12 +3,10 @@ import React, { useId } from 'react';
 // 사실풍 전신 아바타 (SVG). 체중·골격근·체지방으로 체형이 바뀌고,
 // 모든 신체 부위에 입체 음영 필터를 따로 걸어 겹친 팔·다리 경계가 살아 있게 한다.
 
-export const AVATAR_SKIN_TONES = ['#f6dccb', '#eec4a6', '#e0ab86', '#c98d64', '#a46a45', '#74472c'];
-export const AVATAR_EYE_COLORS = ['#3a2618', '#6b4423', '#3f6e9e', '#4f7d4c', '#7d858e', '#8a5a2b'];
-export const AVATAR_SHOE_COLORS = ['#f5f5f4', '#171717', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+import { AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS, AVATAR_SKIN_TONES, LEGACY_SKIN } from './avatarOptions.js';
+import { PhotoAvatar } from './photoAvatar.jsx';
 
-// 예전 파스텔 피부색으로 저장된 프로필은 비슷한 실제 피부 톤으로 보여 준다
-export const LEGACY_SKIN = { '#fcd5ce': AVATAR_SKIN_TONES[1], '#ffb5a7': AVATAR_SKIN_TONES[2], '#f8edeb': AVATAR_SKIN_TONES[0], '#e8e8e4': AVATAR_SKIN_TONES[0], '#d4a373': AVATAR_SKIN_TONES[3], '#a38361': AVATAR_SKIN_TONES[4] };
+export { AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS, AVATAR_SKIN_TONES, LEGACY_SKIN };
 
 // ── 색 계산 ──────────────────────────────────────────────
 const toRgb = (hex) => {
@@ -81,7 +79,8 @@ const STEAM = [
 // [x, y, 가슴 위인지, 크기, 시작]
 const DROPS = [[88.6, 32, false, 1, '0s'], [111, 33, false, 0.85, '1.1s'], [82.6, 50, false, 0.9, '0.6s'], [117.6, 52, false, 1, '1.7s'], [90, 112, true, 1.1, '0.9s'], [112, 124, true, 1, '2s'], [104, 150, true, 0.9, '0.3s']];
 
-export const FullBodyAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = false, pose = 'standard' }) => {
+// 예전 그림(SVG) 아바타. 실사 아바타 그림을 못 불러올 때 대신 보여 준다
+export const SvgFullBodyAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = false, pose = 'standard' }) => {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const id = (name) => `${uid}-${name}`;
   const url = (name) => `url(#${id(name)})`;
@@ -967,3 +966,6 @@ export const FullBodyAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = 
     </div>
   );
 };
+
+// 앱 곳곳에서 쓰는 아바타: 실사 아바타 (그림을 못 불러오면 예전 그림 아바타)
+export const FullBodyAvatar = (props) => <PhotoAvatar {...props} fallback={SvgFullBodyAvatar} />;

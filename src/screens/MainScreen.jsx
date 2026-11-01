@@ -6,7 +6,7 @@ import { MUSCLE_SUBGROUPS } from '../data/anatomy.js';
 import { ACC_COLORS, BOTTOM_COLORS, EXERCISE_OPTIONS, HAIR_COLORS, PROGRAMS, SHIRT_COLORS, getExId, getExName, getExTarget } from '../data/catalog.js';
 import { EXERCISE_GUIDES } from '../exerciseGuides.js';
 import { calculate1RM, formatDate } from '../lib/dates.js';
-import { AVATAR_EYE_COLORS, AVATAR_SHOE_COLORS, AVATAR_SKIN_TONES, FullBodyAvatar } from '../realAvatar.jsx';
+import { AVATAR_SHOE_COLORS, AVATAR_SKIN_TONES, FullBodyAvatar } from '../realAvatar.jsx';
 import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { CalendarPopup } from './CalendarPopup.jsx';
 import { AnalysisTab } from './tabs/AnalysisTab.jsx';
@@ -284,11 +284,6 @@ export function MainScreen() {
               <div className="flex flex-col items-center my-8 relative">
                 <div className="absolute inset-0 bg-gradient-to-b from-neutral-800/20 to-transparent pointer-events-none"></div>
                 <div className="relative mb-6 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]"><FullBodyAvatar profile={currentUser?.profile} bodyStats={currentUser?.bodyStats} size="w-56 h-[380px]" pose={avatarPose} /></div>
-                <div className="flex gap-2 bg-neutral-900 p-1.5 rounded-xl border border-neutral-800 shadow-inner z-10">
-                  <button onClick={() => setAvatarPose("standard")} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${avatarPose === "standard" ? "bg-emerald-500 text-neutral-950 shadow-md" : "text-neutral-400 hover:text-white"}`}>스탠다드</button>
-                  <button onClick={() => setAvatarPose("hip")} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${avatarPose === "hip" ? "bg-emerald-500 text-neutral-950 shadow-md" : "text-neutral-400 hover:text-white"}`}>당당함 😤</button>
-                  <button onClick={() => setAvatarPose("flex")} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${avatarPose === "flex" ? "bg-emerald-500 text-neutral-950 shadow-md" : "text-neutral-400 hover:text-white"}`}>포징 🏋️‍♂️</button>
-                </div>
               </div>
               <div className="px-6 space-y-8">
                 <div>
@@ -299,7 +294,7 @@ export function MainScreen() {
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs font-black text-neutral-500 mb-3 block tracking-widest uppercase">얼굴 표정</span>
+                  <span className="text-xs font-black text-neutral-500 mb-3 block tracking-widest uppercase">얼굴 표정 <span className="normal-case text-neutral-600">· 실사 아바타 표정은 곧 추가돼요</span></span>
                   <div className="flex gap-3">
                      <button onClick={() => updateProfile({ faceExpression: 'normal' })} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all border-2 ${currentUser?.profile?.faceExpression === 'normal' ? 'bg-[#4768ff] text-white border-[#4768ff]' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-800'}`}>기본</button>
                      <button onClick={() => updateProfile({ faceExpression: 'smile' })} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all border-2 ${currentUser?.profile?.faceExpression === 'smile' ? 'bg-[#4768ff] text-white border-[#4768ff]' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-800'}`}>미소</button>
@@ -312,22 +307,16 @@ export function MainScreen() {
                     {AVATAR_SKIN_TONES.map(color => (<button key={`skinColor-${color}`} onClick={() => updateProfile({ skinColor: color })} style={{ backgroundColor: color }} aria-label="피부 톤 선택" className={`w-10 h-10 flex-shrink-0 rounded-full border-2 transition-all ${(currentUser?.profile?.skinColor || AVATAR_SKIN_TONES[1]) === color ? 'border-white scale-110 shadow-md ring-2 ring-white/20' : 'border-neutral-700 opacity-60 hover:opacity-100'}`} />))}
                   </div>
                 </div>
-                <div>
-                  <span className="text-xs font-black text-neutral-500 mb-3 block tracking-widest uppercase">눈동자 색</span>
-                  <div className="flex bg-neutral-900 p-4 rounded-[20px] border border-neutral-800 shadow-inner gap-3 overflow-x-auto hide-scrollbar">
-                    {AVATAR_EYE_COLORS.map(color => (<button key={`eyeColor-${color}`} onClick={() => updateProfile({ eyeColor: color })} style={{ backgroundColor: color }} aria-label="눈동자 색 선택" className={`w-10 h-10 flex-shrink-0 rounded-full border-2 transition-all ${(currentUser?.profile?.eyeColor || AVATAR_EYE_COLORS[0]) === color ? 'border-white scale-110 shadow-md ring-2 ring-white/20' : 'border-neutral-700 opacity-60 hover:opacity-100'}`} />))}
-                  </div>
-                </div>
-                {renderAccessoryCategory("상의", "topStyle", "shirtColor", [{ label: "티셔츠", value: "tshirt" }, { label: "민소매", value: "tank" }, { label: currentUser?.profile?.gender === 'female' ? "스포츠 브라" : "상의 탈의", value: "none" }], SHIRT_COLORS, 'tshirt', currentUser?.profile?.gender === 'female')}
+                {renderAccessoryCategory("상의", "topStyle", "shirtColor", [{ label: "티셔츠", value: "tshirt" }, { label: "민소매", value: "tank" }, { label: currentUser?.profile?.gender === 'female' ? "크롭 후디" : "후드티", value: "hoodie" }, ...(currentUser?.profile?.gender === 'female' ? [] : [{ label: "스트링어", value: "stringer" }]), { label: currentUser?.profile?.gender === 'female' ? "스포츠 브라" : "상의 탈의", value: "none" }], SHIRT_COLORS, 'tshirt', currentUser?.profile?.gender === 'female')}
                 {renderAccessoryCategory("하의", "bottomStyle", "bottomColor", [{ label: "반바지", value: "shorts" }, { label: "조거 팬츠", value: "joggers" }, { label: "레깅스", value: "leggings" }], BOTTOM_COLORS, 'shorts')}
                 {renderAccessoryCategory("운동화", "shoeStyle", "shoeColor", [{ label: "러닝화", value: "runner" }], AVATAR_SHOE_COLORS, 'runner')}
                 {renderAccessoryCategory("머리 장식 (모자/밴드)", "hat", "hatColor", [{ label: "없음", value: "none" }, { label: "헤어밴드", value: "headband" }, { label: "스냅백", value: "cap" }, { label: "비니", value: "beanie" }, { label: "반다나", value: "bandana" }])}
-                {renderAccessoryCategory("얼굴 장식 (안경/마스크)", "faceAcc", "faceAccColor", [{ label: "없음", value: "none" }, { label: "뿔테안경", value: "glasses" }, { label: "선글라스", value: "sunglasses" }, { label: "마스크", value: "mask" }])}
-                {renderAccessoryCategory("목 장식 (목걸이/헤드폰)", "neckAcc", "neckAccColor", [{ label: "없음", value: "none" }, { label: "체인 목걸이", value: "chain" }, { label: "스포츠 수건", value: "towel" }, { label: "헤드폰", value: "headphones" }])}
-                {renderAccessoryCategory("바디 장식 (가방/장비)", "bodyAcc", "bodyAccColor", [{ label: "없음", value: "none" }, { label: "리프팅벨트", value: "belt" }, { label: "중량조끼", value: "vest" }, { label: "크로스백", value: "bag" }])}
-                {renderAccessoryCategory("헤어 스타일", "hairStyle", "hairColor", [{ label: "민머리", value: "none" }, { label: "짧은머리", value: "short" }, { label: "투블럭", value: "classic" }, { label: "스파이키", value: "spiky" }, { label: "긴머리", value: "long" }, { label: "포니테일", value: "ponytail" }, { label: "단발", value: "bob" }, { label: "올림머리", value: "bun" }], HAIR_COLORS)}
-                {renderAccessoryCategory("수염 (Facial Hair)", "facialHair", "hairColor", [{ label: "없음", value: "none" }, { label: "콧수염", value: "mustache" }, { label: "턱수염", value: "goatee" }, { label: "풀 비어드", value: "beard" }], HAIR_COLORS)}
-                {renderAccessoryCategory("타투 & 흉터 (Tattoo)", "tattoo", "tattooColor", [{ label: "없음", value: "none" }, { label: "상처", value: "scar" }, { label: "눈밑 십자가", value: "cross" }, { label: "가슴 트라이벌", value: "chest_tribal" }], ["#171717", "#ef4444", "#3b82f6", "#10b981", "#f59e0b"])}
+                {renderAccessoryCategory("얼굴 장식 (안경/마스크)", "faceAcc", "faceAccColor", [{ label: "없음", value: "none" }, { label: "뿔테안경", value: "glasses" }, { label: "선글라스", value: "sunglasses" }, { label: "마스크", value: "mask" }, { label: "스포츠 고글", value: "goggles" }])}
+                {renderAccessoryCategory("목 장식 (목걸이/헤드폰)", "neckAcc", "neckAccColor", [{ label: "없음", value: "none" }, { label: "체인 목걸이", value: "chain" }, { label: "스포츠 수건", value: "towel" }, { label: "헤드폰", value: "headphones" }, { label: "군번줄", value: "dogtag" }])}
+                {renderAccessoryCategory("바디 장식 (가방/장비)", "bodyAcc", "bodyAccColor", [{ label: "없음", value: "none" }, { label: "리프팅벨트", value: "belt" }, { label: "중량조끼", value: "vest" }, { label: "크로스백", value: "bag" }, { label: "무릎 보호대", value: "kneesleeve" }])}
+                {renderAccessoryCategory("헤어 스타일", "hairStyle", "hairColor", [{ label: "민머리", value: "none" }, { label: "짧은머리", value: "short" }, { label: "투블럭", value: "classic" }, { label: "스파이키", value: "spiky" }, { label: "긴머리", value: "long" }, { label: "포니테일", value: "ponytail" }, { label: "단발", value: "bob" }, { label: "올림머리", value: "bun" }, { label: "포마드", value: "pompadour" }, { label: "울프컷", value: "wolf" }, { label: "레게머리", value: "dreads" }, { label: "양갈래 땋은머리", value: "braids" }, { label: "크루컷", value: "crew" }], HAIR_COLORS)}
+                {renderAccessoryCategory("수염 (Facial Hair)", "facialHair", "hairColor", [{ label: "없음", value: "none" }, { label: "콧수염", value: "mustache" }, { label: "턱수염", value: "goatee" }, { label: "풀 비어드", value: "beard" }, { label: "짧은 수염", value: "stubble" }], HAIR_COLORS)}
+                {renderAccessoryCategory("타투 & 흉터 (곧 추가)", "tattoo", "tattooColor", [{ label: "없음", value: "none" }, { label: "상처", value: "scar" }, { label: "눈밑 십자가", value: "cross" }, { label: "가슴 트라이벌", value: "chest_tribal" }], ["#171717", "#ef4444", "#3b82f6", "#10b981", "#f59e0b"])}
                 {renderAccessoryCategory("특수 오라 (Aura & Effects)", "aura", "auraColor", [{ label: "없음", value: "none" }, { label: "은은한 빛", value: "glow" }, { label: "타오르는 불꽃", value: "fire" }, { label: "강력한 번개", value: "lightning" }, { label: "땀방울", value: "sweat" }], ACC_COLORS)}
                 <div className="pb-8"></div>
               </div>
