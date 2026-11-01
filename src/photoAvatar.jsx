@@ -67,8 +67,15 @@ const Tinted = ({ src, color, style }) => (
 const FULL = { left: 0, top: 0, width: '100%', height: '100%' };
 const pct = (v, total) => `${(v / total) * 100}%`;
 
-// 오라: 실사 오라 그림이 오기 전까지는 아바타 둘레 빛으로 보여 준다
+// 실사 오라 (public/avatar/aura): 4장짜리 움직임을 번갈아 보여 준다. 한 바퀴 도는 시간(초)
+const AURA_LOOP = { glow: 2.4, fire: 0.8, lightning: 0.6, frost: 3, dark: 2.6 };
+// 오라는 평균 체형 실루엣 기준이라, 체형 너비에 맞춰 옆으로 조금 줄인다 (그대로와 몸 너비의 중간)
+const auraScaleX = (spec) => (1 + (MANIFEST.bodies[spec.key]?.span || MANIFEST.auraSpan) / MANIFEST.auraSpan) / 2;
+const hasAuraArt = (aura) => !!MANIFEST.aura?.[aura];
+
+// 그림이 없는 오라는 아바타 둘레 빛으로 보여 준다
 const AURA_CSS = `
+@keyframes gsAuraFrame { 0% { opacity: 0 } 10% { opacity: 1 } 25% { opacity: 1 } 35% { opacity: 0 } 100% { opacity: 0 } }
 @keyframes gsAuraPulse { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
 @keyframes gsAuraFlicker { 0%,100% { opacity: .7 } 20% { opacity: 1 } 40% { opacity: .5 } 60% { opacity: .95 } 80% { opacity: .6 } }
 @keyframes gsAuraBolt { 0%,100% { opacity: .35 } 8% { opacity: 1 } 12% { opacity: .3 } 16% { opacity: .9 } 30% { opacity: .4 } }
@@ -138,8 +145,22 @@ const loadImg = (src) => new Promise((resolve, reject) => { const im = new Image
 export const drawPhotoAvatar = async (ctx, spec, x, y, h) => {
   const k = h / PH;
   const body = await loadImg(spec.bodySrc);
+  const art = hasAuraArt(spec.aura);
+  if (art) {
+    // 오라 첫 장면: 고른 색으로 칠한 빛 + 밝은 심지
+    try {
+      const [strip, core] = await Promise.all([loadImg(`${IMG}/aura/${spec.aura}.webp`), loadImg(`${IMG}/aura/${spec.aura}-core.webp`)]);
+      const sx = auraScaleX(spec), w = Math.round(PW * k * sx), hh = Math.round(h);
+      const c = document.createElement('canvas'); c.width = w; c.height = hh;
+      const cx = c.getContext('2d');
+      cx.fillStyle = spec.auraColor; cx.fillRect(0, 0, w, hh);
+      cx.globalCompositeOperation = 'destination-in'; cx.drawImage(strip, 0, 0, PW, PH, 0, 0, w, hh);
+      cx.globalCompositeOperation = 'source-over'; cx.drawImage(core, 0, 0, PW, PH, 0, 0, w, hh);
+      ctx.drawImage(c, x + (PW * k - w) / 2, y);
+    } catch (e) {}
+  }
   ctx.save();
-  if (spec.aura !== 'none' && spec.aura !== 'sweat') { ctx.shadowColor = spec.auraColor; ctx.shadowBlur = 60; }
+  if (!art && spec.aura !== 'none' && spec.aura !== 'sweat') { ctx.shadowColor = spec.auraColor; ctx.shadowBlur = 60; }
   else { ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 24; }
   if (spec.skinFilter !== 'none' && 'filter' in ctx) ctx.filter = spec.skinFilter;
   ctx.drawImage(body, x, y, PW * k, h);
@@ -174,13 +195,32 @@ export const PhotoAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = fal
 
   const showAura = !crop && aura !== 'none' && aura !== 'sweat';
   if (showAura) ensureAuraCss();
+  const auraArt = showAura && hasAuraArt(aura);
   const auraAnim = aura === 'fire' ? 'gsAuraFlicker 0.9s infinite' : aura === 'lightning' ? 'gsAuraBolt 1.6s infinite' : 'gsAuraPulse 2.8s ease-in-out infinite';
   const auraBlur = aura === 'fire' ? 10 : aura === 'lightning' ? 6 : 12;
 
   const { bodySrc } = spec;
   const figure = (
     <div style={{ position: 'relative', height: '100%', aspectRatio: `${PW} / ${PH}`, margin: '0 auto' }}>
-      {showAura && (
+      {auraArt && (
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, transform: `scaleX(${auraScaleX(spec)})`, pointerEvents: 'none' }}>
+          {[0, 1, 2, 3].map(i => {
+            const T = AURA_LOOP[aura] || 2;
+            const pos = `${(i * 100) / 3}% 0`;
+            return (
+              <div key={i} style={{ position: 'absolute', inset: 0, opacity: 0, animation: `gsAuraFrame ${T}s linear ${(-i * T) / 4}s infinite` }}>
+                <div style={{
+                  position: 'absolute', inset: 0, background: auraColor,
+                  WebkitMaskImage: `url(${IMG}/aura/${aura}.webp)`, maskImage: `url(${IMG}/aura/${aura}.webp)`,
+                  WebkitMaskSize: '400% 100%', maskSize: '400% 100%', WebkitMaskPosition: pos, maskPosition: pos,
+                }} />
+                <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${IMG}/aura/${aura}-core.webp)`, backgroundSize: '400% 100%', backgroundPosition: pos }} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {showAura && !auraArt && (
         <img src={bodySrc} alt="" aria-hidden="true" draggable={false} style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', animation: auraAnim,
           filter: `brightness(0) drop-shadow(0 0 ${auraBlur * 0.4}px ${auraColor}) drop-shadow(0 0 ${auraBlur}px ${auraColor}) drop-shadow(0 0 ${auraBlur * 1.8}px ${auraColor})`,
