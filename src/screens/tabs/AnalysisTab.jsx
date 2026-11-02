@@ -319,7 +319,7 @@ export function AnalysisTab() {
         <div className="bg-white p-6 rounded-[32px] shadow-sm border border-neutral-100 overflow-hidden relative">
           <div className="relative z-10 mb-6">
             <h3 className="text-xl font-black text-neutral-900 mb-1 tracking-tight">회복된 근육으로 운동을 시작해보세요</h3>
-            <p className="text-sm text-neutral-500 font-bold">지시선 모서리나 근육을 터치하면 부위별 맞춤 훈련이 생성됩니다!</p>
+            <p className="text-sm text-neutral-500 font-bold">근육이나 아래 부위 버튼을 누르면 부위별 맞춤 훈련이 생성됩니다!</p>
           </div>
           <div className="flex justify-between items-center relative py-6 bg-neutral-50 rounded-2xl border border-neutral-100 min-h-[480px] px-2 shadow-inner">
             <div className="absolute inset-0 flex justify-center items-center pointer-events-auto p-2 opacity-100 z-20">

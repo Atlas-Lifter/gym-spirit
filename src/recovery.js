@@ -7,7 +7,7 @@
 
 export const RECOVERY_GROUPS = ['가슴', '등', '하체', '어깨', '팔', '복근'];
 const BASE_HOURS = { 가슴: 48, 등: 48, 하체: 60, 어깨: 42, 팔: 36, 복근: 24 };
-const MUSCLE_GROUP = {
+export const MUSCLE_GROUP = {
   pec_upper: '가슴', pec_lower: '가슴',
   delt_front: '어깨', delt_side: '어깨', delt_rear: '어깨',
   biceps: '팔', triceps: '팔', forearm: '팔',
