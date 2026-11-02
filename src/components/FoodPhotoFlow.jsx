@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Camera, Check, Minus, Plus, RotateCcw, Sparkles, X } from 'lucide-react';
 import { supabase } from '../cloud.js';
 import { loadKfood } from '../lib/kfood.js';
-import { foodCandidates } from '../lib/foodMatch.js';
+import { photoCandidates } from '../lib/foodMatch.js';
 import { FoodImage } from './FoodImage.jsx';
 
 // 음식 사진 → (서버 /api/food-photo 가 이름·무게 추정) → 앱 음식·식약처 DB에서 찾기 → 확인 후 끼니에 추가
@@ -48,11 +48,11 @@ export function FoodPhotoFlow({ file, onClose, onRetake, onAdd }) {
           loadKfood().catch(() => null),
         ]);
         const j = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(j.error || `사진 분석에 실패했어요 (${res.status})`);
+        if (!res.ok || j.error) throw new Error(j.error || `사진 분석에 실패했어요 (${res.status})`);
         if (!alive) return;
         setItems((j.items || []).map(it => {
-          const candidates = foodCandidates(it.name, rows);
-          return { name: it.name, weight: it.grams, include: candidates.length > 0, candidates, pick: 0 };
+          const candidates = photoCandidates(it, rows);
+          return { name: it.name, type: it.type, weight: it.grams, include: candidates.length > 0, candidates, pick: 0 };
         }));
         setPhase('review');
       } catch (e) {
@@ -113,8 +113,8 @@ export function FoodPhotoFlow({ file, onClose, onRetake, onAdd }) {
                     </button>
                     {food && <FoodImage id={food.id} icon={food.icon} className="w-11 h-11" bg="bg-neutral-100" />}
                     <div className="flex-1 min-w-0">
-                      <div className="text-[10px] font-bold text-neutral-400">사진: {it.name}</div>
-                      <div className="text-[14px] font-black text-neutral-900 truncate">{food ? food.name : 'DB에서 찾지 못했어요'}{food?.brand && <span className="text-[11px] text-neutral-400 font-bold"> · {food.brand}</span>}</div>
+                      <div className="text-[10px] font-bold text-neutral-400">사진: {it.name}{food?.approx && <span className="ml-1 text-amber-600">· 똑같은 제품이 없어 비슷한 음식이에요</span>}</div>
+                      <div className="text-[14px] font-black text-neutral-900 truncate">{food ? food.name : '비슷한 음식도 찾지 못했어요'}{food?.brand && <span className="text-[11px] text-neutral-400 font-bold"> · {food.brand}</span>}</div>
                       {food && <div className="text-[11px] font-bold text-neutral-500">{kcalOf(food, it.weight)}kcal · 단백질 {proteinOf(food, it.weight)}g{food.noMacros ? ' · 탄·지 정보 없음' : ''}</div>}
                     </div>
                     <button onClick={() => update(i, { include: false })} aria-label="빼기" className="p-1 text-neutral-300 hover:text-rose-500"><X className="w-4 h-4" /></button>

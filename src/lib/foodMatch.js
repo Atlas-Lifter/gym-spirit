@@ -50,3 +50,38 @@ export function foodCandidates(name, rows, limit = 5) {
   }
   return out;
 }
+
+// 띄어 쓴 낱말이 모두 들어 있는 것 ('제로 사이다' → 칠성사이다제로, 나랑드사이다 제로 …). 짧은 이름 먼저
+const wordSearch = (rows, text, limit) => {
+  const words = String(text || '').split(/\s+/).map(norm).filter(w => w.length >= 2);
+  if (!rows || !words.length) return [];
+  return rows.filter(r => words.every(w => r.hay.includes(w)))
+    .sort((a, b) => a.name.length - b.name.length)
+    .slice(0, limit)
+    .map(kfoodToFood);
+};
+
+// 사진에서 찾은 음식 하나 → 후보. 이름으로 먼저 찾고, 모자라면 음식 종류·낱말로 '비슷한 음식'을 채운다
+// item: { name, type, brand }. 결과: [{ ...food, approx }] — approx 는 이름이 아니라 종류로 찾은 것
+export function photoCandidates(item, rows, limit = 6) {
+  const hasHangul = (s) => /[가-힣]/.test(s || '');
+  const out = [];
+  const seen = new Set();
+  const add = (list, approx) => list.forEach(f => {
+    const key = `${norm(f.name)}|${f.brand || ''}`;
+    if (out.length < limit && !seen.has(key)) { seen.add(key); out.push({ ...f, approx }); }
+  });
+  if (hasHangul(item.name)) {
+    add(foodCandidates(item.name, rows, limit), false);
+    if (out.length < 2) add(wordSearch(rows, item.name, limit), false);
+  }
+  if (out.length < limit && item.type) {
+    if (item.brand) add(wordSearch(rows, `${item.brand} ${item.type}`, 2), true);
+    add(wordSearch(rows, item.type, limit), true);
+    add(foodCandidates(item.type, rows, limit), true);
+    // 그래도 없으면 종류의 마지막 낱말만 ('제로 사이다' → '사이다')
+    const last = item.type.trim().split(/\s+/).pop();
+    if (!out.length && last && last !== item.type) add(foodCandidates(last, rows, limit), true);
+  }
+  return out;
+}
