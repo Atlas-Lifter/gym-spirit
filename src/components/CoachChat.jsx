@@ -5,6 +5,8 @@ import { supabase } from '../cloud.js';
 // AI 코치와 대화 — 질문할 때마다 '내 기록' 요약을 같이 보내고, 서버(/api/coach)가 NVIDIA 모델에 물어 답을 흘려보낸다
 // 대화는 이 기기에만 저장 (최근 40개)
 const STORE_KEY = 'gymspirit_coach_chat_v1';
+const MODE_KEY = 'gymspirit_coach_mode_v1';
+const MODES = [{ id: 'deep', label: '🧠 꼼꼼하게', hint: '약 20초' }, { id: 'fast', label: '⚡ 빠르게', hint: '약 3초' }];
 const QUICK = [
   '오늘 뭐 운동하면 좋을까요?',
   '다음 운동 때 무게를 얼마로 올릴까요?',
@@ -26,6 +28,8 @@ export function CoachChat({ getContext, canChat }) {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [showCtx, setShowCtx] = useState(false);
+  const [mode, setMode] = useState(() => { try { return localStorage.getItem(MODE_KEY) === 'fast' ? 'fast' : 'deep'; } catch { return 'deep'; } });
+  const pickMode = (m) => { setMode(m); try { localStorage.setItem(MODE_KEY, m); } catch { /* 이번만 적용 */ } };
   const scrollRef = useRef(null);
   const abortRef = useRef(null);
   const allowed = canChat || import.meta.env.DEV;
@@ -51,7 +55,7 @@ export function CoachChat({ getContext, canChat }) {
         method: 'POST',
         signal: ctrl.signal,
         headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ messages: history.slice(-12).map(({ role, content }) => ({ role, content })), context: getContext() }),
+        body: JSON.stringify({ messages: history.slice(-12).map(({ role, content }) => ({ role, content })), context: getContext(), mode }),
       });
       if (!res.ok || !res.body) {
         const j = await res.json().catch(() => ({}));
@@ -103,13 +107,24 @@ export function CoachChat({ getContext, canChat }) {
           <div key={i} className="flex gap-2.5 items-start">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4768ff] to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-sm"><Sparkles className="w-4 h-4 text-white" /></div>
             <div className={`max-w-[85%] px-4 py-3 rounded-2xl rounded-tl-sm text-sm font-bold leading-relaxed whitespace-pre-wrap shadow-sm border ${m.error ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-white border-neutral-100 text-neutral-700'}`}>
-              {m.content ? <Rich text={m.content} /> : <span className="inline-flex gap-1 py-1">{[0, 1, 2].map(d => <span key={d} className="w-2 h-2 rounded-full bg-neutral-300 animate-bounce" style={{ animationDelay: `${d * 0.15}s` }} />)}</span>}
+              {m.content ? <Rich text={m.content} /> : (
+                <span className="flex flex-col gap-1.5 py-0.5">
+                  <span className="inline-flex gap-1">{[0, 1, 2].map(d => <span key={d} className="w-2 h-2 rounded-full bg-neutral-300 animate-bounce" style={{ animationDelay: `${d * 0.15}s` }} />)}</span>
+                  <span className="text-[11px] font-bold text-neutral-400">내 기록을 살펴보는 중이에요 · {mode === 'fast' ? '보통 3초' : '보통 20초'}</span>
+                </span>
+              )}
             </div>
           </div>
         )))}
       </div>
 
       <div className="border-t border-neutral-100 bg-white px-4 pt-3 pb-4">
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="text-[10px] font-black text-neutral-400 mr-0.5">답변</span>
+          {MODES.map(m => (
+            <button key={m.id} onClick={() => pickMode(m.id)} disabled={busy} className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all ${mode === m.id ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-500'}`}>{m.label} <span className="opacity-60 font-bold">{m.hint}</span></button>
+          ))}
+        </div>
         <div className="flex items-end gap-2">
           {msgs.length > 0 && <button onClick={clear} aria-label="대화 지우기" className="p-3 rounded-xl text-neutral-400 hover:bg-neutral-100 active:scale-90 transition-all"><Trash2 className="w-5 h-5" /></button>}
           <textarea
