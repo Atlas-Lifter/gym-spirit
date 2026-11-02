@@ -16,6 +16,9 @@ export const BONES = [
 ];
 
 let landmarker = null;
+let lastTs = 0;
+// VIDEO 모드에 넘길 시각: 화면이 여러 곳이어도 늘 앞으로만 가게 (MediaPipe 요구)
+export const nextTs = () => { lastTs = Math.max(lastTs + 1, performance.now()); return lastTs; };
 let mode = null;
 
 // runningMode: 'VIDEO'(카메라) | 'IMAGE'(사진). GPU 가 안 되면 CPU 로

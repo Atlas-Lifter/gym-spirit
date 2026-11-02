@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useRef, useState } from 'react';
+import React, { lazy, Suspense, useRef } from 'react';
 import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, MessageSquare, Video, X, Zap } from 'lucide-react';
 import * as cloud from '../cloud.js';
 import { EXERCISE_TIPS } from '../data/exerciseTips.js';
@@ -45,6 +45,8 @@ export function GlobalOverlays() {
     goToSignup,
     guideExerciseId,
     setCoachPopup,
+    formCheck,
+    setFormCheck,
     inviteFriends,
     isAddExerciseModalOpen,
     isAlarmSettingsOpen,
@@ -99,7 +101,6 @@ export function GlobalOverlays() {
     currentUser,
     devMock,
   } = useApp();
-  const [formCheckId, setFormCheckId] = useState(null); // 실시간 자세 체크 중인 종목
   const cardAvatarRef = useRef(null);
   return (
     <>
@@ -125,13 +126,20 @@ export function GlobalOverlays() {
         </div>
       )}
       <CoachPopup />
-      {formCheckId && (() => {
-        const fx = EXERCISE_OPTIONS.find(e => e.id === formCheckId);
-        if (!fx) return null;
+      {formCheck && (() => {
+        const fx = formCheck.exerciseId ? EXERCISE_OPTIONS.find(e => e.id === formCheck.exerciseId) : null;
+        if (formCheck.exerciseId && !fx) return null;
+        const askCoach = (e, summary) => {
+          setFormCheck(null);
+          setCoachPopup({ exerciseId: e.id, seed: { id: Date.now(), display: `📹 방금 한 ${e.name} 세트 자세 피드백해 주세요`, content: `방금 카메라 자세 체크로 한 세트를 했어요. 휴대폰이 잰 결과예요:\n${summary}\n\n이 결과를 보고 잘한 점, 가장 먼저 고칠 점 1~2개, 다음 세트에서 의식할 큐를 짧게 알려 주세요.` } });
+        };
         return (
           <Suspense fallback={null}>
-            <FormCheck exercise={fx} onClose={() => setFormCheckId(null)}
-              onAskCoach={cloudUser || import.meta.env.DEV ? (summary) => { setFormCheckId(null); setCoachPopup({ exerciseId: fx.id, seed: { id: Date.now(), display: `📹 방금 한 ${fx.name} 세트 자세 피드백해 주세요`, content: `방금 카메라 자세 체크로 한 세트를 했어요. 휴대폰이 잰 결과예요:\n${summary}\n\n이 결과를 보고 잘한 점, 가장 먼저 고칠 점 1~2개, 다음 세트에서 의식할 큐를 짧게 알려 주세요.` } }); } : null} />
+            <FormCheck exercise={fx} onClose={() => setFormCheck(null)}
+              onAskCoach={cloudUser || import.meta.env.DEV ? askCoach : null}
+              onOpenGuide={(id) => { setFormCheck(null); setGuideExerciseId(id); }}
+              onAddExercise={isAddExerciseModalOpen ? (e) => { setFormCheck(null); swapTargetExerciseId ? swapExercise(e) : addExerciseFromModal(e); } : null}
+              addLabel={swapTargetExerciseId ? '이 종목으로 변경' : '오늘 운동에 추가'} />
           </Suspense>
         );
       })()}
@@ -160,7 +168,7 @@ export function GlobalOverlays() {
               </div>
               <div className="flex gap-2 px-5 py-3 border-b border-neutral-100">
                 <button onClick={() => setCoachPopup({ exerciseId: ex.id })} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#4768ff] to-indigo-500 text-white text-[13px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"><MessageSquare className="w-4 h-4"/>AI에게 물어보기</button>
-                <button onClick={() => setFormCheckId(ex.id)} className="flex-1 py-2.5 rounded-xl bg-neutral-900 text-white text-[13px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"><Video className="w-4 h-4"/>실시간 자세 체크</button>
+                <button onClick={() => setFormCheck({ exerciseId: ex.id })} className="flex-1 py-2.5 rounded-xl bg-neutral-900 text-white text-[13px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"><Video className="w-4 h-4"/>실시간 자세 체크</button>
               </div>
 
               <div className="flex-1 overflow-y-auto bg-neutral-50 px-5 py-5 space-y-5">

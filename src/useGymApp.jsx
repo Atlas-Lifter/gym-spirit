@@ -90,6 +90,7 @@ export function useGymApp() {
   const [photoCardData, setPhotoCardData] = useState(null);
   const [isAiCoachOpen, setIsAiCoachOpen] = useState(false);
   const [coachPopup, setCoachPopup] = useState(null); // 종목 설명서·자세 체크에서 띄우는 AI 코치 { exerciseId, seed? }
+  const [formCheck, setFormCheck] = useState(null); // 자세 체크 화면 { exerciseId } 또는 { identify: true } (종목 추가 화면의 카메라: 운동 알아보기부터)
   const [activeRankingTab, setActiveRankingTab] = useState('global');
   const [rankingSortBy, setRankingSortBy] = useState('volume');
   const [isFriendSearchModalOpen, setIsFriendSearchModalOpen] = useState(false);
@@ -1831,6 +1832,8 @@ export function useGymApp() {
     getExerciseInsight,
     coachPopup,
     setCoachPopup,
+    formCheck,
+    setFormCheck,
     startCoachRoutine,
     getMuscleRecoveryStatus,
     getTop1RM,

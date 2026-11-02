@@ -92,6 +92,7 @@ export function WorkoutScreen() {
     triggerSaveWorkout,
     updateSet,
     workoutDurationSec,
+    setFormCheck,
   } = useApp();
   const formattedWorkoutTime = `${Math.floor(workoutDurationSec / 3600).toString().padStart(2, '0')}:${Math.floor((workoutDurationSec % 3600) / 60).toString().padStart(2, '0')}:${(workoutDurationSec % 60).toString().padStart(2, '0')}`;
   const currentSessionVolume = session.reduce((total, ex) => total + (ex.sets || []).reduce((sum, s) => {
@@ -439,7 +440,7 @@ export function WorkoutScreen() {
         <div className="fixed inset-0 bg-black/60 z-[70] flex flex-col justify-end animate-fade-in" onClick={() => setIsAddExerciseModalOpen(false)}>
           <div className="bg-white w-full h-[90vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] flex flex-col animate-slide-up text-neutral-900 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 flex justify-between items-center bg-white sticky top-0 z-10 border-b border-neutral-100">
-              <button onClick={() => { showToast("운동 사진 분석 기능은 준비 중입니다."); }} className="text-neutral-500 hover:bg-neutral-100 p-2 rounded-full transition-colors"><Camera className="w-6 h-6"/></button>
+              <button onClick={() => setFormCheck({ identify: true })} aria-label="영상으로 운동 찾기" className="text-neutral-500 hover:bg-neutral-100 p-2 rounded-full transition-colors"><Camera className="w-6 h-6"/></button>
               <h2 className="text-xl font-black">{swapTargetExerciseId ? '종목 변경' : '종목 추가'}</h2>
               <button onClick={() => {setIsAddExerciseModalOpen(false); setSwapTargetExerciseId(null);}} className="text-neutral-900 p-2 rounded-full hover:bg-neutral-100 transition-colors"><X className="w-6 h-6"/></button>
             </div>
