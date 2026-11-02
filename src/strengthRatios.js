@@ -53,6 +53,7 @@ const MAP = {
   br: ['bb_row', 1, 'dl'], prow: ['pendlay', 1, 'dl'], tbar: ['tbar', 1, 'dl'], dr_back: ['db_row', 1, 'dl'],
   meadows_row: ['tbar', 0.55, 'dl'], seal_row: ['bb_row', 0.8, 'dl'], sr: ['machine_row', 1, 'dl'], csr: ['cable_row', 1, 'dl'],
   chest_row: ['machine_row', 0.9, 'dl'], shrug_bb: ['bb_shrug', 1, 'dl'], shrug_db: ['db_shrug', 1, 'dl'],
+  bb_bshrug: ['bb_shrug', 0.9, 'dl'], snatch_shrug: ['bb_shrug', 0.75, 'dl'], clean_shrug: ['bb_shrug', 0.9, 'dl'], calf_shrug: ['bb_shrug', 1, 'dl'],
   pd: ['lat_pulldown', 1, 'pull'], cg_pd: ['cg_pulldown', 1, 'pull'], mag_lpd: ['cg_pulldown', 1, 'pull'], onearm_lpd: ['lat_pulldown', 0.5, 'pull'],
   apd: ['straight_arm', 1, 'pull'], pullover_mac: ['straight_arm', 1.3, 'pull'], face_pull: ['face_pull', 1, 'pull'],
   // 가슴 (→ 벤치)
@@ -66,7 +67,7 @@ const MAP = {
   arnold: ['arnold', 1, 'bp'], landmine_p: ['landmine_press', 1, 'bp'], z_press: ['ohp', 0.85, 'bp'],
   fr: ['db_front', 1, 'bp'], cable_front: ['cable_lateral', 1.1, 'bp'], plate_front: ['db_front', 1.5, 'bp'],
   lr: ['db_lateral', 1, 'bp'], clr: ['cable_lateral', 1, 'bp'], egyptian_lr: ['cable_lateral', 0.9, 'bp'], machine_lr: ['cable_lateral', 1.6, 'bp'],
-  uprow: ['upright_row', 1, 'bp'], y_raise: ['db_lateral', 0.5, 'bp'], cable_y: ['cable_lateral', 0.6, 'bp'],
+  uprow: ['upright_row', 1, 'bp'], smith_uprow: ['upright_row', 1.05, 'bp'], y_raise: ['db_lateral', 0.5, 'bp'], cable_y: ['cable_lateral', 0.6, 'bp'],
   rpdf: ['machine_fly', 0.55, 'pull'], bentover: ['db_lateral', 0.9, 'pull'],
   // 팔: 이두 (→ 당기는 평균), 삼두 (→ 벤치)
   bc: ['bb_curl', 1, 'pull'], ez_curl: ['ez_curl', 1, 'pull'], dc: ['db_curl', 1, 'pull'], hc: ['hammer', 1, 'pull'],

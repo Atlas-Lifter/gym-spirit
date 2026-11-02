@@ -31,6 +31,7 @@ const PT = {
   wide_pu: ['pullup'], vbar_pu: ['pullup'], scap_pu: ['pullup'], kneel_hp_row: ['lat_pulldown'], oa_csr: ['cable_row'],
   neutral_db_row: ['bent_row', 'dumbbell'], oa_lm_row: ['db_row', 'barbell'], lm_tbar: ['bent_row'], inc_bench_row: ['chest_supported_row', 'barbell'],
   rope_apd: ['straight_arm_pulldown'], shotgun_row: ['cable_row'], kb_row: ['db_row', 'kettlebell'], smith_bshrug: ['shrug'],
+  bb_bshrug: ['shrug'], snatch_shrug: ['shrug'], clean_shrug: ['shrug'], calf_shrug: ['shrug', 'none'], smith_uprow: ['upright_row'],
   // ── 어깨 ──
   cable_rdf: ['reverse_fly'], seated_lr: ['lateral_raise'], rope_rd_row: ['face_pull'], reverse_fly: ['bentover_raise'],
   lr_front: ['lateral_raise'],

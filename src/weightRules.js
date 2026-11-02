@@ -11,7 +11,7 @@ export const STANDARD_BAR = 20;
 // 일반 헬스장에는 25kg 원판이 없어서 한쪽에 꽂는 가장 큰 원판은 20kg
 export const GYM_PLATES = [20, 15, 10, 5, 2.5, 1.25];
 
-const PLATE_MACHINES = ['lpd', 's_lpd', 'hack_sq', 'vsq', 'tbar', 'smith_sq', 'sip', 'smith_ohp', 'smith_bp', 'smith_row', 'inc_cpm', 'high_row', 'machine_shrug', 'narrow_lpd', 'smith_calf', 'lp_calf', 'smith_sldl', 'smith_split', 'dec_cpm', 'smith_dec', 'smith_bshrug'];
+const PLATE_MACHINES = ['lpd', 's_lpd', 'hack_sq', 'vsq', 'tbar', 'smith_sq', 'sip', 'smith_ohp', 'smith_bp', 'smith_row', 'inc_cpm', 'high_row', 'machine_shrug', 'narrow_lpd', 'smith_calf', 'lp_calf', 'smith_sldl', 'smith_split', 'dec_cpm', 'smith_dec', 'smith_bshrug', 'smith_uprow'];
 const ONE_END_BARBELL = ['landmine_p', 'meadows_row', 'oa_lm_row', 'lm_tbar'];
 const ASSISTED = ['astpu'];
 // 맨몸 종목에서 실제로 드는 체중 비율

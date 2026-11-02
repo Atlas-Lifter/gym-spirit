@@ -10,6 +10,21 @@ import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { useApp } from '../appContext.js';
 
 // 운동 기록 중 화면 (세트 입력·휴식 타이머·운동 완료)
+// 종목 고르기 필터: '승모'는 승모근 위쪽 종목(슈러그·업라이트 로우)만 모아 보여 준다
+const TRAP_IDS = /shrug|uprow|upright/;
+const matchesCategory = (ex, cat) => {
+  if (cat === '전체') return true;
+  const t = String(ex.target);
+  if (cat === '승모') return t.includes('상부승모') || (t.includes('승모') && TRAP_IDS.test(String(ex.id)));
+  return t.includes(cat);
+};
+// 검색: 이름뿐 아니라 부위(예: 승모)·기구(예: 스미스·덤벨)로도 찾는다
+const matchesSearch = (ex, q) => {
+  const k = String(q || '').trim();
+  if (!k) return true;
+  return `${ex.name} ${ex.target} ${ex.tool}`.includes(k);
+};
+
 export function WorkoutScreen() {
   const {
     requestSaveWorkout,
@@ -392,13 +407,13 @@ export function WorkoutScreen() {
                 <input type="text" placeholder="종목 이름을 검색하세요. (ex. 스쿼트)" value={exSearchQuery} onChange={e => setExSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm font-bold text-neutral-900 placeholder:text-neutral-400" />
               </div>
               <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                {['전체', '가슴', '등', '하체', '어깨', '팔', '복근'].map(cat => (
+                {['전체', '가슴', '등', '승모', '하체', '어깨', '팔', '복근'].map(cat => (
                   <button key={cat} onClick={() => setExCategoryFilter(cat)} className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${exCategoryFilter === cat ? 'bg-neutral-800 text-white border-neutral-800' : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'}`}>{cat}</button>
                 ))}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50">
-              {EXERCISE_OPTIONS.filter(ex => (exCategoryFilter === '전체' || String(ex.target).includes(exCategoryFilter)) && String(ex.name).includes(exSearchQuery)).map((ex) => (
+              {EXERCISE_OPTIONS.filter(ex => matchesCategory(ex, exCategoryFilter) && matchesSearch(ex, exSearchQuery)).map((ex) => (
                 <div key={ex.id} onClick={() => swapTargetExerciseId ? swapExercise(ex) : addExerciseFromModal(ex)} className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-neutral-100 hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer group active:scale-95">
                   <SmartExerciseThumbnail exerciseId={ex.id} target={String(ex.target)} tool={String(ex.tool)} size="w-14 h-14" />
                   <div className="flex-1 min-w-0">
