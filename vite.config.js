@@ -1,13 +1,16 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-// 개발 서버에서만: Vercel 서버 함수(api/*.js)를 같은 주소로 돌려 본다. 키 등은 .env.local (git 에 안 올라감)
+// 개발 서버에서만: Vercel 서버 함수(api/*.js)를 같은 주소(/api/이름)로 돌려 본다. 키 등은 .env.local (git 에 안 올라감)
 // COACH_DEV_BYPASS=1 이면 로그인 확인을 건너뛰고 COACH_ALLOWED_EMAILS 의 첫 계정으로 본다 (로컬 시험용)
 const devApi = (env) => ({
   name: 'dev-api',
   configureServer(server) {
     Object.assign(process.env, env);
-    server.middlewares.use('/api/coach', async (req, res) => {
-      const mod = await server.ssrLoadModule('/api/coach.js');
+    server.middlewares.use('/api', async (req, res, next) => {
+      const name = (req.url || '').split('?')[0].replace(/^\//, '');
+      if (!/^[a-z-]+$/.test(name)) return next();
+      const mod = await server.ssrLoadModule(`/api/${name}.js`).catch(() => null);
+      if (!mod) return next();
       const chunks = [];
       for await (const c of req) chunks.push(c);
       const realFetch = globalThis.fetch;
@@ -19,7 +22,7 @@ const devApi = (env) => ({
       try {
         const headers = { ...req.headers };
         if (env.COACH_DEV_BYPASS === '1') headers.authorization = 'Bearer dev';
-        const out = await mod.default(new Request(`http://localhost${req.url}`, { method: req.method, headers, body: req.method === 'POST' ? Buffer.concat(chunks) : undefined }));
+        const out = await mod.default(new Request(`http://localhost/api/${name}`, { method: req.method, headers, body: req.method === 'POST' ? Buffer.concat(chunks) : undefined }));
         res.statusCode = out.status;
         out.headers.forEach((v, k) => res.setHeader(k, v));
         if (out.body) for await (const c of out.body) res.write(c);

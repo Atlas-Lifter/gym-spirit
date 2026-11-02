@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Camera, ChevronLeft, Minus, Plus, Search, Trash2, Utensils, X } from 'lucide-react';
 import { FOOD_DB, FOOD_CATEGORIES, foodTags } from '../data/foods.js';
 import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { FoodImage } from '../components/FoodImage.jsx';
 import { useApp } from '../appContext.js';
 import { KfoodBrowser } from '../components/KfoodBrowser.jsx';
+import { FoodPhotoFlow } from '../components/FoodPhotoFlow.jsx';
 
 // 식단 플래너 화면
 export function DietScreen() {
   const {
     addDietMeal,
     addFoodToMeal,
+    addFoodsToMeal,
+    cloudUser,
     currentDate,
     foodCategoryFilter,
     foodSearchQuery,
@@ -35,7 +38,14 @@ export function DietScreen() {
     && (!foodQuery || `${f.name} ${f.kw}`.includes(foodQuery)));
   // 식약처 영양 DB 둘러보기 (배너·아이콘으로 여는 별도 화면). 창을 닫으면 원래 검색으로 돌아온다
   const [kOpen, setKOpen] = useState(false);
-  useEffect(() => { if (!isAddFoodModalOpen) setKOpen(false); }, [isAddFoodModalOpen]);
+  useEffect(() => { if (!isAddFoodModalOpen) { setKOpen(false); setPhotoFile(null); } }, [isAddFoodModalOpen]);
+  // 사진으로 기록: 📷 → 카메라·앨범에서 고르기 → 음식 찾기 (로그인한 허용 계정만, 서버가 다시 확인한다)
+  const [photoFile, setPhotoFile] = useState(null);
+  const photoInput = useRef(null);
+  const openCamera = () => {
+    if (!cloudUser && !import.meta.env.DEV) { showToast('사진으로 기록은 로그인한 계정에서 쓸 수 있어요.'); return; }
+    if (photoInput.current) { photoInput.current.value = ''; photoInput.current.click(); }
+  };
   const fmtMacro = (v) => (selectedFood?.noMacros ? '–' : v);
   const pickFood = (food) => { setSelectedFood(food); setFoodWeight(food.serv?.[0]?.g || 100); };
   const per = selectedFood?.per || 100;
@@ -117,13 +127,18 @@ export function DietScreen() {
         <div className="fixed inset-0 bg-black/60 z-[70] flex flex-col justify-end animate-fade-in" onClick={() => {setIsAddFoodModalOpen(false); setSelectedFood(null); setFoodCategoryFilter('전체');}}>
           <div className="bg-white w-full h-[90vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] flex flex-col animate-slide-up text-neutral-900 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 flex justify-between items-center bg-white sticky top-0 z-10 border-b border-neutral-100">
-              {selectedFood ? <button onClick={() => setSelectedFood(null)} title="뒤로" className="text-neutral-700 hover:bg-neutral-100 p-2 rounded-full transition-colors"><ChevronLeft className="w-6 h-6"/></button> : <button onClick={() => showToast("스마트 사진 분석은 준비 중입니다.")} className="text-neutral-500 hover:bg-neutral-100 p-2 rounded-full transition-colors"><Camera className="w-6 h-6"/></button>}
-              <h2 className="text-xl font-black">{selectedFood ? '중량 입력' : kOpen ? '식약처 영양 정보' : '식재료 검색'}</h2>
+              {selectedFood ? <button onClick={() => setSelectedFood(null)} title="뒤로" className="text-neutral-700 hover:bg-neutral-100 p-2 rounded-full transition-colors"><ChevronLeft className="w-6 h-6"/></button> : <button onClick={openCamera} aria-label="사진으로 기록" className="text-neutral-500 hover:bg-neutral-100 p-2 rounded-full transition-colors"><Camera className="w-6 h-6"/></button>}
+              <h2 className="text-xl font-black">{selectedFood ? '중량 입력' : photoFile ? '사진으로 기록' : kOpen ? '식약처 영양 정보' : '식재료 검색'}</h2>
               <button onClick={() => {setIsAddFoodModalOpen(false); setSelectedFood(null); setFoodCategoryFilter('전체');}} className="text-neutral-900 p-2 rounded-full hover:bg-neutral-100 transition-colors"><X className="w-6 h-6"/></button>
             </div>
             {/* 둘러보기 화면은 중량 입력으로 갔다 돌아와도 고른 묶음·스크롤이 남도록 숨겨 둔다 */}
-            {kOpen && <div className={selectedFood ? 'hidden' : 'flex-1 min-h-0 flex flex-col'}><KfoodBrowser initialQuery={foodQuery} onBack={() => setKOpen(false)} onPick={pickFood} /></div>}
-            {!selectedFood && kOpen ? null : !selectedFood ? (
+            <input ref={photoInput} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setSelectedFood(null); setPhotoFile(f); } }} />
+            {photoFile && !selectedFood && (
+              <FoodPhotoFlow key={photoFile.name + photoFile.lastModified} file={photoFile} onClose={() => setPhotoFile(null)} onRetake={openCamera}
+                onAdd={(list) => { addFoodsToMeal(list); setPhotoFile(null); }} />
+            )}
+            {kOpen && <div className={selectedFood || photoFile ? 'hidden' : 'flex-1 min-h-0 flex flex-col'}><KfoodBrowser initialQuery={foodQuery} onBack={() => setKOpen(false)} onPick={pickFood} /></div>}
+            {!selectedFood && (kOpen || photoFile) ? null : !selectedFood ? (
               <>
                 <div className="p-4 bg-white sticky top-[65px] z-10 border-b border-neutral-50 shadow-[0_5px_10px_rgba(0,0,0,0.02)]">
                   <div className="flex gap-2 mb-3">

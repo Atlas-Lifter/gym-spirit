@@ -1249,23 +1249,33 @@ export function useGymApp() {
     setCurrentUser(prev => ({ ...prev, diet: { ...(prev.diet || {}), [currentDate]: { meals: newDietMeals } } }));
     showToast("식단에서 음식을 삭제했습니다.");
   };
-  const addFoodToMeal = () => {
-    if(!selectedFood || !selectedMealId) return;
-    const factor = foodWeight / (selectedFood.per || 100);
-    const foodItem = {
-      id: Date.now().toString(), foodId: String(selectedFood.id), name: String(selectedFood.brand ? `${selectedFood.name} (${selectedFood.brand})` : selectedFood.name), icon: String(selectedFood.icon),
-      weight: Number(foodWeight), unit: String(selectedFood.unit || 'g'), calories: Math.round(selectedFood.calories * factor),
-      protein: Number((selectedFood.protein * factor).toFixed(1)), carbs: Number((selectedFood.carbs * factor).toFixed(1)), fat: Number((selectedFood.fat * factor).toFixed(1)),
+  // 음식 하나를 끼니에 넣을 기록 모양으로 (무게는 그 음식의 단위 g/ml)
+  const toMealItem = (food, weight, idSuffix = '') => {
+    const factor = weight / (food.per || 100);
+    return {
+      id: `${Date.now()}${idSuffix}`, foodId: String(food.id), name: String(food.brand ? `${food.name} (${food.brand})` : food.name), icon: String(food.icon),
+      weight: Number(weight), unit: String(food.unit || 'g'), calories: Math.round(food.calories * factor),
+      protein: Number((food.protein * factor).toFixed(1)), carbs: Number((food.carbs * factor).toFixed(1)), fat: Number((food.fat * factor).toFixed(1)),
     };
-    const newDietMeals = todayDiet.meals.map(meal => {
-      if(meal.id === selectedMealId) return { ...meal, items: [...meal.items, foodItem] };
-      return meal;
-    });
+  };
+  const pushMealItems = (items) => {
+    const newDietMeals = todayDiet.meals.map(meal => (meal.id === selectedMealId ? { ...meal, items: [...meal.items, ...items] } : meal));
     setCurrentUser(prev => ({ ...prev, diet: { ...(prev.diet || {}), [currentDate]: { meals: newDietMeals } } }));
     setIsAddFoodModalOpen(false);
     setSelectedFood(null);
     setFoodWeight(100);
+  };
+  const addFoodToMeal = () => {
+    if(!selectedFood || !selectedMealId) return;
+    pushMealItems([toMealItem(selectedFood, foodWeight)]);
     showToast(`${selectedFood.name} ${foodWeight}${selectedFood.unit || 'g'}을 식단에 추가했어요.`);
+  };
+  // 사진으로 찾은 여러 음식을 한 번에 넣는다. list: [{ food, weight }]
+  const addFoodsToMeal = (list) => {
+    const ok = (list || []).filter(it => it.food && it.weight > 0);
+    if (!ok.length || !selectedMealId) return;
+    pushMealItems(ok.map((it, i) => toMealItem(it.food, it.weight, `-${i}`)));
+    showToast(`사진에서 찾은 음식 ${ok.length}개를 식단에 추가했어요.`);
   };
   // AI 코치가 짠 하루 식단 예시를 보고 있는 날짜의 식단에 담는다 (끼니 순서대로, 모자라면 끼니를 늘린다)
   const applyMealPlan = (plan) => {
@@ -1819,6 +1829,7 @@ export function useGymApp() {
     removeDietMeal,
     removeFoodFromMeal,
     addFoodToMeal,
+    addFoodsToMeal,
     applyMealPlan,
     calculateTotalMacros,
     todayMacros,

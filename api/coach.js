@@ -7,7 +7,7 @@
 // 응답: 답변 글자를 생기는 대로 흘려보내는 text/plain 스트림
 export const config = { runtime: 'edge' };
 
-import { SUPABASE_URL, SUPABASE_KEY } from '../src/supabaseConfig.js';
+import { checkAiAccess, jsonError as json } from '../src/lib/serverAuth.js';
 
 // 무료(체험) 엔드포인트에서 재 본 결과 (2026-11): glm 은 답이 가장 꼼꼼하지만 생각하느라 약 20초,
 // nemotron-lightning 은 생각을 끄면 약 3초. 요청의 mode 로 순서를 정하고, 늦거나 실패하면 다른 모델로 넘어간다
@@ -40,17 +40,6 @@ const SYSTEM = `너는 GYM SPIRIT 앱의 퍼스널 트레이너 겸 영양 코�
   · name 은 "▶ 부위별 종목 후보"나 내 기록에 있는 종목 이름을 글자 그대로. 3~6종목.
   · weight 는 "▶ 앱이 계산한 다음 무게"의 kg, 없거나 맨몸이면 null. reps 는 숫자 하나.
   · 블록 안에는 JSON 만. 블록에 대해 설명하지 말고, 운동 루틴을 추천하지 않은 답(식단·일반 질문)에는 붙이지 마.`;
-
-const json = (status, error) => new Response(JSON.stringify({ error }), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
-
-async function userEmail(req) {
-  const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!token) return null;
-  const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${token}` } });
-  if (!r.ok) return null;
-  const u = await r.json();
-  return (u && u.email || '').toLowerCase() || null;
-}
 
 // 모델 하나에 물어 답 글자를 write 로 넘긴다. 첫 글자가 firstWithin 안에 안 오면 포기 (→ 다음 모델)
 // 결과: 'ok' | 'skip'(다음 모델로) | { error }(바로 끝냄)
@@ -102,13 +91,9 @@ async function ask(model, messages, key, write) {
 
 export default async function handler(req) {
   if (req.method !== 'POST') return json(405, 'POST 만 받아요');
-  const key = process.env.NVIDIA_API_KEY;
-  const allowed = (process.env.COACH_ALLOWED_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-  if (!key || !allowed.length) return json(503, 'AI 코치 설정이 아직 안 됐어요 (NVIDIA_API_KEY, COACH_ALLOWED_EMAILS)');
-
-  const email = await userEmail(req).catch(() => null);
-  if (!email) return json(401, '로그인한 계정에서만 쓸 수 있어요');
-  if (!allowed.includes(email)) return json(403, '이 계정은 AI 코치를 쓸 수 없어요');
+  const access = await checkAiAccess(req);
+  if (access.error) return access.error;
+  const { key } = access;
 
   let body;
   try { body = await req.json(); } catch { return json(400, '요청 형식이 잘못됐어요'); }
