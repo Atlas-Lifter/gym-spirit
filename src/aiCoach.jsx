@@ -655,6 +655,8 @@ const TONE_DOT = { danger: 'bg-red-500', caution: 'bg-amber-500', good: 'bg-emer
 // ── 상담소 본체 ───────────────────────────────────────────────
 export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, programs, exercises, onOpenProgram, onOpenGuide, onApplyMealPlan, getCoachContext, canChat, hasGuide, onStartRoutine, coachRoutine, onSaveRoutine, suggestWeekly }) => {
   const [mode, setMode] = useState('menu'); // menu: 상담 메뉴(정해진 답) · chat: AI 대화
+  const [seed, setSeed] = useState(null); // 상담 메뉴에서 'AI와 더 이야기하기'를 누르면 이 주제로 새 채팅을 연다
+  const chatReady = !!getCoachContext && (canChat || import.meta.env.DEV);
   const [path, setPath] = useState([{ id: 'start' }]); // { id, label? } — label은 내가 고른 답(말풍선)
   const [typing, setTyping] = useState(false);
   const [query, setQuery] = useState('');
@@ -673,6 +675,23 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
   };
   const back = () => setPath(prev => (prev.length > 1 ? prev.slice(0, -1) : prev));
   const restart = () => { setPath([{ id: 'start' }]); setQuery(''); };
+  // 지금 보고 있는 상담 내용(고른 선택 + 메뉴 답)을 들고 AI 대화로 넘어간다
+  const continueWithAI = (stepId, node) => {
+    const title = stepId === 'brief' ? '이번 주 분석 결과' : (nodeTitle(stepId) || node.title || '상담');
+    const picks = path.map(p => p.label).filter(Boolean);
+    const body = node.a || (node.brief ? node.brief.map(b => `- ${b.text}`).join('\n') : '') || node.q || '';
+    const content = [
+      `상담 메뉴에서 「${title}」를 보다가 왔어요.`,
+      picks.length ? `내가 고른 선택: ${picks.join(' → ')}` : '',
+      body ? `앱 상담 메뉴 내용:\n${String(body).slice(0, 1500)}` : '',
+      node.tool ? `(이 화면은 '${node.title || title}' 계산기예요.)` : '',
+      node.a || node.brief
+        ? '이 내용을 내 기록(운동·회복·식단·몸)에 맞춰 더 구체적으로 설명해 주고, 지금 나한테 맞는 다음 행동을 알려 주세요.'
+        : '이 주제로 상담하고 싶어요. 내 기록을 보고 나한테 가장 중요한 포인트부터 알려 주세요.',
+    ].filter(Boolean).join('\n\n');
+    setSeed({ id: Date.now(), display: `💬 「${title}」 더 자세히 상담하고 싶어요`, content });
+    setMode('chat');
+  };
 
   useEffect(() => {
     if (!typing) return undefined;
@@ -742,7 +761,7 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
           </div>
         </div>
         </div>
-        {mode === 'chat' && <div className="flex-1 min-h-0"><CoachChat getContext={getCoachContext} canChat={canChat} exercises={exercises} hasGuide={hasGuide} onOpenGuide={onOpenGuide} onStartRoutine={onStartRoutine} coachRoutine={coachRoutine} onSaveRoutine={onSaveRoutine} suggestWeekly={suggestWeekly} /></div>}
+        {mode === 'chat' && <div className="flex-1 min-h-0"><CoachChat seed={seed} onSeedUsed={() => setSeed(null)} getContext={getCoachContext} canChat={canChat} exercises={exercises} hasGuide={hasGuide} onOpenGuide={onOpenGuide} onStartRoutine={onStartRoutine} coachRoutine={coachRoutine} onSaveRoutine={onSaveRoutine} suggestWeekly={suggestWeekly} /></div>}
 
         <div ref={scrollRef} className={`relative flex-1 overflow-y-auto p-5 bg-neutral-50 flex-col gap-4 ${mode === 'chat' ? 'hidden' : 'flex'}`}>
           {path.map((step, i) => {
@@ -789,6 +808,11 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
                             </button>
                           ))}
                         </div>
+                      )}
+                      {isLast && !typing && chatReady && step.id !== 'start' && step.id !== 'saved' && (
+                        <button onClick={() => continueWithAI(step.id, node)} className="self-start text-xs font-black px-3 py-2 rounded-xl flex items-center gap-1.5 bg-gradient-to-r from-[#4768ff] to-indigo-500 text-white shadow-sm active:scale-95 transition-transform">
+                          <MessageSquare className="w-3.5 h-3.5" />이 주제로 AI 코치와 더 이야기하기
+                        </button>
                       )}
                     </div>
                   </div>

@@ -101,7 +101,7 @@ const Rich = ({ text }) => text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (
   part.startsWith('**') && part.endsWith('**') ? <b key={i} className="font-black text-neutral-900">{part.slice(2, -2)}</b> : <React.Fragment key={i}>{part.replace(/^#{1,4}\s/gm, '')}</React.Fragment>
 ));
 
-export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () => false, onOpenGuide = () => {}, onStartRoutine, coachRoutine, onSaveRoutine, suggestWeekly }) {
+export function CoachChat({ seed, onSeedUsed, getContext, canChat, exercises = [], hasGuide = () => false, onOpenGuide = () => {}, onStartRoutine, coachRoutine, onSaveRoutine, suggestWeekly }) {
   const [store, setStore] = useState(loadThreads);
   const [showList, setShowList] = useState(false);
   const current = store.threads.find(t => t.id === store.currentId) || null;
@@ -129,13 +129,15 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
   useEffect(() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }, [msgs]);
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const send = async (raw) => {
+  // display: 화면에 보일 짧은 글 (상담 메뉴에서 넘어올 때 긴 내용은 코치에게만 보낸다). fresh: 새 대화로 보낸다
+  const send = async (raw, { display, fresh } = {}) => {
     const text = String(raw || '').trim();
     if (!text || busy || !allowed) return;
-    const history = [...msgs.filter(m => !m.error), { role: 'user', content: text }];
+    const base = fresh ? [] : msgs;
+    const history = [...base.filter(m => !m.error), { role: 'user', content: text, ...(display ? { display } : {}) }];
     // 새 채팅이면 첫 질문을 보낼 때 대화를 만든다
-    const id = current ? current.id : newThreadId();
-    if (current) setMsgsOf(id, () => [...history, { role: 'assistant', content: '', pending: true }]);
+    const id = current && !fresh ? current.id : newThreadId();
+    if (current && !fresh) setMsgsOf(id, () => [...history, { role: 'assistant', content: '', pending: true }]);
     else {
       const now = Date.now();
       setStore(st => ({ threads: [{ id, title: titleOf(history), createdAt: now, updatedAt: now, msgs: [...history, { role: 'assistant', content: '', pending: true }] }, ...st.threads], currentId: id }));
@@ -197,6 +199,13 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
   const skipAsking = () => { const q = asking; setAsking(null); send(q); };
   // 저장한 루틴이 화면(props)에 들어온 뒤 미뤄 둔 질문을 보낸다
   useEffect(() => { if (queued && coachRoutine?.type) { send(queued); setQueued(null); } }, [coachRoutine, queued]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 상담 메뉴에서 넘어온 주제: 새 대화로 바로 묻는다
+  useEffect(() => {
+    if (!seed || !allowed) return;
+    setAsking(null);
+    send(seed.content, { display: seed.display, fresh: true });
+    onSeedUsed?.(); // 탭을 오가며 다시 그려져도 같은 주제를 또 보내지 않게
+  }, [seed?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const newChat = () => { setStore(st => ({ ...st, currentId: null })); setAsking(null); setShowList(false); setInput(''); };
   const openThread = (id) => { setStore(st => ({ ...st, currentId: id })); setAsking(null); setShowList(false); };
@@ -246,7 +255,7 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
           const mentions = m.role === 'assistant' && !m.pending && !m.error && !routine ? mentionedExercises(m.content, exercises).filter(e => hasGuide(e.id)) : [];
           const shown = m.role === 'assistant' ? visibleText(m.content) : m.content;
           return m.role === 'user' ? (
-          <div key={i} className="flex justify-end"><div className="bg-[#4768ff] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm font-black max-w-[82%] whitespace-pre-wrap shadow-sm">{m.content}</div></div>
+          <div key={i} className="flex justify-end"><div className="bg-[#4768ff] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm font-black max-w-[82%] whitespace-pre-wrap shadow-sm">{m.display || m.content}</div></div>
         ) : (
           <div key={i} className="flex gap-2.5 items-start">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4768ff] to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-sm"><Sparkles className="w-4 h-4 text-white" /></div>

@@ -7,7 +7,7 @@ export const MAX_MSGS = 40;
 
 export const titleOf = (msgs) => {
   const first = (msgs || []).find(m => m.role === 'user');
-  const t = first ? String(first.content).replace(/\s+/g, ' ').trim() : '';
+  const t = first ? String(first.display || first.content).replace(/^💬\s*/, '').replace(/\s+/g, ' ').trim() : '';
   return t ? (t.length > 28 ? `${t.slice(0, 28)}…` : t) : '새 채팅';
 };
 
