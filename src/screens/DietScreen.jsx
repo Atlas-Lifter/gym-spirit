@@ -33,7 +33,7 @@ export function DietScreen() {
   const foodQuery = String(foodSearchQuery || '').trim();
   const foods = FOOD_DB.filter(f => (foodCategoryFilter === '전체' || (foodCategoryFilter === '고단백' ? foodTags(f).includes('고단백') : f.category === foodCategoryFilter))
     && (!foodQuery || `${f.name} ${f.kw}`.includes(foodQuery)));
-  // 식약처 DB: 검색을 시작하면 그때 불러온다. 기본 분류(전체·고단백)에서만 함께 보여 준다
+  // 식약처 DB: 검색을 시작하면 그때 불러온다. 분류 칩과 상관없이 검색 결과를 함께 보여 준다 (고단백만 걸러 줌)
   const [kRows, setKRows] = useState(null);
   const [kState, setKState] = useState('idle');
   const wantK = isAddFoodModalOpen && !!foodQuery;
@@ -43,7 +43,7 @@ export function DietScreen() {
     loadKfood().then(rows => { setKRows(rows); setKState('ready'); }).catch(() => setKState('error'));
   }, [wantK, kRows, kState]);
   const kFoods = useMemo(() => {
-    if (!kRows || !foodQuery || !['전체', '고단백'].includes(foodCategoryFilter)) return [];
+    if (!kRows || !foodQuery) return [];
     const list = searchKfood(kRows, foodQuery, foodCategoryFilter === '고단백' ? 200 : 40).map(kfoodToFood);
     return foodCategoryFilter === '고단백' ? list.filter(f => foodTags(f).includes('고단백')).slice(0, 40) : list;
   }, [kRows, foodQuery, foodCategoryFilter]);
@@ -147,6 +147,15 @@ export function DietScreen() {
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50">
                   <div className="text-[11px] font-bold text-neutral-400 px-1">{foods.length}개 · 영양 정보는 100g(음료 100ml) 기준이에요</div>
+                  {!foodQuery && (
+                    <div className="bg-[#4768ff]/5 border border-[#4768ff]/15 rounded-2xl p-3.5 text-[12px] font-bold text-neutral-600 leading-relaxed">
+                      <div className="font-black text-[#4768ff] mb-0.5">🇰🇷 식약처 영양 DB 1.9만 개 연결됨</div>
+                      위 검색창에 음식·메뉴 이름(예: 제육볶음, 김치찌개, 메가커피 라떼)을 입력하면 아래 목록에 함께 나와요.
+                    </div>
+                  )}
+                  {foodQuery && foods.length > 2 && kFoods.length > 0 && (
+                    <button onClick={() => document.getElementById('kfood-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="w-full text-left bg-[#4768ff]/5 border border-[#4768ff]/15 rounded-xl px-3 py-2 text-[12px] font-black text-[#4768ff]">🇰🇷 식약처 영양 DB에서 {kFoods.length >= 40 ? '40개 이상' : `${kFoods.length}개`} 더 찾았어요 · 아래로 ↓</button>
+                  )}
                   {foods.map(food => {
                     const sv = food.serv?.[0];
                     return (
@@ -162,8 +171,8 @@ export function DietScreen() {
                     );
                   })}
                   {foods.length === 0 && kFoods.length === 0 && kState !== 'loading' && <div className="text-center text-sm font-bold text-neutral-400 py-10">찾는 음식이 없어요. 다른 이름(예: 닭, 밥, 커피)으로 찾아보세요.</div>}
-                  {foodQuery && ['전체', '고단백'].includes(foodCategoryFilter) && (
-                    <div className="pt-3 space-y-2">
+                  {foodQuery && (
+                    <div id="kfood-results" className="pt-3 space-y-2 scroll-mt-2">
                       <div className="flex items-end justify-between px-1">
                         <div className="text-xs font-black text-neutral-700">🇰🇷 식약처 영양 DB <span className="text-neutral-400 font-bold">· 음식·프랜차이즈 메뉴·식재료 1.9만 개</span></div>
                         {kFoods.length > 0 && <div className="text-[10px] font-bold text-neutral-400">{kFoods.length >= 40 ? '상위 40개' : `${kFoods.length}개`}</div>}
