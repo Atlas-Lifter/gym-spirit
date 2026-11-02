@@ -2,9 +2,7 @@
 // publishable 키는 브라우저에 공개되도록 만들어진 키라 코드에 둬도 안전하다. (권한은 DB의 RLS 규칙이 막는다)
 import { createClient } from '@supabase/supabase-js';
 import { cleanAvatar } from './admin.js';
-
-const SUPABASE_URL = 'https://jparwpjyertrfncmftil.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_chMnSPGH1m0CN0oDwg26-Q_wy5nUHVO';
+import { SUPABASE_URL, SUPABASE_KEY } from './supabaseConfig.js';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 export const SITE_URL = 'https://gym-spirit.vercel.app';

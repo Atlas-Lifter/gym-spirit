@@ -38,6 +38,7 @@ export function MainScreen() {
     friendState,
     getAnalysisWeekInfo,
     getBestLifts,
+    getCoachContext,
     getMuscleExercises,
     getMuscleRecoveryStatus,
     getWeeklyLoadReport,
@@ -564,6 +565,8 @@ export function MainScreen() {
           onOpenProgram={(id) => { const prog = PROGRAMS.find(p => p.id === id); if (prog) { setIsAiCoachOpen(false); setSelectedProgramModal(prog); } }}
           onOpenGuide={(id) => { if (EXERCISE_GUIDES[id]) setGuideExerciseId(id); }}
           onApplyMealPlan={applyMealPlan}
+          getCoachContext={getCoachContext}
+          canChat={!!cloudUser}
         /></Suspense>
       )}
 

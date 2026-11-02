@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, ChevronLeft, ChevronRight, MessageSquare, RotateCw, Star, Search, BookOpen, Calculator, Activity, Dumbbell } from 'lucide-react';
+import { CoachChat } from './components/CoachChat.jsx';
 import { COACH_TREE } from './coachTree.js';
 import { FOOD_DB, foodTags } from './data/foods.js';
 import { FoodImage } from './components/FoodImage.jsx';
@@ -652,7 +653,8 @@ const Briefing = ({ report, onPick }) => {
 const TONE_DOT = { danger: 'bg-red-500', caution: 'bg-amber-500', good: 'bg-emerald-500', info: 'bg-[#4768ff]' };
 
 // ── 상담소 본체 ───────────────────────────────────────────────
-export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, programs, exercises, onOpenProgram, onOpenGuide, onApplyMealPlan }) => {
+export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, programs, exercises, onOpenProgram, onOpenGuide, onApplyMealPlan, getCoachContext, canChat }) => {
+  const [mode, setMode] = useState('menu'); // menu: 상담 메뉴(정해진 답) · chat: AI 대화
   const [path, setPath] = useState([{ id: 'start' }]); // { id, label? } — label은 내가 고른 답(말풍선)
   const [typing, setTyping] = useState(false);
   const [query, setQuery] = useState('');
@@ -726,13 +728,23 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
   return (
     <div className="fixed inset-0 bg-black/60 z-[95] flex flex-col justify-end backdrop-blur-sm animate-fade-in" onClick={onClose}>
       <div className="bg-white text-neutral-900 w-full h-[88vh] rounded-t-[40px] flex flex-col shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-slide-up relative overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-4 flex justify-between items-center bg-white z-10 border-b border-neutral-100">
-          {path.length > 1 ? (<button onClick={back} aria-label="이전" className="text-neutral-500 hover:bg-neutral-100 p-2.5 rounded-full transition-colors active:scale-90"><ChevronLeft className="w-6 h-6" /></button>) : (<div className="w-11" />)}
+        <div className="bg-white z-10 border-b border-neutral-100">
+        <div className="px-5 pt-4 pb-3 flex justify-between items-center">
+          {mode === 'menu' && path.length > 1 ? (<button onClick={back} aria-label="이전" className="text-neutral-500 hover:bg-neutral-100 p-2.5 rounded-full transition-colors active:scale-90"><ChevronLeft className="w-6 h-6" /></button>) : (<div className="w-11" />)}
           <h2 className="text-xl font-black flex items-center gap-2 tracking-tight"><MessageSquare className="w-5 h-5 text-[#4768ff]" /> AI 코치 상담소</h2>
           <button onClick={onClose} aria-label="닫기" className="text-neutral-900 p-2.5 rounded-full hover:bg-neutral-100 transition-colors active:scale-90"><X className="w-6 h-6" /></button>
         </div>
+        <div className="px-5 pb-3">
+          <div className="grid grid-cols-2 bg-neutral-100 rounded-xl p-1 text-[13px] font-black">
+            {[['menu', '📋 상담 메뉴'], ['chat', '💬 AI 코치와 대화']].map(([id, label]) => (
+              <button key={id} onClick={() => setMode(id)} className={`py-2 rounded-lg transition-all ${mode === id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500'}`}>{label}</button>
+            ))}
+          </div>
+        </div>
+        </div>
+        {mode === 'chat' && <div className="flex-1 min-h-0"><CoachChat getContext={getCoachContext} canChat={canChat} /></div>}
 
-        <div ref={scrollRef} className="relative flex-1 overflow-y-auto p-5 bg-neutral-50 flex flex-col gap-4">
+        <div ref={scrollRef} className={`relative flex-1 overflow-y-auto p-5 bg-neutral-50 flex-col gap-4 ${mode === 'chat' ? 'hidden' : 'flex'}`}>
           {path.map((step, i) => {
             const node = virtualNode(step.id);
             const isLast = i === lastIndex;
@@ -825,7 +837,7 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
           })()}
         </div>
 
-        <div className="border-t border-neutral-100 bg-white px-4 pt-3 pb-5">
+        <div className={`border-t border-neutral-100 bg-white px-4 pt-3 pb-5 ${mode === 'chat' ? 'hidden' : ''}`}>
           {query && (
             <div className="mb-2.5 flex flex-col gap-1.5">
               {results.length ? results.map(r => (

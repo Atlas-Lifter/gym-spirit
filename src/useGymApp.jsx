@@ -15,6 +15,7 @@ import { detectPR, exerciseHistory, suggestNext } from './lib/progress.js';
 import { DEFAULT_TIMER_SETTINGS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { estimateFromLifts } from './strengthRatios.js';
 import { setLoad } from './weightRules.js';
+import { buildCoachContext } from './lib/coachContext.js';
 
 // 앱 전체 상태와 동작(기록 저장·클라우드·타이머·친구·길드 등). 화면 파일들은 useApp() 으로 여기서 꺼내 쓴다.
 export function useGymApp() {
@@ -1077,6 +1078,19 @@ export function useGymApp() {
     musclesOf: (ex) => getExerciseMuscles(EXERCISE_OPTIONS.find(e => e.id === String(getExId(ex))) || ex.exercise || ex),
     bestOf: (id) => getTop1RM(id),
   });
+  // AI 코치에게 보낼 내 기록 요약 (물어볼 때마다 새로 만든다)
+  const getCoachContext = () => buildCoachContext({
+    profile: activeUser?.profile || {},
+    bodyStats: activeUser?.bodyStats || {},
+    bodyGoal: activeUser?.bodyGoal,
+    workouts: safeWorkouts,
+    nameOf: (ex) => getExName(ex),
+    recovery: getMuscleRecoveryStatus(),
+    bestLifts: getBestLifts(),
+    todayMacros,
+    todayDiet,
+    cardioMinOn,
+  });
   const getTop1RM = (exerciseId) => {
     let max1RM = 0;
     if(!activeUser || !safeWorkouts) return 0;
@@ -1722,6 +1736,7 @@ export function useGymApp() {
     LOAD_GROUPS,
     getWeeklyLoadReport,
     getBestLifts,
+    getCoachContext,
     getMuscleRecoveryStatus,
     getTop1RM,
     getEffective1RM,
