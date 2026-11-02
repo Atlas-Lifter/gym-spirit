@@ -1,5 +1,5 @@
 // 식약처·농진청 식품영양성분 DB (public/data/kfood.json, .tools/kfood_build.py 로 만듦)
-// 3.5MB(압축 시 약 0.7MB)라 둘러보기 화면을 처음 열 때 한 번만 불러온다
+// 6.6MB(압축 시 약 1.3MB)라 둘러보기·사진 기록을 처음 쓸 때 한 번만 불러온다
 export const KFOOD_SOURCE = '식품의약품안전처 식품영양성분 DB · 농촌진흥청 국가표준식품성분표';
 
 let cache = null;

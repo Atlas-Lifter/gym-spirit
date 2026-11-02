@@ -12,7 +12,7 @@ const GROUPS = [
   { id: 'drink', label: '커피·음료', emoji: '☕', tile: 'from-sky-400 to-cyan-500', soft: 'bg-sky-50', tx: 'text-sky-600' },
   { id: 'bakery', label: '빵·디저트', emoji: '🍰', tile: 'from-pink-400 to-fuchsia-500', soft: 'bg-pink-50', tx: 'text-pink-600' },
   { id: 'raw', label: '식재료', emoji: '🥦', tile: 'from-emerald-400 to-teal-500', soft: 'bg-emerald-50', tx: 'text-emerald-600' },
-  { id: 'pack', label: '가공식품·편의점', emoji: '🛒', tile: 'from-violet-500 to-purple-600', soft: 'bg-violet-50', tx: 'text-violet-600', wide: true, hint: '닭가슴살 · 프로틴 · 그릭요거트 · 즉석밥 · 삼각김밥 · 라면' },
+  { id: 'pack', label: '마트·편의점 제품', emoji: '🛒', tile: 'from-violet-500 to-purple-600', soft: 'bg-violet-50', tx: 'text-violet-600', wide: true, hint: '편의점 도시락 · 라면 · 과자 · 음료 · 닭가슴살 · 프로틴' },
 ];
 const GROUP = Object.fromEntries(GROUPS.map(g => [g.id, g]));
 
@@ -107,7 +107,7 @@ export function KfoodBrowser({ initialQuery = '', onPick, onBack }) {
           <div>
             <div className="text-[11px] font-black text-white/70 tracking-wide">공공데이터 · 식품의약품안전처</div>
             <h2 className="text-2xl font-black leading-tight mt-0.5">영양 정보 둘러보기</h2>
-            <p className="text-[12px] font-bold text-white/80 mt-1">음식·프랜차이즈·가공식품·식재료 {counts.all ? counts.all.toLocaleString() : '3.2만'}개</p>
+            <p className="text-[12px] font-bold text-white/80 mt-1">음식·프랜차이즈·가공식품·식재료 {counts.all ? counts.all.toLocaleString() : '5.9만'}개</p>
           </div>
           <div className="text-5xl drop-shadow-sm select-none">{g.emoji}</div>
         </div>
@@ -125,7 +125,7 @@ export function KfoodBrowser({ initialQuery = '', onPick, onBack }) {
             <button key={x.id} onClick={() => pickGroup(x.id)} className={`relative rounded-2xl p-2.5 text-left transition-all active:scale-95 border ${x.wide ? 'col-span-3 flex items-center gap-3' : ''} ${group === x.id ? `bg-gradient-to-br ${x.tile} text-white border-transparent shadow-md` : 'bg-white text-neutral-800 border-neutral-100'}`}>
               <div className={`leading-none ${x.wide ? 'text-3xl' : 'text-2xl'}`}>{x.emoji}</div>
               <div className={x.wide ? 'flex-1 min-w-0' : ''}>
-                <div className={`text-[12px] font-black leading-tight ${x.wide ? '' : 'mt-1.5'}`}>{x.label}{x.wide && <span className={`ml-1.5 text-[9px] font-black px-1.5 py-0.5 rounded ${group === x.id ? 'bg-white/20' : 'bg-violet-100 text-violet-600'}`}>인기 제품</span>}</div>
+                <div className={`text-[12px] font-black leading-tight ${x.wide ? '' : 'mt-1.5'}`}>{x.label}{x.wide && <span className={`ml-1.5 text-[9px] font-black px-1.5 py-0.5 rounded ${group === x.id ? 'bg-white/20' : 'bg-violet-100 text-violet-600'}`}>마트·편의점</span>}</div>
                 {x.hint && <div className={`text-[10px] font-bold truncate ${group === x.id ? 'text-white/80' : 'text-neutral-500'}`}>{x.hint}</div>}
                 <div className={`text-[10px] font-bold ${group === x.id ? 'text-white/80' : 'text-neutral-400'}`}>{counts[x.id] ? `${counts[x.id].toLocaleString()}개` : '…'}</div>
               </div>
@@ -168,7 +168,7 @@ export function KfoodBrowser({ initialQuery = '', onPick, onBack }) {
             ))}
           </div>
         </div>
-        {sort === 'best' && !query.trim() && <div className="text-[10px] font-bold text-neutral-400 -mt-2 px-0.5">{group === 'pack' ? '여러 규격으로 많이 나온 인기 제품부터 보여 줘요' : LIGHT_FIRST.has(group) ? '칼로리 낮은 것부터 보여 줘요' : '운동하는 분께 맞게 단백질 비율이 높은 것부터 보여 줘요'}</div>}
+        {sort === 'best' && !query.trim() && <div className="text-[10px] font-bold text-neutral-400 -mt-2 px-0.5">{group === 'pack' ? '여러 규격으로 많이 나온 제품부터 보여 줘요' : LIGHT_FIRST.has(group) ? '칼로리 낮은 것부터 보여 줘요' : '운동하는 분께 맞게 단백질 비율이 높은 것부터 보여 줘요'}</div>}
         {sort === 'ratio' && <div className="text-[10px] font-bold text-neutral-400 -mt-2 px-0.5">칼로리 중 단백질이 차지하는 비율이 높은 순 (단백질 5g 이상)</div>}
 
         {/* 목록 */}
