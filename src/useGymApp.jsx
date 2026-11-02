@@ -10,7 +10,7 @@ import { calculate1RM, formatDate } from './lib/dates.js';
 import { useWakeLock } from './pwa.jsx';
 import { MAX_LEVEL, levelInfo, xpForLevel } from './questSystem.js';
 import { CARDIO_DAMAGE_PER_MIN } from './data/cardio.js';
-import { computeRecovery } from './recovery.js';
+import { computeRecovery, MUSCLE_GROUP } from './recovery.js';
 import { detectPR, exerciseHistory, suggestNext } from './lib/progress.js';
 import { DEFAULT_TIMER_SETTINGS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { estimateFromLifts } from './strengthRatios.js';
@@ -1084,7 +1084,11 @@ export function useGymApp() {
     bodyStats: activeUser?.bodyStats || {},
     bodyGoal: activeUser?.bodyGoal,
     workouts: safeWorkouts,
+    // 진행 중인 오늘 운동도 '오늘 한 운동'으로 본다
+    liveSession: currentDate === formatDate(new Date()) ? session : null,
     nameOf: (ex) => getExName(ex),
+    // 종목의 주동근 → 부위(가슴·등·하체·어깨·팔·복근)
+    groupsOf: (ex) => [...new Set((getExerciseMuscles(EXERCISE_OPTIONS.find(e => e.id === String(getExId(ex))) || ex.exercise || ex)?.p || []).map(m => MUSCLE_GROUP[m]).filter(Boolean))],
     recovery: getMuscleRecoveryStatus(),
     bestLifts: getBestLifts(),
     todayMacros,
