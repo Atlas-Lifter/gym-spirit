@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BookOpen, CalendarDays, ChevronDown, Dumbbell, Play, Send, Sparkles, Trash2 } from 'lucide-react';
+import { BookOpen, CalendarDays, ChevronDown, Dumbbell, List, Play, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { supabase } from '../cloud.js';
 import { mentionedExercises, parseRoutine, visibleText } from '../lib/coachRoutine.js';
 import { CoachRoutineEditor, routineSummary } from './CoachRoutineEditor.jsx';
+import { loadThreads, newThreadId, saveThreads, titleOf, whenLabel } from '../lib/coachThreads.js';
 
 // AI 코치와 대화 — 질문할 때마다 '내 기록' 요약을 같이 보내고, 서버(/api/coach)가 NVIDIA 모델에 물어 답을 흘려보낸다
-// 대화는 이 기기에만 저장 (최근 40개)
-const STORE_KEY = 'gymspirit_coach_chat_v1';
+// 대화는 이 기기에만 저장 (대화 30개, 대화마다 최근 40개 — lib/coachThreads.js)
 const MODE_KEY = 'gymspirit_coach_mode_v1';
 const MODES = [{ id: 'deep', label: '🧠 꼼꼼하게', hint: '약 20초' }, { id: 'fast', label: '⚡ 빠르게', hint: '약 3초' }];
 const QUICK = [
@@ -19,9 +19,6 @@ const QUICK = [
 
 // 운동 조언을 묻는 질문인지 (내 루틴을 아직 모르면 먼저 물어본다)
 const WORKOUT_Q = /운동|루틴|부위|무게|세트|분할|스케줄|가슴|등|하체|어깨|팔|복근|스쿼트|벤치|데드/;
-
-const loadChat = () => { try { const v = JSON.parse(localStorage.getItem(STORE_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } };
-const saveChat = (msgs) => { try { localStorage.setItem(STORE_KEY, JSON.stringify(msgs.slice(-40))); } catch { /* 저장 못 해도 화면에서는 유지 */ } };
 
 // 코치가 짜 준 루틴 카드: 앱 종목으로 찾은 것만 운동에 넣는다
 const RoutineCard = ({ routine, hasGuide, onOpenGuide, onStart }) => {
@@ -54,13 +51,66 @@ const RoutineCard = ({ routine, hasGuide, onOpenGuide, onStart }) => {
   );
 };
 
+// 지난 대화 목록
+const ThreadList = ({ threads, currentId, onOpen, onNew, onDelete, onClose }) => {
+  const [confirm, setConfirm] = useState(null);
+  const sorted = [...threads].filter(t => t.msgs.length).sort((a, b) => b.updatedAt - a.updatedAt);
+  return (
+    <div className="absolute inset-0 z-30 bg-white flex flex-col animate-fade-in">
+      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-neutral-100">
+        <div>
+          <div className="text-lg font-black text-neutral-900">대화 목록</div>
+          <div className="text-[11px] font-bold text-neutral-400">이 기기에 저장된 코치와의 대화 (최근 30개)</div>
+        </div>
+        <button onClick={onClose} aria-label="닫기" className="p-2 rounded-full hover:bg-neutral-100"><X className="w-5 h-5" /></button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-neutral-50">
+        <button onClick={onNew} className="w-full py-3 rounded-2xl border-2 border-dashed border-[#4768ff]/30 text-[13px] font-black text-[#4768ff] flex items-center justify-center gap-1.5 bg-white active:scale-[0.98] transition-all"><Plus className="w-4 h-4" />새 채팅 시작하기</button>
+        {sorted.length === 0 && <div className="text-center text-sm font-bold text-neutral-400 py-10">아직 저장된 대화가 없어요.</div>}
+        {sorted.map(t => {
+          const last = [...t.msgs].reverse().find(m => m.role === 'assistant' && !m.error);
+          const snippet = last ? visibleText(last.content).replace(/\*\*/g, '').replace(/\s+/g, ' ').slice(0, 60) : '';
+          return (
+            <div key={t.id} className={`bg-white rounded-2xl border p-3.5 flex items-start gap-3 ${t.id === currentId ? 'border-[#4768ff]/40 shadow-sm' : 'border-neutral-100'}`}>
+              <button onClick={() => onOpen(t.id)} className="flex-1 min-w-0 text-left">
+                <div className="flex items-center gap-1.5">
+                  {t.id === currentId && <span className="text-[9px] font-black text-white bg-[#4768ff] rounded px-1.5 py-0.5 flex-shrink-0">보는 중</span>}
+                  <div className="text-[14px] font-black text-neutral-900 truncate">{t.title}</div>
+                </div>
+                {snippet && <div className="text-[11px] font-bold text-neutral-400 truncate mt-0.5">{snippet}</div>}
+                <div className="text-[10px] font-bold text-neutral-300 mt-1">{whenLabel(t.updatedAt)} · 질문 {t.msgs.filter(m => m.role === 'user').length}개</div>
+              </button>
+              {confirm === t.id ? (
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  <button onClick={() => { onDelete(t.id); setConfirm(null); }} className="text-[11px] font-black text-white bg-rose-500 rounded-lg px-2.5 py-1.5">삭제</button>
+                  <button onClick={() => setConfirm(null)} className="text-[11px] font-bold text-neutral-400 px-2.5 py-1">취소</button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirm(t.id)} aria-label="대화 삭제" className="p-2 text-neutral-300 hover:text-rose-500 flex-shrink-0"><Trash2 className="w-4 h-4" /></button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // **굵게** 정도만 살린다
 const Rich = ({ text }) => text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (
   part.startsWith('**') && part.endsWith('**') ? <b key={i} className="font-black text-neutral-900">{part.slice(2, -2)}</b> : <React.Fragment key={i}>{part.replace(/^#{1,4}\s/gm, '')}</React.Fragment>
 ));
 
 export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () => false, onOpenGuide = () => {}, onStartRoutine, coachRoutine, onSaveRoutine, suggestWeekly }) {
-  const [msgs, setMsgs] = useState(loadChat);
+  const [store, setStore] = useState(loadThreads);
+  const [showList, setShowList] = useState(false);
+  const current = store.threads.find(t => t.id === store.currentId) || null;
+  const msgs = current ? current.msgs : [];
+  // 대화 하나의 메시지를 바꾼다 (답을 받는 중 다른 대화로 옮겨도 원래 대화에 들어가게 id 로 찾는다)
+  const setMsgsOf = (id, fn) => setStore(st => ({
+    ...st,
+    threads: st.threads.map(t => (t.id === id ? { ...t, msgs: fn(t.msgs), updatedAt: Date.now() } : t)),
+  }));
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [showCtx, setShowCtx] = useState(false);
@@ -75,7 +125,7 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
   const askedRef = useRef(false);
   const routineText = routineSummary(coachRoutine);
 
-  useEffect(() => { saveChat(msgs.filter(m => !m.pending)); }, [msgs]);
+  useEffect(() => { saveThreads(store); }, [store]);
   useEffect(() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }, [msgs]);
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -83,7 +133,14 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
     const text = String(raw || '').trim();
     if (!text || busy || !allowed) return;
     const history = [...msgs.filter(m => !m.error), { role: 'user', content: text }];
-    setMsgs([...history, { role: 'assistant', content: '', pending: true }]);
+    // 새 채팅이면 첫 질문을 보낼 때 대화를 만든다
+    const id = current ? current.id : newThreadId();
+    if (current) setMsgsOf(id, () => [...history, { role: 'assistant', content: '', pending: true }]);
+    else {
+      const now = Date.now();
+      setStore(st => ({ threads: [{ id, title: titleOf(history), createdAt: now, updatedAt: now, msgs: [...history, { role: 'assistant', content: '', pending: true }] }, ...st.threads], currentId: id }));
+    }
+    const setMsgs = (fn) => setMsgsOf(id, fn);
     setInput('');
     setBusy(true);
     const ctrl = new AbortController();
@@ -141,10 +198,20 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
   // 저장한 루틴이 화면(props)에 들어온 뒤 미뤄 둔 질문을 보낸다
   useEffect(() => { if (queued && coachRoutine?.type) { send(queued); setQueued(null); } }, [coachRoutine, queued]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const clear = () => { abortRef.current?.abort(); setMsgs([]); setBusy(false); };
+  const newChat = () => { setStore(st => ({ ...st, currentId: null })); setAsking(null); setShowList(false); setInput(''); };
+  const openThread = (id) => { setStore(st => ({ ...st, currentId: id })); setAsking(null); setShowList(false); };
+  const deleteThread = (id) => setStore(st => ({ threads: st.threads.filter(t => t.id !== id), currentId: st.currentId === id ? null : st.currentId }));
+  const savedCount = store.threads.filter(t => t.msgs.length).length;
 
   return (
     <div className="relative flex flex-col h-full bg-neutral-50">
+      {allowed && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-neutral-100">
+          <button onClick={() => setShowList(true)} className="flex items-center gap-1.5 text-[12px] font-black text-neutral-600 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 active:scale-95 flex-shrink-0"><List className="w-4 h-4" />대화 목록{savedCount ? <span className="text-neutral-400">{savedCount}</span> : null}</button>
+          <div className="flex-1 min-w-0 text-center text-[12px] font-black text-neutral-800 truncate">{current ? current.title : '새 채팅'}</div>
+          <button onClick={newChat} disabled={!current} className="flex items-center gap-1 text-[12px] font-black text-[#4768ff] px-2.5 py-1.5 rounded-lg hover:bg-[#4768ff]/5 active:scale-95 disabled:opacity-40 flex-shrink-0"><Plus className="w-4 h-4" />새 채팅</button>
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-3">
         <div className="bg-gradient-to-br from-[#4768ff] to-indigo-500 text-white rounded-3xl p-4 shadow-md shadow-[#4768ff]/20">
           <div className="flex items-center gap-2 text-[15px] font-black"><Sparkles className="w-4 h-4" />스피릿 코치에게 물어보기</div>
@@ -232,7 +299,6 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
           ))}
         </div>
         <div className="flex items-end gap-2">
-          {msgs.length > 0 && <button onClick={clear} aria-label="대화 지우기" className="p-3 rounded-xl text-neutral-400 hover:bg-neutral-100 active:scale-90 transition-all"><Trash2 className="w-5 h-5" /></button>}
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -246,6 +312,7 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
         </div>
         <p className="text-[10px] font-bold text-neutral-400 mt-2 text-center">AI 답변은 틀릴 수 있어요 · 통증·부상은 꼭 병원 진료를 받으세요</p>
       </div>
+      {showList && <ThreadList threads={store.threads} currentId={store.currentId} onOpen={openThread} onNew={newChat} onDelete={deleteThread} onClose={() => setShowList(false)} />}
       {editor && <CoachRoutineEditor routine={coachRoutine} startType={editor.startType} suggestWeekly={suggestWeekly} onSave={saveRoutine} onClose={() => setEditor(null)} />}
     </div>
   );
