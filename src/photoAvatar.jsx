@@ -51,6 +51,16 @@ const TOP_FOR = {
 const NECK = { chain: 'chain', towel: 'towel', headphones: 'headphones', dogtag: 'dogtag' };
 const BODY_ACC = { belt: 'belt', vest: 'vest', bag: 'bag', kneesleeve: 'kneesleeve' };
 
+// 타투 자리: [가운데 x, 가운데 y, 너비, 회전] (몸 그림 px)
+const tattooPlace = (name, b) => {
+  const h = b.head, c = b.chest, a = b.arm;
+  if (name === 'scar') return [h.cx + h.w * 0.2, h.top + h.w * 0.8, h.w * 0.18, 0];
+  if (name === 'cross') return [h.cx - h.w * 0.19, h.top + h.w * 0.7, h.w * 0.1, 0];
+  if (name === 'chest_tribal' && c) return [c.cx, c.cy, c.w, 0];
+  if (name === 'arm_tribal' && a) return [a.cx, a.cy, a.w * 1.2, 22];
+  return null;
+};
+
 // 회색 명암 그림 위에 고른 색을 곱한다
 const Tinted = ({ src, color, style }) => (
   <div style={{ position: 'absolute', isolation: 'isolate', ...style }}>
@@ -100,6 +110,20 @@ export const avatarSpec = (profile, bodyStats) => {
   const skinFilter = gm ? 'none' : (SKIN_FILTERS[Math.max(0, AVATAR_SKIN_TONES.indexOf(skin))] || 'none');
   const have = new Set(MANIFEST.wear[key] || []);
   const layers = [];
+  if (!gm) {
+    const hg = body.head;
+    // 표정: 표정 그림의 얼굴 가운데를 머리 크기에 맞춰 덮는다 (피부색도 몸과 같게)
+    const fk = `${g}-${profile?.faceExpression || 'normal'}`, fr = MANIFEST.face?.[fk];
+    if (fr) layers.push({ id: 'face', src: `${IMG}/face/${fk}.webp`, plain: true, filter: skinFilter,
+      box: { x: hg.cx + fr[0] * hg.w, y: hg.top + fr[1] * hg.w, w: fr[2] * hg.w, h: fr[3] * hg.w } });
+    // 타투·흉터: 옷 아래, 피부 위에 고른 색 잉크로
+    const tn = profile?.tattoo || 'none', ratio = MANIFEST.tattoo?.[tn], place = ratio && tattooPlace(tn, body);
+    if (place) {
+      const [tx, ty, tw, rot] = place, th = tw / ratio;
+      layers.push({ id: 'tattoo', src: `${IMG}/tattoo/${tn}.webp`, ink: true, color: profile?.tattooColor || '#171717', rot,
+        box: { x: tx - tw / 2, y: ty - th / 2, w: tw, h: th } });
+    }
+  }
   const wear = (item, color) => { if (item && have.has(item)) layers.push({ id: item, src: `${IMG}/wear/${key}-${item}.webp`, color }); };
 
   if (!gm) {
@@ -170,6 +194,26 @@ export const drawPhotoAvatar = async (ctx, spec, x, y, h) => {
     try { im = await loadImg(L.src); } catch (e) { continue; }
     const b = L.box || { x: 0, y: 0, w: PW, h: PH };
     const w = Math.max(1, Math.round(b.w * k)), hh = Math.max(1, Math.round(b.h * k));
+    if (L.plain) {
+      ctx.save();
+      if (L.filter && L.filter !== 'none' && 'filter' in ctx) ctx.filter = L.filter;
+      ctx.drawImage(im, x + b.x * k, y + b.y * k, w, hh);
+      ctx.restore();
+      continue;
+    }
+    if (L.ink) {
+      const c2 = document.createElement('canvas'); c2.width = w; c2.height = hh;
+      const t = c2.getContext('2d');
+      t.fillStyle = L.color; t.fillRect(0, 0, w, hh);
+      t.globalCompositeOperation = 'destination-in'; t.drawImage(im, 0, 0, w, hh);
+      ctx.save();
+      ctx.globalAlpha = 0.85; ctx.globalCompositeOperation = 'multiply';
+      ctx.translate(x + (b.x + b.w / 2) * k, y + (b.y + b.h / 2) * k);
+      if (L.rot) ctx.rotate((L.rot * Math.PI) / 180);
+      ctx.drawImage(c2, -w / 2, -hh / 2);
+      ctx.restore();
+      continue;
+    }
     // 회색 명암 × 고른 색, 모양은 원래 그림 그대로
     const c = document.createElement('canvas'); c.width = w; c.height = hh;
     const cx = c.getContext('2d');
@@ -187,11 +231,17 @@ export const PhotoAvatar = ({ profile, bodyStats, size = 'w-32 h-64', crop = fal
   const spec = avatarSpec(profile, bodyStats);
   if (failed || !spec) return Fallback ? <Fallback profile={profile} bodyStats={bodyStats} size={size} crop={crop} {...rest} /> : null;
   const { skinFilter, aura, auraColor } = spec;
-  const layers = spec.layers.map(L => (
-    <Tinted key={L.id} src={L.src} color={L.color} style={L.box
-      ? { left: pct(L.box.x, PW), top: pct(L.box.y, PH), width: pct(L.box.w, PW), height: pct(L.box.h, PH) }
-      : FULL} />
-  ));
+  const layers = spec.layers.map(L => {
+    const box = L.box ? { left: pct(L.box.x, PW), top: pct(L.box.y, PH), width: pct(L.box.w, PW), height: pct(L.box.h, PH) } : FULL;
+    if (L.plain) return <img key={L.id} src={L.src} alt="" draggable={false} style={{ position: 'absolute', ...box, filter: L.filter }} />;
+    if (L.ink) return (
+      <div key={L.id} style={{
+        position: 'absolute', ...box, transform: L.rot ? `rotate(${L.rot}deg)` : undefined, background: L.color, opacity: 0.85, mixBlendMode: 'multiply',
+        WebkitMaskImage: `url(${L.src})`, maskImage: `url(${L.src})`, WebkitMaskSize: '100% 100%', maskSize: '100% 100%',
+      }} />
+    );
+    return <Tinted key={L.id} src={L.src} color={L.color} style={box} />;
+  });
 
   const showAura = !crop && aura !== 'none' && aura !== 'sweat';
   if (showAura) ensureAuraCss();

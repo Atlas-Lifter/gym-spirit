@@ -294,11 +294,12 @@ export function MainScreen() {
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs font-black text-neutral-500 mb-3 block tracking-widest uppercase">얼굴 표정 <span className="normal-case text-neutral-600">· 실사 아바타 표정은 곧 추가돼요</span></span>
+                  <span className="text-xs font-black text-neutral-500 mb-3 block tracking-widest uppercase">얼굴 표정</span>
                   <div className="flex gap-3">
                      <button onClick={() => updateProfile({ faceExpression: 'normal' })} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all border-2 ${currentUser?.profile?.faceExpression === 'normal' ? 'bg-[#4768ff] text-white border-[#4768ff]' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-800'}`}>기본</button>
                      <button onClick={() => updateProfile({ faceExpression: 'smile' })} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all border-2 ${currentUser?.profile?.faceExpression === 'smile' ? 'bg-[#4768ff] text-white border-[#4768ff]' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-800'}`}>미소</button>
                      <button onClick={() => updateProfile({ faceExpression: 'angry' })} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all border-2 ${currentUser?.profile?.faceExpression === 'angry' ? 'bg-[#4768ff] text-white border-[#4768ff]' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-800'}`}>진지</button>
+                     <button onClick={() => updateProfile({ faceExpression: 'effort' })} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all border-2 ${currentUser?.profile?.faceExpression === 'effort' ? 'bg-[#4768ff] text-white border-[#4768ff]' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-800'}`}>기합</button>
                   </div>
                 </div>
                 <div>
@@ -316,7 +317,7 @@ export function MainScreen() {
                 {renderAccessoryCategory("바디 장식 (가방/장비)", "bodyAcc", "bodyAccColor", [{ label: "없음", value: "none" }, { label: "리프팅벨트", value: "belt" }, { label: "중량조끼", value: "vest" }, { label: "크로스백", value: "bag" }, { label: "무릎 보호대", value: "kneesleeve" }])}
                 {renderAccessoryCategory("헤어 스타일", "hairStyle", "hairColor", [{ label: "민머리", value: "none" }, { label: "짧은머리", value: "short" }, { label: "투블럭", value: "classic" }, { label: "스파이키", value: "spiky" }, { label: "긴머리", value: "long" }, { label: "포니테일", value: "ponytail" }, { label: "단발", value: "bob" }, { label: "올림머리", value: "bun" }, { label: "포마드", value: "pompadour" }, { label: "울프컷", value: "wolf" }, { label: "레게머리", value: "dreads" }, { label: "양갈래 땋은머리", value: "braids" }, { label: "크루컷", value: "crew" }], HAIR_COLORS)}
                 {renderAccessoryCategory("수염 (Facial Hair)", "facialHair", "hairColor", [{ label: "없음", value: "none" }, { label: "콧수염", value: "mustache" }, { label: "턱수염", value: "goatee" }, { label: "풀 비어드", value: "beard" }, { label: "짧은 수염", value: "stubble" }], HAIR_COLORS)}
-                {renderAccessoryCategory("타투 & 흉터 (곧 추가)", "tattoo", "tattooColor", [{ label: "없음", value: "none" }, { label: "상처", value: "scar" }, { label: "눈밑 십자가", value: "cross" }, { label: "가슴 트라이벌", value: "chest_tribal" }], ["#171717", "#ef4444", "#3b82f6", "#10b981", "#f59e0b"])}
+                {renderAccessoryCategory("타투 & 흉터 (Tattoo)", "tattoo", "tattooColor", [{ label: "없음", value: "none" }, { label: "상처", value: "scar" }, { label: "눈밑 십자가", value: "cross" }, { label: "가슴 트라이벌", value: "chest_tribal" }, { label: "팔 트라이벌", value: "arm_tribal" }], ["#171717", "#ef4444", "#3b82f6", "#10b981", "#f59e0b"])}
                 {renderAccessoryCategory("특수 오라 (Aura & Effects)", "aura", "auraColor", [{ label: "없음", value: "none" }, { label: "은은한 빛", value: "glow" }, { label: "타오르는 불꽃", value: "fire" }, { label: "강력한 번개", value: "lightning" }, { label: "서리 오라", value: "frost" }, { label: "암흑 오라", value: "dark" }, { label: "땀방울", value: "sweat" }], ACC_COLORS)}
                 <div className="pb-8"></div>
               </div>
