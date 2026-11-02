@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, CheckCircle2, MessageSquare, RotateCcw, SwitchCamera, X } from 'lucide-react';
+import { Camera, CheckCircle2, FileVideo, MessageSquare, RotateCcw, SwitchCamera, X } from 'lucide-react';
 import { BONES, loadPose } from '../lib/pose.js';
 import { createRepCounter, measure, profileFor, setSummary, SUPPORTED_LABELS } from '../lib/formRules.js';
 
-// 실시간 자세 체크: 카메라 → (휴대폰 안에서) 관절 찾기 → 각도·반복 세기·반복마다 피드백
+// 실시간 자세 체크: 카메라(또는 찍어 둔 영상) → (휴대폰 안에서) 관절 찾기 → 각도·반복 세기·반복마다 피드백
 // 영상은 저장하거나 밖으로 보내지 않는다. 세트가 끝나면 숫자 요약만 AI 코치에게 보낼 수 있다
 const ANGLE_NAME = { knee: '무릎', kneeMin: '무릎', hip: '엉덩이', elbow: '팔꿈치', elbowMin: '팔꿈치', shoulder: '어깨' };
 
@@ -19,11 +19,18 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
   const [error, setError] = useState('');
   const [view, setView] = useState({ reps: 0, angle: null, cue: null, seen: true, angles: {} });
   const [reps, setReps] = useState([]);
+  const [source, setSource] = useState('camera'); // camera | file
+  const [progress, setProgress] = useState(0); // 올린 영상 재생 위치 0~1
+  const fileInput = useRef(null);
+  const fileUrl = useRef(null);
 
   const stop = () => {
     cancelAnimationFrame(rafRef.current);
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
+    const v = videoRef.current;
+    if (v) { v.pause(); v.onended = null; }
+    if (fileUrl.current) { URL.revokeObjectURL(fileUrl.current); fileUrl.current = null; }
   };
   useEffect(() => stop, []);
 
@@ -44,30 +51,40 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
     pts.slice(11).forEach(p => { if ((p.visibility ?? 1) < 0.4) return; g.beginPath(); g.arc(p.x * c.width, p.y * c.height, g.lineWidth * 1.3, 0, Math.PI * 2); g.fill(); });
   };
 
-  const start = async (mode = facing) => {
+  // 카메라(mode) 또는 영상 파일(file)로 시작. 영상은 끝까지 재생되면 세트를 자동으로 끝낸다
+  const start = async (mode = facing, file = null) => {
     stop();
+    setSource(file ? 'file' : 'camera');
     setStep('loading');
     setError('');
+    setProgress(0);
     try {
-      const [landmarker, stream] = await Promise.all([
-        loadPose('VIDEO'),
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }),
-      ]);
-      streamRef.current = stream;
       const v = videoRef.current;
-      v.srcObject = stream;
+      const landmarker = await loadPose('VIDEO');
+      if (file) {
+        v.srcObject = null;
+        fileUrl.current = URL.createObjectURL(file);
+        v.src = fileUrl.current;
+        v.onended = () => finishSet();
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        streamRef.current = stream;
+        v.removeAttribute('src');
+        v.srcObject = stream;
+      }
       await v.play();
       counterRef.current = profile ? createRepCounter(profile) : null;
       setReps([]);
       setView({ reps: 0, angle: null, cue: null, seen: true, angles: {} });
       setStep('live');
-      let last = -1, lastUi = 0;
+      let last = -1, lastUi = 0, lastTs = 0;
       const loop = () => {
         rafRef.current = requestAnimationFrame(loop);
         if (v.readyState < 2 || v.currentTime === last) return;
         last = v.currentTime;
         const now = performance.now();
-        const res = landmarker.detectForVideo(v, now);
+        lastTs = Math.max(lastTs + 1, now); // 시각은 늘 앞으로만 (MediaPipe 요구)
+        const res = landmarker.detectForVideo(v, lastTs);
         const pts = res.landmarks?.[0], world = res.worldLandmarks?.[0];
         draw(pts);
         const m = measure(pts, world, v.videoWidth / (v.videoHeight || 1));
@@ -76,6 +93,7 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
         // 화면 숫자는 초당 8번 정도만 바꾼다
         if (now - lastUi > 120 || r?.counted || r?.done) {
           lastUi = now;
+          if (file && v.duration) setProgress(v.currentTime / v.duration);
           setView(prev => ({
             reps: counterRef.current ? counterRef.current.reps.length : 0,
             angle: r?.value ?? null,
@@ -88,10 +106,12 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
       loop();
     } catch (e) {
       stop();
-      setError(e?.name === 'NotAllowedError' ? '카메라 사용을 허용해 주세요. (설정 → 사파리/브라우저 → 카메라)' : e?.name === 'NotFoundError' ? '카메라를 찾지 못했어요.' : '자세 인식을 시작하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.');
+      setError(file ? '이 영상을 열지 못했어요. 다른 영상(mp4·mov)으로 해 주세요.'
+        : e?.name === 'NotAllowedError' ? '카메라 사용을 허용해 주세요. (설정 → 사파리/브라우저 → 카메라)' : e?.name === 'NotFoundError' ? '카메라를 찾지 못했어요.' : '자세 인식을 시작하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.');
       setStep('error');
     }
   };
+  const pickFile = () => { if (fileInput.current) { fileInput.current.value = ''; fileInput.current.click(); } };
 
   const finishSet = () => {
     const done = counterRef.current ? counterRef.current.finish() : [];
@@ -101,7 +121,7 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
   };
   const flip = () => { const next = facing === 'user' ? 'environment' : 'user'; setFacing(next); start(next); };
   const close = () => { stop(); onClose(); };
-  const mirror = facing === 'user' ? { transform: 'scaleX(-1)' } : undefined;
+  const mirror = source === 'camera' && facing === 'user' ? { transform: 'scaleX(-1)' } : undefined;
   const issues = reps.flatMap(r => r.feedback.filter(f => !f.ok).map(f => f.text.replace(/\s*\(.*\)$/, '')));
   const issueCount = Object.entries(issues.reduce((o, t) => ({ ...o, [t]: (o[t] || 0) + 1 }), {})).sort((a, b) => b[1] - a[1]);
 
@@ -109,17 +129,18 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
     <div className="fixed inset-0 z-[115] bg-black text-white flex flex-col">
       <div className="flex items-center justify-between px-4 pt-4 pb-3 bg-gradient-to-b from-black/80 to-transparent absolute top-0 inset-x-0 z-10">
         <div className="min-w-0">
-          <div className="text-[11px] font-black text-[#8ea2ff]">실시간 자세 체크{profile ? ` · ${profile.label}` : ''}</div>
+          <div className="text-[11px] font-black text-[#8ea2ff]">{source === 'file' && step !== 'intro' ? '영상 자세 체크' : '실시간 자세 체크'}{profile ? ` · ${profile.label}` : ''}</div>
           <div className="text-lg font-black truncate">{exercise.name}</div>
         </div>
         <div className="flex gap-2">
-          {step === 'live' && <button onClick={flip} aria-label="카메라 바꾸기" className="p-2.5 bg-white/15 rounded-full active:scale-90"><SwitchCamera className="w-5 h-5" /></button>}
+          {step === 'live' && source === 'camera' && <button onClick={flip} aria-label="카메라 바꾸기" className="p-2.5 bg-white/15 rounded-full active:scale-90"><SwitchCamera className="w-5 h-5" /></button>}
           <button onClick={close} aria-label="닫기" className="p-2.5 bg-white/15 rounded-full active:scale-90"><X className="w-5 h-5" /></button>
         </div>
       </div>
 
       {/* 카메라 */}
       <div className={`relative flex-1 ${step === 'live' || step === 'loading' ? '' : 'hidden'}`}>
+        <input ref={fileInput} type="file" accept="video/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) start(facing, f); }} />
         <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-contain" style={mirror} />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-contain pointer-events-none" style={mirror} />
         {step === 'loading' && (
@@ -150,7 +171,8 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
               </div>
             )}
             <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-              <button onClick={finishSet} className="w-full py-3.5 rounded-xl bg-white text-neutral-900 font-black active:scale-95">세트 끝내기</button>
+              {source === 'file' && <div className="h-1.5 rounded-full bg-white/20 mb-3 overflow-hidden"><div className="h-full bg-[#4768ff] transition-all" style={{ width: `${Math.round(progress * 100)}%` }} /></div>}
+              <button onClick={finishSet} className="w-full py-3.5 rounded-xl bg-white text-neutral-900 font-black active:scale-95">{source === 'file' ? '여기까지 보고 끝내기' : '세트 끝내기'}</button>
             </div>
           </>
         )}
@@ -159,6 +181,7 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
       {step === 'intro' && (
         <div className="flex-1 overflow-y-auto px-5 pt-24 pb-6 space-y-4">
           <div className="text-2xl font-black leading-snug">휴대폰을 세워 두고<br />한 세트 해 보세요</div>
+          <p className="text-[13px] font-bold text-white/60 -mt-2">미리 찍어 둔 영상을 올려도 돼요. 영상도 휴대폰 안에서만 분석해요.</p>
           <div className="space-y-2 text-[14px] font-bold text-white/85">
             <div className="bg-white/10 rounded-2xl p-3.5">📐 {profile ? profile.view : '몸 전체가 나오게'} 보이도록 2~3m 떨어진 곳에 휴대폰을 세워요</div>
             <div className="bg-white/10 rounded-2xl p-3.5">💡 밝은 곳에서, 몸에 붙는 옷이면 더 정확해요</div>
@@ -173,6 +196,7 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
             ))}
           </div>
           <button onClick={() => start()} className="w-full py-4 rounded-xl bg-[#4768ff] font-black text-lg flex items-center justify-center gap-2 active:scale-95"><Camera className="w-5 h-5" />카메라 켜기</button>
+          <button onClick={pickFile} className="w-full py-3.5 rounded-xl bg-white/15 font-black flex items-center justify-center gap-2 active:scale-95"><FileVideo className="w-5 h-5" />찍어 둔 영상 올리기</button>
           <p className="text-[11px] font-bold text-white/40 text-center">AI가 관절 위치로 판단하는 참고용이에요. 통증이 있으면 바로 멈추세요.</p>
         </div>
       )}
@@ -180,7 +204,7 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
       {step === 'error' && (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
           <div className="text-base font-black">{error}</div>
-          <button onClick={() => start()} className="px-5 py-3 rounded-xl bg-[#4768ff] font-black flex items-center gap-2"><RotateCcw className="w-4 h-4" />다시 시도</button>
+          <button onClick={() => (source === 'file' ? pickFile() : start())} className="px-5 py-3 rounded-xl bg-[#4768ff] font-black flex items-center gap-2"><RotateCcw className="w-4 h-4" />{source === 'file' ? '다른 영상 고르기' : '다시 시도'}</button>
         </div>
       )}
 
@@ -207,7 +231,8 @@ export function FormCheck({ exercise, onClose, onAskCoach }) {
             {profile && reps.length > 0 && onAskCoach && (
               <button onClick={() => { onAskCoach(setSummary(profile, exercise, reps)); }} className="w-full py-3.5 rounded-xl bg-[#4768ff] font-black flex items-center justify-center gap-2 active:scale-95"><MessageSquare className="w-5 h-5" />AI 코치에게 이 세트 피드백 받기</button>
             )}
-            <button onClick={() => start()} className="w-full py-3.5 rounded-xl bg-white/15 font-black flex items-center justify-center gap-2 active:scale-95"><RotateCcw className="w-4 h-4" />한 세트 더</button>
+            <button onClick={() => start()} className="w-full py-3.5 rounded-xl bg-white/15 font-black flex items-center justify-center gap-2 active:scale-95"><Camera className="w-4 h-4" />카메라로 한 세트 더</button>
+            <button onClick={pickFile} className="w-full py-3.5 rounded-xl bg-white/15 font-black flex items-center justify-center gap-2 active:scale-95"><FileVideo className="w-4 h-4" />영상 올리기</button>
             <button onClick={close} className="w-full py-3 rounded-xl text-white/60 font-black">닫기</button>
           </div>
         </div>
