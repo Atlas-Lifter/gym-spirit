@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Camera, ChevronLeft, Minus, Plus, Search, Trash2, Utensils, X } from 'lucide-react';
 import { FOOD_DB, FOOD_CATEGORIES, foodTags } from '../data/foods.js';
 import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { FoodImage } from '../components/FoodImage.jsx';
 import { useApp } from '../appContext.js';
-import { KFOOD_SOURCE, kfoodToFood, loadKfood, searchKfood } from '../lib/kfood.js';
+import { KfoodBrowser } from '../components/KfoodBrowser.jsx';
 
 // 식단 플래너 화면
 export function DietScreen() {
@@ -33,20 +33,9 @@ export function DietScreen() {
   const foodQuery = String(foodSearchQuery || '').trim();
   const foods = FOOD_DB.filter(f => (foodCategoryFilter === '전체' || (foodCategoryFilter === '고단백' ? foodTags(f).includes('고단백') : f.category === foodCategoryFilter))
     && (!foodQuery || `${f.name} ${f.kw}`.includes(foodQuery)));
-  // 식약처 DB: 검색을 시작하면 그때 불러온다. 분류 칩과 상관없이 검색 결과를 함께 보여 준다 (고단백만 걸러 줌)
-  const [kRows, setKRows] = useState(null);
-  const [kState, setKState] = useState('idle');
-  const wantK = isAddFoodModalOpen && !!foodQuery;
-  useEffect(() => {
-    if (!wantK || kRows || kState === 'loading') return;
-    setKState('loading');
-    loadKfood().then(rows => { setKRows(rows); setKState('ready'); }).catch(() => setKState('error'));
-  }, [wantK, kRows, kState]);
-  const kFoods = useMemo(() => {
-    if (!kRows || !foodQuery) return [];
-    const list = searchKfood(kRows, foodQuery, foodCategoryFilter === '고단백' ? 200 : 40).map(kfoodToFood);
-    return foodCategoryFilter === '고단백' ? list.filter(f => foodTags(f).includes('고단백')).slice(0, 40) : list;
-  }, [kRows, foodQuery, foodCategoryFilter]);
+  // 식약처 영양 DB 둘러보기 (배너·아이콘으로 여는 별도 화면). 창을 닫으면 원래 검색으로 돌아온다
+  const [kOpen, setKOpen] = useState(false);
+  useEffect(() => { if (!isAddFoodModalOpen) setKOpen(false); }, [isAddFoodModalOpen]);
   const fmtMacro = (v) => (selectedFood?.noMacros ? '–' : v);
   const pickFood = (food) => { setSelectedFood(food); setFoodWeight(food.serv?.[0]?.g || 100); };
   const per = selectedFood?.per || 100;
@@ -128,16 +117,23 @@ export function DietScreen() {
         <div className="fixed inset-0 bg-black/60 z-[70] flex flex-col justify-end animate-fade-in" onClick={() => {setIsAddFoodModalOpen(false); setSelectedFood(null); setFoodCategoryFilter('전체');}}>
           <div className="bg-white w-full h-[90vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] flex flex-col animate-slide-up text-neutral-900 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 flex justify-between items-center bg-white sticky top-0 z-10 border-b border-neutral-100">
-              <button onClick={() => showToast("스마트 사진 분석은 준비 중입니다.")} className="text-neutral-500 hover:bg-neutral-100 p-2 rounded-full transition-colors"><Camera className="w-6 h-6"/></button>
-              <h2 className="text-xl font-black">{selectedFood ? '중량 입력' : '식재료 검색'}</h2>
+              {selectedFood ? <button onClick={() => setSelectedFood(null)} title="뒤로" className="text-neutral-700 hover:bg-neutral-100 p-2 rounded-full transition-colors"><ChevronLeft className="w-6 h-6"/></button> : <button onClick={() => showToast("스마트 사진 분석은 준비 중입니다.")} className="text-neutral-500 hover:bg-neutral-100 p-2 rounded-full transition-colors"><Camera className="w-6 h-6"/></button>}
+              <h2 className="text-xl font-black">{selectedFood ? '중량 입력' : kOpen ? '식약처 영양 정보' : '식재료 검색'}</h2>
               <button onClick={() => {setIsAddFoodModalOpen(false); setSelectedFood(null); setFoodCategoryFilter('전체');}} className="text-neutral-900 p-2 rounded-full hover:bg-neutral-100 transition-colors"><X className="w-6 h-6"/></button>
             </div>
-            {!selectedFood ? (
+            {/* 둘러보기 화면은 중량 입력으로 갔다 돌아와도 고른 묶음·스크롤이 남도록 숨겨 둔다 */}
+            {kOpen && <div className={selectedFood ? 'hidden' : 'flex-1 min-h-0 flex flex-col'}><KfoodBrowser initialQuery={foodQuery} onBack={() => setKOpen(false)} onPick={pickFood} /></div>}
+            {!selectedFood && kOpen ? null : !selectedFood ? (
               <>
                 <div className="p-4 bg-white sticky top-[65px] z-10 border-b border-neutral-50 shadow-[0_5px_10px_rgba(0,0,0,0.02)]">
-                  <div className="bg-neutral-100 rounded-xl p-3 mb-3 flex items-center gap-2">
+                  <div className="flex gap-2 mb-3">
+                  <div className="flex-1 min-w-0 bg-neutral-100 rounded-xl p-3 flex items-center gap-2">
                     <Search className="w-5 h-5 text-neutral-400" />
                     <input type="text" placeholder="음식 이름을 검색하세요 (예: 닭가슴살, 김밥, 커피)" value={foodSearchQuery} onChange={e => setFoodSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm font-bold text-neutral-900 placeholder:text-neutral-400" />
+                  </div>
+                    <button onClick={() => setKOpen(true)} title="식약처 영양 정보" className="flex-shrink-0 w-[52px] rounded-xl bg-gradient-to-br from-[#4768ff] to-indigo-500 text-white flex flex-col items-center justify-center active:scale-95 transition-all shadow-sm">
+                      <span className="text-base leading-none">🇰🇷</span><span className="text-[9px] font-black mt-0.5">식약처</span>
+                    </button>
                   </div>
                   <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
                     {['전체', '고단백', ...FOOD_CATEGORIES].map(cat => (
@@ -147,15 +143,13 @@ export function DietScreen() {
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50">
                   <div className="text-[11px] font-bold text-neutral-400 px-1">{foods.length}개 · 영양 정보는 100g(음료 100ml) 기준이에요</div>
-                  {!foodQuery && (
-                    <div className="bg-[#4768ff]/5 border border-[#4768ff]/15 rounded-2xl p-3.5 text-[12px] font-bold text-neutral-600 leading-relaxed">
-                      <div className="font-black text-[#4768ff] mb-0.5">🇰🇷 식약처 영양 DB 1.9만 개 연결됨</div>
-                      위 검색창에 음식·메뉴 이름(예: 제육볶음, 김치찌개, 메가커피 라떼)을 입력하면 아래 목록에 함께 나와요.
-                    </div>
-                  )}
-                  {foodQuery && foods.length > 2 && kFoods.length > 0 && (
-                    <button onClick={() => document.getElementById('kfood-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="w-full text-left bg-[#4768ff]/5 border border-[#4768ff]/15 rounded-xl px-3 py-2 text-[12px] font-black text-[#4768ff]">🇰🇷 식약처 영양 DB에서 {kFoods.length >= 40 ? '40개 이상' : `${kFoods.length}개`} 더 찾았어요 · 아래로 ↓</button>
-                  )}
+                  <button onClick={() => setKOpen(true)} className="w-full text-left rounded-2xl p-4 bg-gradient-to-br from-[#4768ff] to-indigo-500 text-white shadow-md shadow-[#4768ff]/20 active:scale-[0.98] transition-all relative overflow-hidden">
+                    <div className="absolute -right-3 -bottom-4 text-[64px] opacity-20 select-none">🇰🇷</div>
+                    <div className="text-[10px] font-black text-white/70">식품의약품안전처 · 농촌진흥청</div>
+                    <div className="text-[16px] font-black mt-0.5">식약처 영양 정보 둘러보기 →</div>
+                    <div className="text-[11px] font-bold text-white/80 mt-0.5">한식·프랜차이즈 메뉴·식재료 1.9만 개를 종류·브랜드별로</div>
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">{['🍲 한식', '🍔 패스트푸드', '☕ 음료', '🍰 디저트', '🥦 식재료'].map(t => <span key={t} className="text-[10px] font-black bg-white/15 rounded-full px-2 py-0.5 whitespace-nowrap">{t}</span>)}</div>
+                  </button>
                   {foods.map(food => {
                     const sv = food.serv?.[0];
                     return (
@@ -170,31 +164,10 @@ export function DietScreen() {
                       </div>
                     );
                   })}
-                  {foods.length === 0 && kFoods.length === 0 && kState !== 'loading' && <div className="text-center text-sm font-bold text-neutral-400 py-10">찾는 음식이 없어요. 다른 이름(예: 닭, 밥, 커피)으로 찾아보세요.</div>}
-                  {foodQuery && (
-                    <div id="kfood-results" className="pt-3 space-y-2 scroll-mt-2">
-                      <div className="flex items-end justify-between px-1">
-                        <div className="text-xs font-black text-neutral-700">🇰🇷 식약처 영양 DB <span className="text-neutral-400 font-bold">· 음식·프랜차이즈 메뉴·식재료 1.9만 개</span></div>
-                        {kFoods.length > 0 && <div className="text-[10px] font-bold text-neutral-400">{kFoods.length >= 40 ? '상위 40개' : `${kFoods.length}개`}</div>}
-                      </div>
-                      {kState === 'loading' && <div className="text-center text-xs font-bold text-neutral-400 py-6">영양 DB 불러오는 중…</div>}
-                      {kState === 'error' && <button onClick={() => setKState('idle')} className="w-full text-center text-xs font-bold text-rose-500 py-6">영양 DB를 못 불러왔어요. 눌러서 다시 시도</button>}
-                      {kState === 'ready' && kFoods.length === 0 && <div className="text-center text-xs font-bold text-neutral-400 py-6">영양 DB에도 없어요. 띄어쓰기 없이 짧게(예: 제육, 라떼) 찾아보세요.</div>}
-                      {kFoods.map(food => {
-                        const sv = food.serv[0];
-                        return (
-                          <div key={food.id} onClick={() => pickFood(food)} className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-neutral-100 hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer active:scale-95">
-                            <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 text-2xl">{food.icon}</div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-black text-neutral-900 text-[14px] truncate">{food.name}</h3>
-                              <div className="text-[10px] font-bold text-neutral-400 mt-0.5 truncate">{food.brand && <span className="text-neutral-600">{food.brand} · </span>}100{food.unit} {food.calories}kcal · 단백질 {food.protein}g{sv ? ` · 1회 ${sv.g}${food.unit} ${Math.round(food.calories * sv.g / 100)}kcal` : ''}</div>
-                              {food.noMacros && <div className="text-[9px] font-bold text-neutral-400 mt-0.5">탄수화물·지방 정보 없음</div>}
-                            </div>
-                            <div className="text-[10px] font-black bg-neutral-50 px-2 py-1 rounded-md flex-shrink-0 text-neutral-500 max-w-[72px] truncate">{food.category}</div>
-                          </div>
-                        );
-                      })}
-                      <div className="text-[9px] font-bold text-neutral-300 text-center pt-1">출처: {KFOOD_SOURCE} (공공데이터포털)</div>
+                  {foods.length === 0 && (
+                    <div className="text-center py-8">
+                      <div className="text-sm font-bold text-neutral-400">기본 목록에는 없어요.</div>
+                      <button onClick={() => setKOpen(true)} className="mt-3 px-4 py-2.5 rounded-xl bg-[#4768ff] text-white text-sm font-black active:scale-95 transition-all">🇰🇷 식약처 영양 DB에서 '{foodQuery}' 찾기</button>
                     </div>
                   )}
                 </div>

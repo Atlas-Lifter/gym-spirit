@@ -7,8 +7,8 @@ export const loadKfood = () => {
   if (!cache) {
     cache = fetch('/data/kfood.json')
       .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-      .then(d => d.rows.map(([name, brand, cat, kcal, protein, carbs, fat, unit, serving, src]) => ({
-        name, brand, cat, kcal, protein, carbs, fat, unit, serving, src, hay: `${name} ${brand} ${cat}`.replace(/\s+/g, ''),
+      .then(d => d.rows.map(([name, brand, cat, kcal, protein, carbs, fat, unit, serving, src, grp, sub]) => ({
+        name, brand, cat, kcal, protein, carbs, fat, unit, serving, src, grp, sub, hay: `${name} ${brand} ${cat} ${sub}`.replace(/\s+/g, ''),
       })))
       .catch(e => { cache = null; throw e; });
   }
@@ -39,7 +39,7 @@ const ICONS = [
   [/사과|배|포도|귤|딸기|바나나|감|복숭아|수박|참외|과일/, '🍎'], [/감자|고구마|옥수수|호박/, '🥔'], [/버섯/, '🍄'],
   [/채소|배추|양배추|시금치|상추|오이|당근|무|가지|나물|순/, '🥦'],
 ];
-const iconOf = (r) => (ICONS.find(([re]) => re.test(r.cat) || re.test(r.name)) || [null, '🍽️'])[1];
+export const iconOf = (r) => (ICONS.find(([re]) => re.test(r.cat) || re.test(r.name)) || [null, '🍽️'])[1];
 
 // 검색 결과 → 식단 화면이 쓰는 음식 모양 (탄수화물·지방이 없는 자료는 0 으로 계산하되 noMacros 로 표시)
 export const kfoodToFood = (r) => ({
