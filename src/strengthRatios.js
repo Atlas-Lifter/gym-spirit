@@ -53,6 +53,7 @@ const MAP = {
   br: ['bb_row', 1, 'dl'], prow: ['pendlay', 1, 'dl'], tbar: ['tbar', 1, 'dl'], dr_back: ['db_row', 1, 'dl'],
   meadows_row: ['tbar', 0.55, 'dl'], seal_row: ['bb_row', 0.8, 'dl'], sr: ['machine_row', 1, 'dl'], csr: ['cable_row', 1, 'dl'],
   chest_row: ['machine_row', 0.9, 'dl'], shrug_bb: ['bb_shrug', 1, 'dl'], shrug_db: ['db_shrug', 1, 'dl'],
+  cable_shrug: ['bb_shrug', 0.75, 'dl'], machine_shrug: ['bb_shrug', 0.9, 'dl'], smith_bshrug: ['bb_shrug', 0.9, 'dl'],
   bb_bshrug: ['bb_shrug', 0.9, 'dl'], snatch_shrug: ['bb_shrug', 0.75, 'dl'], clean_shrug: ['bb_shrug', 0.9, 'dl'], calf_shrug: ['bb_shrug', 1, 'dl'],
   pd: ['lat_pulldown', 1, 'pull'], cg_pd: ['cg_pulldown', 1, 'pull'], mag_lpd: ['cg_pulldown', 1, 'pull'], onearm_lpd: ['lat_pulldown', 0.5, 'pull'],
   apd: ['straight_arm', 1, 'pull'], pullover_mac: ['straight_arm', 1.3, 'pull'], face_pull: ['face_pull', 1, 'pull'],
