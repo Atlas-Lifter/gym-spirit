@@ -15,7 +15,7 @@ import { detectPR, exerciseHistory, suggestNext } from './lib/progress.js';
 import { DEFAULT_TIMER_SETTINGS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { estimateFromLifts } from './strengthRatios.js';
 import { setLoad } from './weightRules.js';
-import { buildCoachContext } from './lib/coachContext.js';
+import { buildCoachContext, usualGroupsByWeekday } from './lib/coachContext.js';
 
 // 앱 전체 상태와 동작(기록 저장·클라우드·타이머·친구·길드 등). 화면 파일들은 useApp() 으로 여기서 꺼내 쓴다.
 export function useGymApp() {
@@ -516,6 +516,12 @@ export function useGymApp() {
     if (!currentUser) return;
     setCurrentUser(prev => ({ ...prev, bodyHistory: (prev.bodyHistory || []).filter(e => e.date !== date) }));
     showToast('기록을 삭제했어요.');
+  };
+  // AI 코치가 따를 내 운동 루틴: { type: 'weekly'|'cycle'|'none', weekly: { 1: ['가슴'] … }, cycle: [['가슴','팔'], …], note }
+  const saveCoachRoutine = (routine) => {
+    if (!currentUser) return;
+    setCurrentUser(prev => ({ ...prev, coachRoutine: { ...routine, updatedAt: Date.now() } }));
+    showToast(routine.type === 'none' ? '루틴 없이 그날 컨디션에 맞춰 추천할게요.' : '내 루틴을 저장했어요. 코치가 이 루틴에 맞춰 조언해요.');
   };
   const saveBodyGoal = (goal) => {
     if (!currentUser) return;
@@ -1128,17 +1134,21 @@ export function useGymApp() {
       showToast(`AI 코치 루틴${title ? ` '${title}'` : ''}이 세팅되었어요!`);
     });
   };
+  // 종목의 주동근 → 부위(가슴·등·하체·어깨·팔·복근)
+  const coachGroupsOf = (ex) => [...new Set((getExerciseMuscles(EXERCISE_OPTIONS.find(e => e.id === String(getExId(ex))) || ex.exercise || ex)?.p || []).map(m => MUSCLE_GROUP[m]).filter(Boolean))];
+  // 루틴 설정의 '기록으로 채우기': 최근 8주 요일마다 주로 한 부위
+  const getUsualWeekly = () => usualGroupsByWeekday({ workouts: safeWorkouts, groupsOf: coachGroupsOf, nameOf: (ex) => getExName(ex) });
   // AI 코치에게 보낼 내 기록 요약 (물어볼 때마다 새로 만든다)
   const getCoachContext = () => buildCoachContext({
     profile: activeUser?.profile || {},
     bodyStats: activeUser?.bodyStats || {},
     bodyGoal: activeUser?.bodyGoal,
+    coachRoutine: activeUser?.coachRoutine,
     workouts: safeWorkouts,
     // 진행 중인 오늘 운동도 '오늘 한 운동'으로 본다
     liveSession: currentDate === formatDate(new Date()) ? session : null,
     nameOf: (ex) => getExName(ex),
-    // 종목의 주동근 → 부위(가슴·등·하체·어깨·팔·복근)
-    groupsOf: (ex) => [...new Set((getExerciseMuscles(EXERCISE_OPTIONS.find(e => e.id === String(getExId(ex))) || ex.exercise || ex)?.p || []).map(m => MUSCLE_GROUP[m]).filter(Boolean))],
+    groupsOf: coachGroupsOf,
     recovery: getMuscleRecoveryStatus(),
     nextWeights: getCoachNextWeights(),
     exerciseChoices: getCoachExerciseChoices(),
@@ -1745,6 +1755,7 @@ export function useGymApp() {
     upsertBodyEntry,
     deleteBodyEntry,
     saveBodyGoal,
+    saveCoachRoutine,
     saveBodyStats,
     triggerSaveWorkout,
     requestSaveWorkout,
@@ -1793,6 +1804,7 @@ export function useGymApp() {
     getWeeklyLoadReport,
     getBestLifts,
     getCoachContext,
+    getUsualWeekly,
     startCoachRoutine,
     getMuscleRecoveryStatus,
     getTop1RM,

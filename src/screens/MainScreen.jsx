@@ -39,6 +39,8 @@ export function MainScreen() {
     getAnalysisWeekInfo,
     getBestLifts,
     getCoachContext,
+    getUsualWeekly,
+    saveCoachRoutine,
     startCoachRoutine,
     getMuscleExercises,
     getMuscleRecoveryStatus,
@@ -570,6 +572,9 @@ export function MainScreen() {
           canChat={!!cloudUser}
           hasGuide={(id) => !!EXERCISE_GUIDES[id]}
           onStartRoutine={startCoachRoutine}
+          coachRoutine={activeUser?.coachRoutine}
+          onSaveRoutine={saveCoachRoutine}
+          suggestWeekly={getUsualWeekly}
         /></Suspense>
       )}
 

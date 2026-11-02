@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BookOpen, ChevronDown, Dumbbell, Play, Send, Sparkles, Trash2 } from 'lucide-react';
+import { BookOpen, CalendarDays, ChevronDown, Dumbbell, Play, Send, Sparkles, Trash2 } from 'lucide-react';
 import { supabase } from '../cloud.js';
 import { mentionedExercises, parseRoutine, visibleText } from '../lib/coachRoutine.js';
+import { CoachRoutineEditor, routineSummary } from './CoachRoutineEditor.jsx';
 
 // AI 코치와 대화 — 질문할 때마다 '내 기록' 요약을 같이 보내고, 서버(/api/coach)가 NVIDIA 모델에 물어 답을 흘려보낸다
 // 대화는 이 기기에만 저장 (최근 40개)
@@ -15,6 +16,9 @@ const QUICK = [
   '이번 주 운동 평가해 주세요',
   '요즘 정체기 같아요. 어떻게 바꿀까요?',
 ];
+
+// 운동 조언을 묻는 질문인지 (내 루틴을 아직 모르면 먼저 물어본다)
+const WORKOUT_Q = /운동|루틴|부위|무게|세트|분할|스케줄|가슴|등|하체|어깨|팔|복근|스쿼트|벤치|데드/;
 
 const loadChat = () => { try { const v = JSON.parse(localStorage.getItem(STORE_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } };
 const saveChat = (msgs) => { try { localStorage.setItem(STORE_KEY, JSON.stringify(msgs.slice(-40))); } catch { /* 저장 못 해도 화면에서는 유지 */ } };
@@ -55,7 +59,7 @@ const Rich = ({ text }) => text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (
   part.startsWith('**') && part.endsWith('**') ? <b key={i} className="font-black text-neutral-900">{part.slice(2, -2)}</b> : <React.Fragment key={i}>{part.replace(/^#{1,4}\s/gm, '')}</React.Fragment>
 ));
 
-export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () => false, onOpenGuide = () => {}, onStartRoutine }) {
+export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () => false, onOpenGuide = () => {}, onStartRoutine, coachRoutine, onSaveRoutine, suggestWeekly }) {
   const [msgs, setMsgs] = useState(loadChat);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,6 +69,11 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
   const scrollRef = useRef(null);
   const abortRef = useRef(null);
   const allowed = canChat || import.meta.env.DEV;
+  const [editor, setEditor] = useState(null); // { startType } — 내 루틴 설정 화면
+  const [asking, setAsking] = useState(null); // 루틴을 묻는 동안 잠깐 미뤄 둔 질문
+  const [queued, setQueued] = useState(null); // 루틴 저장 뒤 (새 루틴이 반영된 다음) 보낼 질문
+  const askedRef = useRef(false);
+  const routineText = routineSummary(coachRoutine);
 
   useEffect(() => { saveChat(msgs.filter(m => !m.pending)); }, [msgs]);
   useEffect(() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }, [msgs]);
@@ -111,10 +120,31 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
     }
   };
 
+  // 루틴을 아직 모르는데 운동 조언을 물으면, 한 번만 먼저 루틴이 있는지 묻는다
+  const ask = (raw) => {
+    const text = String(raw || '').trim();
+    if (!text || busy || !allowed) return;
+    if (!coachRoutine?.type && onSaveRoutine && !askedRef.current && WORKOUT_Q.test(text)) {
+      askedRef.current = true;
+      setAsking(text);
+      setInput('');
+      return;
+    }
+    send(text);
+  };
+  const saveRoutine = (r) => {
+    onSaveRoutine(r);
+    setEditor(null);
+    if (asking) { setQueued(asking); setAsking(null); }
+  };
+  const skipAsking = () => { const q = asking; setAsking(null); send(q); };
+  // 저장한 루틴이 화면(props)에 들어온 뒤 미뤄 둔 질문을 보낸다
+  useEffect(() => { if (queued && coachRoutine?.type) { send(queued); setQueued(null); } }, [coachRoutine, queued]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const clear = () => { abortRef.current?.abort(); setMsgs([]); setBusy(false); };
 
   return (
-    <div className="flex flex-col h-full bg-neutral-50">
+    <div className="relative flex flex-col h-full bg-neutral-50">
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-3">
         <div className="bg-gradient-to-br from-[#4768ff] to-indigo-500 text-white rounded-3xl p-4 shadow-md shadow-[#4768ff]/20">
           <div className="flex items-center gap-2 text-[15px] font-black"><Sparkles className="w-4 h-4" />스피릿 코치에게 물어보기</div>
@@ -123,13 +153,24 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
           {showCtx && <pre className="mt-2 bg-black/15 rounded-xl p-2.5 text-[10px] font-bold whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">{getContext()}</pre>}
         </div>
 
+        {allowed && onSaveRoutine && (
+          <button onClick={() => setEditor({})} className="w-full text-left bg-white border border-neutral-100 rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-all">
+            <CalendarDays className="w-5 h-5 text-[#4768ff] flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[12px] font-black text-neutral-800">내 운동 루틴</div>
+              <div className="text-[11px] font-bold text-neutral-400 truncate">{routineText || '아직 안 알려주셨어요 · 알려주면 루틴에 맞춰 조언해요'}</div>
+            </div>
+            <span className="text-[11px] font-black text-[#4768ff] flex-shrink-0">{routineText ? '수정' : '설정하기'}</span>
+          </button>
+        )}
+
         {!allowed && (
           <div className="bg-white border border-neutral-100 rounded-2xl p-4 text-sm font-bold text-neutral-600">로그인한 계정에서만 쓸 수 있어요. 게스트 모드에서는 위쪽 '상담 메뉴'를 이용해 주세요.</div>
         )}
 
-        {msgs.length === 0 && allowed && (
+        {msgs.length === 0 && allowed && !asking && (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {QUICK.map(q => <button key={q} onClick={() => send(q)} className="text-[12px] font-black px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 active:scale-95 transition-all hover:border-[#4768ff]">{q}</button>)}
+            {QUICK.map(q => <button key={q} onClick={() => ask(q)} className="text-[12px] font-black px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 active:scale-95 transition-all hover:border-[#4768ff]">{q}</button>)}
           </div>
         )}
 
@@ -161,6 +202,26 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
           </div>
           );
         })}
+
+        {asking && (
+          <>
+            <div className="flex justify-end"><div className="bg-[#4768ff] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm font-black max-w-[82%] whitespace-pre-wrap shadow-sm">{asking}</div></div>
+            <div className="flex gap-2.5 items-start">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4768ff] to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-sm"><Sparkles className="w-4 h-4 text-white" /></div>
+              <div className="max-w-[85%] flex-1 space-y-2">
+                <div className="px-4 py-3 rounded-2xl rounded-tl-sm text-sm font-bold leading-relaxed bg-white border border-neutral-100 text-neutral-700 shadow-sm">
+                  운동 조언 전에 하나만 여쭤볼게요. <b className="font-black text-neutral-900">정해진 운동 루틴</b>이 있으신가요? 알려주시면 그 루틴에 맞춰 추천해 드릴게요.
+                </div>
+                <div className="grid grid-cols-1 gap-1.5">
+                  <button onClick={() => setEditor({ startType: 'weekly' })} className="text-left text-[12px] font-black px-3 py-2.5 rounded-xl bg-white border border-[#4768ff]/25 text-[#4768ff] active:scale-95">📅 요일마다 하는 부위가 정해져 있어요</button>
+                  <button onClick={() => setEditor({ startType: 'cycle' })} className="text-left text-[12px] font-black px-3 py-2.5 rounded-xl bg-white border border-[#4768ff]/25 text-[#4768ff] active:scale-95">🔁 분할 순서대로 돌려요 (예: 가슴→등→하체)</button>
+                  <button onClick={() => saveRoutine({ type: 'none' })} className="text-left text-[12px] font-black px-3 py-2.5 rounded-xl bg-white border border-neutral-200 text-neutral-700 active:scale-95">🙅 정해진 루틴은 없어요</button>
+                  <button onClick={skipAsking} className="text-left text-[11px] font-bold px-3 py-2 text-neutral-400">나중에 할게요 · 그냥 답해 주세요</button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="border-t border-neutral-100 bg-white px-4 pt-3 pb-4">
@@ -175,16 +236,17 @@ export function CoachChat({ getContext, canChat, exercises = [], hasGuide = () =
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(input); } }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); ask(input); } }}
             rows={1}
             disabled={!allowed}
             placeholder={allowed ? '운동·식단·회복, 무엇이든 물어보세요' : '로그인 후 이용할 수 있어요'}
             className="flex-1 resize-none bg-neutral-100 rounded-xl px-3.5 py-3 text-sm font-bold outline-none max-h-28 placeholder:text-neutral-400 disabled:opacity-60"
           />
-          <button onClick={() => send(input)} disabled={!allowed || busy || !input.trim()} aria-label="보내기" className="p-3 rounded-xl bg-[#4768ff] text-white disabled:bg-neutral-200 active:scale-90 transition-all"><Send className="w-5 h-5" /></button>
+          <button onClick={() => ask(input)} disabled={!allowed || busy || !input.trim() || !!asking} aria-label="보내기" className="p-3 rounded-xl bg-[#4768ff] text-white disabled:bg-neutral-200 active:scale-90 transition-all"><Send className="w-5 h-5" /></button>
         </div>
         <p className="text-[10px] font-bold text-neutral-400 mt-2 text-center">AI 답변은 틀릴 수 있어요 · 통증·부상은 꼭 병원 진료를 받으세요</p>
       </div>
+      {editor && <CoachRoutineEditor routine={coachRoutine} startType={editor.startType} suggestWeekly={suggestWeekly} onSave={saveRoutine} onClose={() => setEditor(null)} />}
     </div>
   );
 }

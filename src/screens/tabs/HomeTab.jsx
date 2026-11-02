@@ -109,10 +109,12 @@ export function HomeTab() {
                         const sessionData = safeWorkouts[date] || [];
                         const firstExName = sessionData[0] ? getExName(sessionData[0]) : '';
                         const targets = [...new Set(sessionData.map(ex => getExTarget(ex).split('(')[0]))].join(', ') || '전신';
+                        const [yy, mm, dd] = date.split('-').map(Number);
+                        const dow = new Date(yy, mm - 1, dd).getDay();
                         return (
                           <div key={`hist-${idx}`} onClick={() => setSelectedDayDetailModal(date)} className="bg-white border border-neutral-100 p-4 rounded-[24px] shadow-sm relative hover:shadow-md hover:border-emerald-400 transition-all cursor-pointer group">
                             <div className="flex justify-between items-start mb-1.5">
-                              <h3 className="font-black text-lg text-neutral-900 group-hover:text-emerald-600 transition-colors">{date.split('-')[1]}월 {date.split('-')[2]}일</h3>
+                              <h3 className="font-black text-lg text-neutral-900 group-hover:text-emerald-600 transition-colors">{date.split('-')[1]}월 {date.split('-')[2]}일 <span className={`text-sm font-black ${dow === 0 ? 'text-rose-400' : dow === 6 ? 'text-blue-400' : 'text-neutral-400'}`}>({'일월화수목금토'[dow]})</span></h3>
                               <div className="relative"><button onClick={(e) => { e.stopPropagation(); setSelectedPastDate(date); setIsRoutineLoaderOpen(true); }} className="text-neutral-400 p-1.5 hover:bg-neutral-100 rounded-full transition-colors active:scale-90"><MoreVertical className="w-5 h-5"/></button></div>
                             </div>
                             <p className="text-xs text-neutral-500 mb-3 font-bold">{targets}</p>

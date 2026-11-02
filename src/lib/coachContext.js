@@ -52,10 +52,61 @@ const weekdayPattern = (workouts, now, groupsOf, nameOf) => {
     const ns = top(w.names, 3).filter(([, c]) => c >= 2).map(([n]) => n);
     return `${WEEKDAY[day]}: ${PATTERN_WEEKS}주 중 ${w.times}번 운동${gs.length ? ` · 주로 ${gs.join(', ')}` : ' · 부위가 매번 다름'}${ns.length ? ` · 자주 한 종목 ${ns.join(', ')}` : ''}`;
   });
-  return { lines, perWeek: r1(total / PATTERN_WEEKS), today: by[now.getDay()] };
+  return { lines, perWeek: r1(total / PATTERN_WEEKS), today: by[now.getDay()], by };
 };
 
-export function buildCoachContext({ profile = {}, bodyStats = {}, bodyGoal, workouts = {}, liveSession, nameOf, groupsOf = () => [], recovery = {}, nextWeights = [], exerciseChoices = {}, bestLifts = {}, todayMacros, todayDiet, cardioMinOn, now = new Date() }) {
+// 루틴 설정 화면의 '내 기록으로 채우기': 요일마다 절반 이상 한 부위 (기록이 적으면 null)
+export const usualGroupsByWeekday = ({ workouts = {}, groupsOf = () => [], nameOf = () => '', now = new Date() }) => {
+  const pat = weekdayPattern(workouts, now, groupsOf, nameOf);
+  if (!pat) return null;
+  return Object.fromEntries(pat.by.map((w, day) => [day, w.times < 2 ? [] : top(w.groups, 3).filter(([, c]) => c >= Math.max(2, w.times / 2)).map(([g]) => g)]));
+};
+
+// 내가 정한 루틴 → 오늘 할 차례
+const joinGroups = (gs) => (gs && gs.length ? gs.join('·') : '휴식');
+const routineLines = (routine, { workouts, now, groupsOf, nameOf, today, ready }) => {
+  if (!routine || !routine.type) return ['▶ 내 루틴: 아직 안 알려줌 (요일별·분할 루틴이 있는지 모름)'];
+  if (routine.type === 'none') return ['▶ 내 루틴: 정해진 루틴 없음 — 회복도와 이번 주 균형을 보고 그날그날 추천'];
+  const out = [];
+  let planned = [];
+  if (routine.type === 'weekly') {
+    const w = routine.weekly || {};
+    out.push(`▶ 내 루틴 (요일별 고정): ${[1, 2, 3, 4, 5, 6, 0].map(d => `${WEEKDAY[d]} ${joinGroups(w[d])}`).join(' / ')}`);
+    planned = w[now.getDay()] || [];
+    out.push(`▶ 오늘(${WEEKDAY[now.getDay()]}) 루틴: ${joinGroups(planned)}`);
+  } else if (routine.type === 'cycle') {
+    const steps = (routine.cycle || []).filter(st => Array.isArray(st));
+    if (!steps.length) return ['▶ 내 루틴: 분할 순환이지만 순서가 비어 있음'];
+    out.push(`▶ 내 루틴 (분할 순환, 요일 상관없이 순서대로): ${steps.map((st, i) => `${i + 1}) ${joinGroups(st)}`).join(' → ')}`);
+    // 가장 최근 운동이 몇 번째 차례였는지 부위가 가장 많이 겹치는 것으로 찾는다
+    let last = null;
+    for (let i = 0; i < 14 && !last; i++) {
+      const info = i === 0 ? today : dayInfo(workouts[dateKey(dayBefore(now, i))], groupsOf, nameOf);
+      if (info.exs.length) last = { info, i };
+    }
+    const fit = (gs) => steps.map((st, k) => [k, st.filter(g => gs.includes(g)).length]).sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+    if (!last || fit(last.info.groups)[1] === 0) {
+      planned = steps[0];
+      out.push(`▶ 오늘 차례: 1) ${joinGroups(steps[0])} (최근 운동이 루틴과 맞지 않아 처음부터)`);
+    } else {
+      const k = fit(last.info.groups)[0];
+      const next = (k + 1) % steps.length;
+      if (last.i === 0) {
+        planned = [];
+        out.push(`▶ 오늘 한 운동은 ${k + 1}) 차례 → 다음 운동 날 차례: ${next + 1}) ${joinGroups(steps[next])}`);
+      } else {
+        planned = steps[next];
+        out.push(`▶ 지난 운동(${dateKey(dayBefore(now, last.i)).slice(5)})은 ${k + 1}) 차례 → 오늘 차례: ${next + 1}) ${joinGroups(steps[next])}`);
+      }
+    }
+  }
+  const notReady = planned.filter(g => g !== '유산소' && ready && !ready.includes(g));
+  if (notReady.length) out.push(`▶ 오늘 루틴 부위 중 아직 쉬어야 할 부위: ${notReady.join(', ')} (회복 ${READY_PERCENT}% 미만이거나 오늘 이미 함)`);
+  if (routine.note) out.push(`▶ 루틴 메모: ${String(routine.note).slice(0, 200)}`);
+  return out;
+};
+
+export function buildCoachContext({ profile = {}, bodyStats = {}, bodyGoal, workouts = {}, liveSession, nameOf, groupsOf = () => [], recovery = {}, nextWeights = [], exerciseChoices = {}, coachRoutine, bestLifts = {}, todayMacros, todayDiet, cardioMinOn, now = new Date() }) {
   const out = [];
   const todayKey = dateKey(now);
   out.push(`오늘: ${todayKey} (${WEEKDAY[now.getDay()]}요일)`);
@@ -80,9 +131,10 @@ export function buildCoachContext({ profile = {}, bodyStats = {}, bodyGoal, work
 
   // 오늘 운동해도 되는 부위: 회복도 80% 이상이고 오늘 아직 안 한 부위
   const rec = Object.entries(recovery);
+  let ready = null;
   if (rec.length) {
     out.push(`부위별 회복도: ${rec.map(([g, o]) => `${g} ${o.percent}%${o.percent < 90 && o.hoursLeft ? `(${o.hoursLeft}시간 남음)` : ''}`).join(', ')}`);
-    const ready = rec.filter(([g, o]) => o.percent >= READY_PERCENT && !today.groups.includes(g)).map(([g]) => g);
+    ready = rec.filter(([g, o]) => o.percent >= READY_PERCENT && !today.groups.includes(g)).map(([g]) => g);
     const rest = rec.filter(([g, o]) => o.percent < READY_PERCENT || today.groups.includes(g))
       .map(([g, o]) => `${g}(${today.groups.includes(g) ? '오늘 이미 함' : `회복 ${o.percent}%`})`);
     out.push(`▶ 오늘 운동 추천 가능 부위 (회복 ${READY_PERCENT}% 이상, 오늘 안 한 부위): ${ready.length ? ready.join(', ') : '없음 — 오늘은 휴식·가벼운 유산소·스트레칭 권장'}`);
@@ -91,6 +143,7 @@ export function buildCoachContext({ profile = {}, bodyStats = {}, bodyGoal, work
     const choices = ready.filter(g => exerciseChoices[g]?.length).map(g => `${g}: ${exerciseChoices[g].join(', ')}`);
     if (choices.length) out.push(`▶ 부위별 종목 후보 (앱에 있는 이름):\n${choices.map(c => `- ${c}`).join('\n')}`);
   }
+  out.push(...routineLines(coachRoutine, { workouts, now, groupsOf, nameOf, today, ready }));
   out.push(`오늘 한 운동: ${today.exs.length ? `${today.groups.join(', ')} (${today.names.join(', ')})${live ? ' — 지금 진행 중' : ''}` : '아직 없음'}`);
   if (yesterday.exs.length) out.push(`어제 한 운동: ${yesterday.groups.join(', ')} (${yesterday.names.join(', ')})`);
 
