@@ -408,6 +408,10 @@ export function GlobalOverlays() {
           .animate-scale-up { animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
           @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
           .animate-slide-down { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+          @keyframes gsPrPop { 0% { transform: translateY(-20px) scale(0.85); opacity: 0; } 12% { transform: translateY(0) scale(1.04); opacity: 1; } 20% { transform: scale(1); } 85% { opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
+          .gs-pr-pop { animation: gsPrPop 3.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+          @keyframes gsPrMedal { 0%, 100% { transform: rotate(-8deg) scale(1); } 50% { transform: rotate(8deg) scale(1.15); } }
+          .gs-pr-medal { display: inline-block; animation: gsPrMedal 0.8s ease-in-out 3; }
         `}} />
     </>
   );

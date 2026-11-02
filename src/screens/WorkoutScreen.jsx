@@ -25,15 +25,25 @@ const matchesSearch = (ex, q) => {
   return `${ex.name} ${ex.target} ${ex.tool}`.includes(k);
 };
 
+// 다음 무게 추천 상자 모양
+const SUGGEST_LOOK = {
+  up: { icon: '📈', label: '오늘 추천', title: 'text-emerald-300', box: 'bg-emerald-500/10 border-emerald-500/40', btn: 'bg-emerald-400 text-black' },
+  reps: { icon: '➕', label: '오늘 추천', title: 'text-sky-300', box: 'bg-sky-500/10 border-sky-500/40', btn: 'bg-sky-400 text-black' },
+  same: { icon: '🎯', label: '오늘 추천', title: 'text-yellow-200', box: 'bg-yellow-400/10 border-yellow-400/40', btn: 'bg-yellow-300 text-black' },
+  deload: { icon: '🔄', label: '디로드 추천', title: 'text-violet-300', box: 'bg-violet-500/10 border-violet-500/40', btn: 'bg-violet-400 text-black' },
+  rest: { icon: '🛌', label: '회복 우선', title: 'text-rose-300', box: 'bg-rose-500/10 border-rose-500/40', btn: 'bg-rose-400 text-black' },
+};
+
 export function WorkoutScreen() {
   const {
     requestSaveWorkout,
     addExerciseFromModal,
     addSet,
     adjustTimer,
-    applyProgressiveOverload,
+    applySuggestion,
     bodyWeightKg,
-    checkOverloadRecommendation,
+    getNextSuggestion,
+    prCelebration,
     cycleSetType,
     exCategoryFilter,
     exOneRM,
@@ -97,6 +107,24 @@ export function WorkoutScreen() {
   };
   return (
     <div className="min-h-screen bg-[#03060a] text-neutral-100 pb-32 flex flex-col relative animate-fade-in">
+      {prCelebration && (
+        // 신기록 축하: 화면 위쪽에 잠깐 떴다 사라진다
+        <div key={prCelebration.id} className="fixed top-16 inset-x-0 z-[85] flex justify-center px-4 pointer-events-none">
+          <div className="gs-pr-pop relative max-w-sm w-full rounded-[24px] p-4 pl-5 border border-amber-300/70 bg-gradient-to-br from-[#2a1b02] via-[#1a1203] to-[#0b0802] shadow-[0_0_40px_rgba(251,191,36,0.55)] overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-amber-400/30 blur-2xl" />
+            <div className="relative flex items-center gap-3">
+              <span className="text-4xl gs-pr-medal">🏅</span>
+              <div className="min-w-0">
+                <div className="text-[11px] font-black tracking-widest text-amber-300">NEW PERSONAL RECORD</div>
+                <div className="text-lg font-black text-white leading-tight break-keep">신기록! {prCelebration.name}</div>
+                {prCelebration.items.map(p => (
+                  <div key={p.kind} className="text-[12px] font-bold text-amber-100/90 mt-0.5">{p.label} <span className="text-white font-black">{p.value}</span> <span className="text-amber-200/60">(이전 {p.prev})</span></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <GlobalOverlays />
       {/* 트론 테마: 에메랄드 격자 + 위쪽 에메랄드·아래쪽 노란 광원 */}
       <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(16,185,129,0.14), transparent 70%), radial-gradient(ellipse 70% 30% at 50% 100%, rgba(250,204,21,0.08), transparent 70%), linear-gradient(rgba(16,185,129,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.07) 1px, transparent 1px)', backgroundSize: '100% 100%, 100% 100%, 32px 32px, 32px 32px' }} />
@@ -145,9 +173,6 @@ export function WorkoutScreen() {
                          <button onClick={() => setGuideExerciseId(exIdStr)} className="text-[11px] font-black text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-900/60 hover:bg-blue-500/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"><BookOpen className="w-3 h-3"/> 설명</button>
                          <button onClick={() => setSubstituteModalEx(ex)} className="text-[11px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-900/60 hover:bg-amber-500/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap" title="기구 대기 시 대체 운동 추천"><Zap className="w-3 h-3 fill-amber-400"/> 대체</button>
                          {max1RM > 0 && <span className="text-[11px] font-bold text-neutral-400 flex items-center gap-1"><Target className="w-3 h-3"/> 1RM <span className="text-white bg-neutral-800 px-1.5 py-0.5 rounded">{max1RM}kg</span></span>}
-                         {checkOverloadRecommendation(exIdStr) && (
-                           <button onClick={() => applyProgressiveOverload(ex.id)} className="text-[10px] font-black text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/50 hover:bg-amber-500/30 transition-all flex items-center gap-1 active:scale-95"><Flame className="w-3 h-3 text-amber-400 animate-bounce"/> 지난주 완수! +2.5kg 증량</button>
-                         )}
                        </div>
                      </div>
                   </div>
@@ -155,6 +180,23 @@ export function WorkoutScreen() {
                     <button onClick={() => setExerciseOptionsModal(ex.id)} className="text-neutral-500 hover:text-white transition-colors p-2 rounded-full hover:bg-neutral-800 active:scale-90"><MoreVertical className="w-6 h-6"/></button>
                   </div>
                 </div>
+                {(() => {
+                  // 다음 무게 추천 (아직 다 안 한 종목만)
+                  if (ex.sets.length && ex.sets.every(st => st.completed)) return null;
+                  const sug = getNextSuggestion(ex);
+                  if (!sug) return null;
+                  const look = SUGGEST_LOOK[sug.kind] || SUGGEST_LOOK.reps;
+                  return (
+                    <div className={`-mt-1 mb-4 rounded-2xl border px-3 py-2.5 flex items-center gap-3 ${look.box}`}>
+                      <span className="text-xl leading-none">{look.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-[12px] font-black ${look.title}`}>{look.label} · {sug.text}</div>
+                        <div className="text-[10px] font-bold text-neutral-400 leading-snug mt-0.5 break-keep">{sug.why}</div>
+                      </div>
+                      <button onClick={() => applySuggestion(ex.id)} className={`flex-shrink-0 px-3 py-2 rounded-xl text-[11px] font-black active:scale-95 transition-transform ${look.btn}`}>적용</button>
+                    </div>
+                  );
+                })()}
                 <div className="space-y-3">
                   <div className="grid grid-cols-12 gap-2 text-center text-[10px] font-black text-emerald-400/60 tracking-widest mb-1 px-1">
                     <div className="col-span-2">세트 ↻</div><div className="col-span-3">{exRule.label}</div><div className="col-span-3">REPS</div><div className="col-span-2">RPE</div><div className="col-span-2">DONE</div>
@@ -180,7 +222,7 @@ export function WorkoutScreen() {
                           </div>
                         </div>
                         <div className="flex justify-between items-start gap-2 px-2 mt-2 mb-4 min-h-[16px]">
-                          <span className="flex-1 min-w-0 text-[10px] text-neutral-500 font-bold leading-snug">{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}{(set.rpeAuto || !String(set.rpe || '').trim()) && suggestRpe(ex, set, exRM) !== null && <span className="ml-1.5 text-emerald-400/80">· RPE {set.rpeAuto ? '자동' : '추천'} {suggestRpe(ex, set, exRM)} (1RM {exRM}kg 기준)</span>}
+                          <span className="flex-1 min-w-0 text-[10px] text-neutral-500 font-bold leading-snug">{set.completed && Array.isArray(set.pr) && set.pr.length > 0 && <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded-md bg-amber-400/15 border border-amber-400/50 text-amber-300 font-black">🏅 신기록</span>}{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}{(set.rpeAuto || !String(set.rpe || '').trim()) && suggestRpe(ex, set, exRM) !== null && <span className="ml-1.5 text-emerald-400/80">· RPE {set.rpeAuto ? '자동' : '추천'} {suggestRpe(ex, set, exRM)} (1RM {exRM}kg 기준)</span>}
                             {!(parseInt(set.reps, 10) > 0) && parseFloat(set.weight) > 0 && exRM > 0 && exRule.key !== 'bodyweight' && exRule.key !== 'assist' && (() => {
                               const max = parseFloat(set.weight) >= exRM ? 1 : Math.floor(30 * (exRM / parseFloat(set.weight) - 1));
                               return <span className="ml-1.5 text-emerald-400/80">· 이 무게 최대 약 {max}회 (RPE 8 ≈ {Math.max(1, max - 2)}회) · 횟수를 넣으면 RPE 자동</span>;

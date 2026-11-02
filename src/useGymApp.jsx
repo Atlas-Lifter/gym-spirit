@@ -11,9 +11,10 @@ import { useWakeLock } from './pwa.jsx';
 import { MAX_LEVEL, levelInfo, xpForLevel } from './questSystem.js';
 import { CARDIO_DAMAGE_PER_MIN } from './data/cardio.js';
 import { computeRecovery } from './recovery.js';
+import { detectPR, exerciseHistory, suggestNext } from './lib/progress.js';
 import { DEFAULT_TIMER_SETTINGS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { estimateFromLifts } from './strengthRatios.js';
-import { nextWeight, setLoad } from './weightRules.js';
+import { setLoad } from './weightRules.js';
 
 // 앱 전체 상태와 동작(기록 저장·클라우드·타이머·친구·길드 등). 화면 파일들은 useApp() 으로 여기서 꺼내 쓴다.
 export function useGymApp() {
@@ -534,7 +535,7 @@ export function useGymApp() {
     const cleanSession = src.map(ex => ({
       id: String(ex.id || Date.now()),
       exercise: { id: String(getExId(ex)), name: String(getExName(ex)), target: String(getExTarget(ex)), tool: String(ex.exercise?.tool || ex.tool || '바벨') },
-      sets: (ex.sets || []).map(s => ({ id: String(s.id || Date.now()), type: String(s.type || '-'), weight: String(s.weight || '0'), reps: String(s.reps || '0'), rpe: String(s.rpe || ''), completed: Boolean(s.completed), ...(s.completed && s.doneAt ? { doneAt: String(s.doneAt) } : {}) }))
+      sets: (ex.sets || []).map(s => ({ id: String(s.id || Date.now()), type: String(s.type || '-'), weight: String(s.weight || '0'), reps: String(s.reps || '0'), rpe: String(s.rpe || ''), completed: Boolean(s.completed), ...(s.completed && s.doneAt ? { doneAt: String(s.doneAt) } : {}), ...(s.completed && Array.isArray(s.pr) && s.pr.length ? { pr: s.pr.map(String) } : {}) }))
     }));
     const dateKey = String(currentDate);
     // 운동이 끝난 시각 = 마지막으로 완료 체크한 세트 시각 (자정을 넘겨 끝난 운동도 그대로).
@@ -789,8 +790,26 @@ export function useGymApp() {
     const rpe = Math.max(5, Math.min(10, 10 - (maxReps - r)));
     return Math.round(rpe * 2) / 2;
   };
+  // 신기록 축하 (운동 화면 위에 잠깐 뜬다)
+  const [prCelebration, setPrCelebration] = useState(null);
+  const prTimer = useRef(null);
+  const loadOfEx = (ex) => (s) => setLoad(String(getExId(ex)), toolOfEx(ex), s.weight, bodyWeightKg);
+  const historyFor = (ex) => exerciseHistory(safeWorkouts, getExId(ex), currentDate, getExId, loadOfEx(ex));
   const toggleSetComplete = (exerciseId, setId) => {
     let justCompleted = false;
+    // 완료하는 세트가 지금까지(지난 기록 + 오늘 앞서 완료한 세트)의 최고 기록을 넘으면 신기록
+    let pr = [];
+    const exNow = session.find(e => e.id === exerciseId);
+    const setNow = exNow?.sets?.find(st => st.id === setId);
+    if (exNow && setNow && !setNow.completed && (setNow.type || '-') !== 'W' && parseInt(setNow.reps, 10) > 0) {
+      const load = loadOfEx(exNow);
+      const prior = [
+        ...historyFor(exNow).flatMap(h => h.sets),
+        ...exNow.sets.filter(st => st.id !== setId && st.completed && (st.type || '-') !== 'W' && parseInt(st.reps, 10) > 0)
+          .map(st => ({ load: load(st), reps: parseInt(st.reps, 10), type: st.type || '-' })),
+      ];
+      pr = detectPR({ load: load(setNow), reps: parseInt(setNow.reps, 10), type: setNow.type || '-' }, prior);
+    }
     setSession(session.map(ex => {
       if (ex.id === exerciseId) {
         return { ...ex, sets: ex.sets.map(s => {
@@ -801,6 +820,7 @@ export function useGymApp() {
               const next = { ...s, completed: !s.completed, ...(auto !== null ? { rpe: String(auto), rpeAuto: true } : {}) };
               // 완료한 시각을 남겨 두고, 회복 카운트다운은 마지막으로 완료한 세트 시각부터 센다
               if (justCompleted) next.doneAt = new Date().toISOString(); else delete next.doneAt;
+              if (justCompleted && pr.length) next.pr = pr.map(p => p.kind); else delete next.pr;
               return next;
             }
             return s;
@@ -809,6 +829,12 @@ export function useGymApp() {
       return ex;
     }));
     if (justCompleted) startRest(timerSettings.defaultRest);
+    if (justCompleted && pr.length) {
+      clearTimeout(prTimer.current);
+      setPrCelebration({ id: Date.now(), name: getExName(exNow), items: pr });
+      prTimer.current = setTimeout(() => setPrCelebration(null), 3600);
+      try { navigator.vibrate?.([60, 40, 140]); } catch (e) {}
+    }
   };
   const adjustTimer = (amount) => setTimeLeft(prev => Math.max(0, prev + amount));
   const getPreviousRecord = (exerciseId, setIndex) => {
@@ -828,26 +854,25 @@ export function useGymApp() {
     const targetGroup = getExTarget(currentExObj).split('(')[0];
     return EXERCISE_OPTIONS.filter(ex => ex.id !== currentId && ex.target.includes(targetGroup)).slice(0, 3);
   };
-  const checkOverloadRecommendation = (exerciseId) => {
-    if (!activeUser || !safeWorkouts || pastWorkoutDates.length === 0) return false;
-    const lastDate = pastWorkoutDates.find(d => d < currentDate);
-    if (!lastDate) return false;
-    const lastSession = safeWorkouts[lastDate];
-    if (!Array.isArray(lastSession)) return false;
-    const pastEx = lastSession.find(e => getExId(e) === exerciseId);
-    if (!pastEx || !pastEx.sets || pastEx.sets.length === 0) return false;
-    return pastEx.sets.every(s => s.completed && parseFloat(s.weight) > 0);
+  // 다음 무게 추천: 지난 기록·RPE·정체·회복도를 보고 제안 (lib/progress.js). '적용'을 눌러야 들어간다
+  let recoveryCache = null;
+  const recoveryOf = (ex) => {
+    recoveryCache = recoveryCache || getMuscleRecoveryStatus();
+    const g = String(getExTarget(ex)).split('(')[0];
+    return recoveryCache[g] ? recoveryCache[g].percent : null;
   };
-  const applyProgressiveOverload = (sessionExId) => {
-    setSession(session.map(ex => {
-      if (ex.id === sessionExId) {
-        return { ...ex, sets: ex.sets.map(s => {
-            return { ...s, weight: nextWeight(ruleOfEx(ex), s.weight) };
-          }) };
-      }
-      return ex;
-    }));
-    showToast("🔥 점진적 과부하! 전 세트에 +2.5kg이 추가되었습니다.");
+  const getNextSuggestion = (ex) => suggestNext(historyFor(ex), ruleOfEx(ex), recoveryOf(ex));
+  const applySuggestion = (sessionExId) => {
+    const ex = session.find(e => e.id === sessionExId);
+    const sug = ex && getNextSuggestion(ex);
+    if (!sug) return;
+    const rule = ruleOfEx(ex);
+    setSession(session.map(e => (e.id !== sessionExId ? e : { ...e, sets: e.sets.map(st => {
+      if (st.completed || (st.type || '-') !== '-') return st;
+      const keepWeight = rule.key === 'bodyweight' && !(sug.weight > 0);
+      return { ...st, weight: keepWeight ? st.weight : String(sug.weight), reps: String(sug.reps) };
+    }) })));
+    showToast(`💡 추천을 적용했어요: ${sug.text}`);
   };
   const openPhotoCard = (dateKey) => {
     const sessionData = safeWorkouts[dateKey] || session;
@@ -868,9 +893,12 @@ export function useGymApp() {
         const sets = ex.sets || [];
         const done = sets.filter(st => st.completed).length || sets.length;
         const name = String(getExName(ex));
-        acc[name] = { name, sets: (acc[name]?.sets || 0) + done };
+        const pr = sets.some(st => st.completed && Array.isArray(st.pr) && st.pr.length);
+        acc[name] = { name, sets: (acc[name]?.sets || 0) + done, pr: !!(acc[name]?.pr || pr) };
         return acc;
       }, {})).filter(it => it.sets > 0),
+      // 이날 세운 신기록 수 (세트 기준)
+      prCount: sessionData.reduce((n, ex) => n + (ex.sets || []).filter(st => st.completed && Array.isArray(st.pr) && st.pr.length).length, 0),
     });
     setIsPhotoCardModalOpen(true);
   };
@@ -1683,8 +1711,10 @@ export function useGymApp() {
     adjustTimer,
     getPreviousRecord,
     getAlternativeExercises,
-    checkOverloadRecommendation,
-    applyProgressiveOverload,
+    getNextSuggestion,
+    prCelebration,
+    setPrCelebration,
+    applySuggestion,
     openPhotoCard,
     getExerciseLogsHistory,
     getAnalysisWeekInfo,

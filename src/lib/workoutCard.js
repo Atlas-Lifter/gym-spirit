@@ -114,6 +114,13 @@ const drawBubble = (ctx, b, t, font) => {
   ctx.fillStyle = strong ? t.onAccent : t.accent;
   ctx.fillText(`${b.sets}세트`, b.x, y + setFs * 0.15);
   if (strong) { ctx.font = `900 ${Math.round(fs * 0.62)}px ${font}`; ctx.globalAlpha = 0.75; ctx.fillText('🔥 메인 종목', b.x, b.y - total / 2 - fs * 0.15); }
+  // 이 종목에서 신기록을 세웠으면 원 오른쪽 위에 메달
+  if (b.pr) {
+    const mx = b.x + b.r * 0.72, my = b.y - b.r * 0.72, mr = Math.max(20, b.r * 0.24);
+    ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2);
+    ctx.fillStyle = '#f59e0b'; ctx.shadowColor = 'rgba(245,158,11,0.8)'; ctx.shadowBlur = 18; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.font = `${Math.round(mr * 1.15)}px ${font}`; ctx.textAlign = 'center'; ctx.fillText('🏅', mx, my + mr * 0.4);
+  }
   ctx.restore();
 };
 
@@ -178,6 +185,15 @@ export const renderWorkoutCard = async ({ theme = 'neon', data, avatarSvg, avata
   ctx.globalAlpha = 1; ctx.font = `900 84px ${font}`; ctx.fillText('오운완 인증🔥', 80, 228);
   ctx.globalAlpha = 0.7; ctx.font = `700 38px ${font}`; ctx.fillText(prettyDate(data?.date), 84, 290);
   ctx.globalAlpha = 1;
+  // 이날 세운 신기록
+  if (data?.prCount > 0) {
+    const dateW = ctx.measureText(prettyDate(data?.date)).width;
+    const label = `🏅 신기록 ${data.prCount}개`;
+    ctx.font = `900 30px ${font}`;
+    const lw = ctx.measureText(label).width + 36;
+    roundRect(ctx, 84 + dateW + 20, 252, lw, 50, 25); ctx.fillStyle = '#f59e0b'; ctx.fill();
+    ctx.fillStyle = '#1c1002'; ctx.fillText(label, 84 + dateW + 38, 288);
+  }
 
   // 오른쪽 위 덤벨 표시
   roundRect(ctx, W - 196, 84, 116, 116, 36); ctx.fillStyle = t.chip; ctx.fill();
@@ -188,7 +204,7 @@ export const renderWorkoutCard = async ({ theme = 'neon', data, avatarSvg, avata
 
   // 운동 말풍선 자리 잡기 (세트가 많을수록 큰 원, 아바타 둘레에 마인드맵처럼)
   const items = (data?.items?.length ? data.items : (data?.exercises || []).map(name => ({ name, sets: 1 })))
-    .filter(it => it && it.name).map(it => ({ name: String(it.name), sets: Math.max(1, Number(it.sets) || 1) }));
+    .filter(it => it && it.name).map(it => ({ name: String(it.name), sets: Math.max(1, Number(it.sets) || 1), pr: !!it.pr }));
   const bubbles = layoutBubbles(ctx, items, font);
 
   // 말풍선 → 아바타 점선 (아바타 뒤에 깔린다)
