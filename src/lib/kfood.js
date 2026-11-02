@@ -1,5 +1,5 @@
 // 식약처·농진청 식품영양성분 DB (public/data/kfood.json, .tools/kfood_build.py 로 만듦)
-// 1.6MB 라 처음 검색할 때 한 번만 불러온다
+// 3.5MB(압축 시 약 0.7MB)라 둘러보기 화면을 처음 열 때 한 번만 불러온다
 export const KFOOD_SOURCE = '식품의약품안전처 식품영양성분 DB · 농촌진흥청 국가표준식품성분표';
 
 let cache = null;
@@ -46,7 +46,7 @@ export const kfoodToFood = (r) => ({
   id: `k:${r.name}|${r.brand}|${r.unit}`,
   name: r.name,
   brand: r.brand,
-  category: r.cat || (r.src === 'r' ? '식재료' : '음식'),
+  category: r.src === 'p' ? r.sub : r.cat || (r.src === 'r' ? '식재료' : '음식'),
   icon: iconOf(r),
   calories: r.kcal,
   protein: r.protein,
@@ -55,8 +55,8 @@ export const kfoodToFood = (r) => ({
   noMacros: r.carbs == null || r.fat == null,
   per: 100,
   unit: r.unit,
-  serv: r.serving ? [{ l: `1회 제공량`, g: r.serving }] : [],
-  note: `${r.brand ? `${r.brand} 메뉴 · ` : ''}${r.src === 'r' ? '농촌진흥청 국가표준식품성분표' : '식품의약품안전처 식품영양성분 DB'} 자료예요.${r.carbs == null || r.fat == null ? ' 이 메뉴는 업체가 탄수화물·지방을 공개하지 않아 칼로리·단백질만 정확해요.' : ''}`,
+  serv: r.serving ? [{ l: r.src === 'p' ? '1포장' : '1회 제공량', g: r.serving }] : [],
+  note: `${r.brand ? `${r.brand} ${r.src === 'p' ? '제품' : '메뉴'} · ` : ''}${r.src === 'r' ? '농촌진흥청 국가표준식품성분표' : r.src === 'p' ? '식품의약품안전처 가공식품 영양성분 DB' : '식품의약품안전처 식품영양성분 DB'} 자료예요.${r.carbs == null || r.fat == null ? ' 이 메뉴는 업체가 탄수화물·지방을 공개하지 않아 칼로리·단백질만 정확해요.' : ''}`,
   bgColor: 'bg-neutral-100',
   txColor: 'text-neutral-500',
   kfood: true,

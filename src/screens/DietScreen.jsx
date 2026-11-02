@@ -147,8 +147,8 @@ export function DietScreen() {
                     <div className="absolute -right-3 -bottom-4 text-[64px] opacity-20 select-none">🇰🇷</div>
                     <div className="text-[10px] font-black text-white/70">식품의약품안전처 · 농촌진흥청</div>
                     <div className="text-[16px] font-black mt-0.5">식약처 영양 정보 둘러보기 →</div>
-                    <div className="text-[11px] font-bold text-white/80 mt-0.5">한식·프랜차이즈 메뉴·식재료 1.9만 개를 종류·브랜드별로</div>
-                    <div className="flex flex-wrap gap-1.5 mt-2.5">{['🍲 한식', '🍔 패스트푸드', '☕ 음료', '🍰 디저트', '🥦 식재료'].map(t => <span key={t} className="text-[10px] font-black bg-white/15 rounded-full px-2 py-0.5 whitespace-nowrap">{t}</span>)}</div>
+                    <div className="text-[11px] font-bold text-white/80 mt-0.5">한식·프랜차이즈·편의점·가공식품·식재료 3.2만 개를 종류·브랜드별로</div>
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">{['🍲 한식', '🍔 패스트푸드', '☕ 음료', '🍰 디저트', '🥦 식재료', '🛒 편의점'].map(t => <span key={t} className="text-[10px] font-black bg-white/15 rounded-full px-2 py-0.5 whitespace-nowrap">{t}</span>)}</div>
                   </button>
                   {foods.map(food => {
                     const sv = food.serv?.[0];
