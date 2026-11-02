@@ -37,3 +37,10 @@ SOFTWARE.
 - 출처: https://github.com/yuhonas/free-exercise-db
 - 라이선스: The Unlicense (퍼블릭 도메인)
 - 쓰는 곳: `public/exercises/*.jpg` (종목별 시작·끝 자세 사진)
+
+## 식품영양성분 자료 — 식단 검색
+
+- 출처: 식품의약품안전처 「통합식품영양성분정보」(음식), 농촌진흥청 「국가표준식품성분표」(원재료성 식품) — 공공데이터포털(data.go.kr)
+- 이용 조건: 공공데이터포털 표기 '이용허락범위 제한 없음'
+- 쓰는 곳: `public/data/kfood.json` (`.tools/kfood_build.py` 로 이름·브랜드·열량·단백질·탄수화물·지방·1회 제공량만 추려 만듦)
+- 업체가 공개하지 않은 탄수화물·지방은 비워 두고 앱에서 '정보 없음'으로 표시함

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Camera, ChevronLeft, Minus, Plus, Search, Trash2, Utensils, X } from 'lucide-react';
 import { FOOD_DB, FOOD_CATEGORIES, foodTags } from '../data/foods.js';
 import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { FoodImage } from '../components/FoodImage.jsx';
 import { useApp } from '../appContext.js';
+import { KFOOD_SOURCE, kfoodToFood, loadKfood, searchKfood } from '../lib/kfood.js';
 
 // 식단 플래너 화면
 export function DietScreen() {
@@ -32,6 +33,21 @@ export function DietScreen() {
   const foodQuery = String(foodSearchQuery || '').trim();
   const foods = FOOD_DB.filter(f => (foodCategoryFilter === '전체' || (foodCategoryFilter === '고단백' ? foodTags(f).includes('고단백') : f.category === foodCategoryFilter))
     && (!foodQuery || `${f.name} ${f.kw}`.includes(foodQuery)));
+  // 식약처 DB: 검색을 시작하면 그때 불러온다. 기본 분류(전체·고단백)에서만 함께 보여 준다
+  const [kRows, setKRows] = useState(null);
+  const [kState, setKState] = useState('idle');
+  const wantK = isAddFoodModalOpen && !!foodQuery;
+  useEffect(() => {
+    if (!wantK || kRows || kState === 'loading') return;
+    setKState('loading');
+    loadKfood().then(rows => { setKRows(rows); setKState('ready'); }).catch(() => setKState('error'));
+  }, [wantK, kRows, kState]);
+  const kFoods = useMemo(() => {
+    if (!kRows || !foodQuery || !['전체', '고단백'].includes(foodCategoryFilter)) return [];
+    const list = searchKfood(kRows, foodQuery, foodCategoryFilter === '고단백' ? 200 : 40).map(kfoodToFood);
+    return foodCategoryFilter === '고단백' ? list.filter(f => foodTags(f).includes('고단백')).slice(0, 40) : list;
+  }, [kRows, foodQuery, foodCategoryFilter]);
+  const fmtMacro = (v) => (selectedFood?.noMacros ? '–' : v);
   const pickFood = (food) => { setSelectedFood(food); setFoodWeight(food.serv?.[0]?.g || 100); };
   const per = selectedFood?.per || 100;
   const unit = selectedFood?.unit || 'g';
@@ -145,13 +161,40 @@ export function DietScreen() {
                       </div>
                     );
                   })}
-                  {foods.length === 0 && <div className="text-center text-sm font-bold text-neutral-400 py-10">찾는 음식이 없어요. 다른 이름(예: 닭, 밥, 커피)으로 찾아보세요.</div>}
+                  {foods.length === 0 && kFoods.length === 0 && kState !== 'loading' && <div className="text-center text-sm font-bold text-neutral-400 py-10">찾는 음식이 없어요. 다른 이름(예: 닭, 밥, 커피)으로 찾아보세요.</div>}
+                  {foodQuery && ['전체', '고단백'].includes(foodCategoryFilter) && (
+                    <div className="pt-3 space-y-2">
+                      <div className="flex items-end justify-between px-1">
+                        <div className="text-xs font-black text-neutral-700">🇰🇷 식약처 영양 DB <span className="text-neutral-400 font-bold">· 음식·프랜차이즈 메뉴·식재료 1.9만 개</span></div>
+                        {kFoods.length > 0 && <div className="text-[10px] font-bold text-neutral-400">{kFoods.length >= 40 ? '상위 40개' : `${kFoods.length}개`}</div>}
+                      </div>
+                      {kState === 'loading' && <div className="text-center text-xs font-bold text-neutral-400 py-6">영양 DB 불러오는 중…</div>}
+                      {kState === 'error' && <button onClick={() => setKState('idle')} className="w-full text-center text-xs font-bold text-rose-500 py-6">영양 DB를 못 불러왔어요. 눌러서 다시 시도</button>}
+                      {kState === 'ready' && kFoods.length === 0 && <div className="text-center text-xs font-bold text-neutral-400 py-6">영양 DB에도 없어요. 띄어쓰기 없이 짧게(예: 제육, 라떼) 찾아보세요.</div>}
+                      {kFoods.map(food => {
+                        const sv = food.serv[0];
+                        return (
+                          <div key={food.id} onClick={() => pickFood(food)} className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-neutral-100 hover:border-[#4768ff] hover:shadow-md transition-all cursor-pointer active:scale-95">
+                            <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 text-2xl">{food.icon}</div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-black text-neutral-900 text-[14px] truncate">{food.name}</h3>
+                              <div className="text-[10px] font-bold text-neutral-400 mt-0.5 truncate">{food.brand && <span className="text-neutral-600">{food.brand} · </span>}100{food.unit} {food.calories}kcal · 단백질 {food.protein}g{sv ? ` · 1회 ${sv.g}${food.unit} ${Math.round(food.calories * sv.g / 100)}kcal` : ''}</div>
+                              {food.noMacros && <div className="text-[9px] font-bold text-neutral-400 mt-0.5">탄수화물·지방 정보 없음</div>}
+                            </div>
+                            <div className="text-[10px] font-black bg-neutral-50 px-2 py-1 rounded-md flex-shrink-0 text-neutral-500 max-w-[72px] truncate">{food.category}</div>
+                          </div>
+                        );
+                      })}
+                      <div className="text-[9px] font-bold text-neutral-300 text-center pt-1">출처: {KFOOD_SOURCE} (공공데이터포털)</div>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
               <div className="flex-1 bg-neutral-50 p-5 flex flex-col items-center overflow-y-auto">
                  <div className="mb-3 mt-1 shadow-lg rounded-[28px] border-4 border-white"><FoodImage id={selectedFood.id} icon={selectedFood.icon} className="w-36 h-36" rounded="rounded-3xl" bg={selectedFood.bgColor} /></div>
                  <h3 className="text-2xl font-black text-neutral-900 mb-1 text-center">{String(selectedFood.name)}</h3>
+                 {selectedFood.brand && <div className="text-xs font-black text-neutral-400 mb-1">{selectedFood.brand}</div>}
                  <div className="flex flex-wrap justify-center gap-1 mb-4">
                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md bg-white ${selectedFood.txColor}`}>{selectedFood.category}</span>
                    {foodTags(selectedFood).map(t => <span key={t} className={`text-[10px] font-black px-2 py-0.5 rounded-md ${TAG_STYLE[t]}`}>{t}</span>)}
@@ -161,7 +204,7 @@ export function DietScreen() {
                      <div className="text-xs font-black text-neutral-900 mb-1.5">📋 영양 정보</div>
                      <p className="text-[13px] font-bold text-neutral-600 leading-relaxed">{selectedFood.note}</p>
                      <div className="grid grid-cols-4 gap-1 mt-3 text-center">
-                       {[['칼로리', `${selectedFood.calories}`, 'text-neutral-900'], ['탄수', `${selectedFood.carbs}g`, 'text-amber-500'], ['단백질', `${selectedFood.protein}g`, 'text-[#4768ff]'], ['지방', `${selectedFood.fat}g`, 'text-rose-500']].map(([k, v, c]) => (
+                       {[['칼로리', `${selectedFood.calories}`, 'text-neutral-900'], ['탄수', fmtMacro(`${selectedFood.carbs}g`), 'text-amber-500'], ['단백질', `${selectedFood.protein}g`, 'text-[#4768ff]'], ['지방', fmtMacro(`${selectedFood.fat}g`), 'text-rose-500']].map(([k, v, c]) => (
                          <div key={k} className="bg-neutral-50 rounded-lg py-1.5"><div className={`text-xs font-black ${c}`}>{v}</div><div className="text-[9px] font-bold text-neutral-400">{k}</div></div>
                        ))}
                      </div>
@@ -185,11 +228,11 @@ export function DietScreen() {
                  <div className="w-full bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm flex justify-between items-center mt-auto mb-5">
                    <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">칼로리</div><div className="font-black text-lg text-neutral-900">{Math.round(selectedFood.calories * (foodWeight/per))}</div></div>
                    <div className="w-[1px] h-8 bg-neutral-100"></div>
-                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">탄수화물</div><div className="font-black text-lg text-amber-500">{(selectedFood.carbs * (foodWeight/per)).toFixed(1)}</div></div>
+                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">탄수화물</div><div className="font-black text-lg text-amber-500">{fmtMacro((selectedFood.carbs * (foodWeight/per)).toFixed(1))}</div></div>
                    <div className="w-[1px] h-8 bg-neutral-100"></div>
                    <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">단백질</div><div className="font-black text-lg text-[#4768ff]">{(selectedFood.protein * (foodWeight/per)).toFixed(1)}</div></div>
                    <div className="w-[1px] h-8 bg-neutral-100"></div>
-                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">지방</div><div className="font-black text-lg text-rose-500">{(selectedFood.fat * (foodWeight/per)).toFixed(1)}</div></div>
+                   <div className="text-center"><div className="text-[10px] font-bold text-neutral-400">지방</div><div className="font-black text-lg text-rose-500">{fmtMacro((selectedFood.fat * (foodWeight/per)).toFixed(1))}</div></div>
                  </div>
                  <button onClick={addFoodToMeal} className="w-full bg-[#4768ff] text-white font-black py-4 rounded-xl shadow-[0_10px_25px_rgba(71,104,255,0.3)] hover:bg-blue-600 active:scale-95 transition-all text-lg">식단에 추가하기</button>
               </div>

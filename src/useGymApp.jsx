@@ -1173,7 +1173,7 @@ export function useGymApp() {
     if(!selectedFood || !selectedMealId) return;
     const factor = foodWeight / (selectedFood.per || 100);
     const foodItem = {
-      id: Date.now().toString(), foodId: String(selectedFood.id), name: String(selectedFood.name), icon: String(selectedFood.icon),
+      id: Date.now().toString(), foodId: String(selectedFood.id), name: String(selectedFood.brand ? `${selectedFood.name} (${selectedFood.brand})` : selectedFood.name), icon: String(selectedFood.icon),
       weight: Number(foodWeight), unit: String(selectedFood.unit || 'g'), calories: Math.round(selectedFood.calories * factor),
       protein: Number((selectedFood.protein * factor).toFixed(1)), carbs: Number((selectedFood.carbs * factor).toFixed(1)), fat: Number((selectedFood.fat * factor).toFixed(1)),
     };
