@@ -1078,6 +1078,56 @@ export function useGymApp() {
     musclesOf: (ex) => getExerciseMuscles(EXERCISE_OPTIONS.find(e => e.id === String(getExId(ex))) || ex.exercise || ex),
     bestOf: (id) => getTop1RM(id),
   });
+  // AI 코치용: 최근 4주에 한 종목의 '다음 무게'를 앱 계산(lib/progress.js)으로 미리 구한다 — 코치가 숫자를 지어내지 않게
+  const coachGroupOf = (ex) => String(getExTarget(ex)).split('(')[0];
+  const getCoachNextWeights = () => {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const before = formatDate(tomorrow); // 오늘 기록까지 넣고 계산
+    const seen = new Map();
+    Object.keys(safeWorkouts).sort().reverse().slice(0, 28).forEach(date => {
+      (Array.isArray(safeWorkouts[date]) ? safeWorkouts[date] : []).forEach(ex => {
+        const id = String(getExId(ex));
+        if (id && !seen.has(id) && (ex.sets || []).some(st => st.completed)) seen.set(id, ex);
+      });
+    });
+    return [...seen.values()].slice(0, 14).map(ex => {
+      // 다음 운동 날 기준이라 회복도는 넣지 않는다 (오늘 할 부위는 회복 80% 규칙으로 따로 거른다)
+      const sug = suggestNext(exerciseHistory(safeWorkouts, getExId(ex), before, getExId, loadOfEx(ex)), ruleOfEx(ex), null);
+      return sug && { name: getExName(ex), group: coachGroupOf(ex), text: sug.text, weight: sug.weight, reps: sug.reps, why: sug.why };
+    }).filter(Boolean);
+  };
+  // 부위별로 코치가 고를 종목 이름: 내가 해 본 종목 먼저, 그다음 앱 기본 목록 순
+  const getCoachExerciseChoices = () => {
+    const out = {};
+    const count = {};
+    Object.values(safeWorkouts).forEach(ses => (Array.isArray(ses) ? ses : []).forEach(ex => { const id = String(getExId(ex)); count[id] = (count[id] || 0) + 1; }));
+    const byGroup = {};
+    EXERCISE_OPTIONS.forEach(e => { (byGroup[coachGroupOf(e)] = byGroup[coachGroupOf(e)] || []).push(e); });
+    Object.entries(byGroup).forEach(([g, list]) => {
+      out[g] = [...list].sort((a, b) => (count[b.id] || 0) - (count[a.id] || 0)).slice(0, 10).map(e => e.name);
+    });
+    return out;
+  };
+  // 코치가 짜 준 루틴으로 운동 시작 (추천 부위 루틴 시작과 같은 방식). items: [{ exercise, sets, reps, weight }]
+  // 진행 중인 운동이 있으면 확인 창이 코치 창에 가리지 않게 코치를 먼저 닫는다
+  const startCoachRoutine = ({ title, items }) => {
+    const list = (items || []).filter(it => it.exercise).slice(0, 10);
+    if (!list.length) return;
+    setIsAiCoachOpen(false);
+    guardNewWorkout(() => {
+      const t = Date.now();
+      setSession(list.map((it, i) => ({
+        id: `coach-${t}-${i}`, exercise: it.exercise,
+        sets: Array.from({ length: Math.min(Math.max(parseInt(it.sets, 10) || 3, 1), 8) }).map((_, j) => ({
+          id: `set-${t}-${i}-${j}`, type: '-', weight: it.weight > 0 ? String(it.weight) : '', reps: it.reps > 0 ? String(it.reps) : '', rpe: '', completed: false,
+        })),
+      })));
+      setCurrentDate(formatDate(new Date()));
+      setWorkoutDurationSec(0);
+      setCurrentScreen('workout');
+      showToast(`AI 코치 루틴${title ? ` '${title}'` : ''}이 세팅되었어요!`);
+    });
+  };
   // AI 코치에게 보낼 내 기록 요약 (물어볼 때마다 새로 만든다)
   const getCoachContext = () => buildCoachContext({
     profile: activeUser?.profile || {},
@@ -1090,6 +1140,8 @@ export function useGymApp() {
     // 종목의 주동근 → 부위(가슴·등·하체·어깨·팔·복근)
     groupsOf: (ex) => [...new Set((getExerciseMuscles(EXERCISE_OPTIONS.find(e => e.id === String(getExId(ex))) || ex.exercise || ex)?.p || []).map(m => MUSCLE_GROUP[m]).filter(Boolean))],
     recovery: getMuscleRecoveryStatus(),
+    nextWeights: getCoachNextWeights(),
+    exerciseChoices: getCoachExerciseChoices(),
     bestLifts: getBestLifts(),
     todayMacros,
     todayDiet,
@@ -1741,6 +1793,7 @@ export function useGymApp() {
     getWeeklyLoadReport,
     getBestLifts,
     getCoachContext,
+    startCoachRoutine,
     getMuscleRecoveryStatus,
     getTop1RM,
     getEffective1RM,

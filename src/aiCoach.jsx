@@ -653,7 +653,7 @@ const Briefing = ({ report, onPick }) => {
 const TONE_DOT = { danger: 'bg-red-500', caution: 'bg-amber-500', good: 'bg-emerald-500', info: 'bg-[#4768ff]' };
 
 // ── 상담소 본체 ───────────────────────────────────────────────
-export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, programs, exercises, onOpenProgram, onOpenGuide, onApplyMealPlan, getCoachContext, canChat }) => {
+export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, programs, exercises, onOpenProgram, onOpenGuide, onApplyMealPlan, getCoachContext, canChat, hasGuide, onStartRoutine }) => {
   const [mode, setMode] = useState('menu'); // menu: 상담 메뉴(정해진 답) · chat: AI 대화
   const [path, setPath] = useState([{ id: 'start' }]); // { id, label? } — label은 내가 고른 답(말풍선)
   const [typing, setTyping] = useState(false);
@@ -742,7 +742,7 @@ export const AiCoach = ({ onClose, profile, bodyStats, report, bestLifts, progra
           </div>
         </div>
         </div>
-        {mode === 'chat' && <div className="flex-1 min-h-0"><CoachChat getContext={getCoachContext} canChat={canChat} /></div>}
+        {mode === 'chat' && <div className="flex-1 min-h-0"><CoachChat getContext={getCoachContext} canChat={canChat} exercises={exercises} hasGuide={hasGuide} onOpenGuide={onOpenGuide} onStartRoutine={onStartRoutine} /></div>}
 
         <div ref={scrollRef} className={`relative flex-1 overflow-y-auto p-5 bg-neutral-50 flex-col gap-4 ${mode === 'chat' ? 'hidden' : 'flex'}`}>
           {path.map((step, i) => {

@@ -55,7 +55,7 @@ const weekdayPattern = (workouts, now, groupsOf, nameOf) => {
   return { lines, perWeek: r1(total / PATTERN_WEEKS), today: by[now.getDay()] };
 };
 
-export function buildCoachContext({ profile = {}, bodyStats = {}, bodyGoal, workouts = {}, liveSession, nameOf, groupsOf = () => [], recovery = {}, bestLifts = {}, todayMacros, todayDiet, cardioMinOn, now = new Date() }) {
+export function buildCoachContext({ profile = {}, bodyStats = {}, bodyGoal, workouts = {}, liveSession, nameOf, groupsOf = () => [], recovery = {}, nextWeights = [], exerciseChoices = {}, bestLifts = {}, todayMacros, todayDiet, cardioMinOn, now = new Date() }) {
   const out = [];
   const todayKey = dateKey(now);
   out.push(`오늘: ${todayKey} (${WEEKDAY[now.getDay()]}요일)`);
@@ -87,6 +87,9 @@ export function buildCoachContext({ profile = {}, bodyStats = {}, bodyGoal, work
       .map(([g, o]) => `${g}(${today.groups.includes(g) ? '오늘 이미 함' : `회복 ${o.percent}%`})`);
     out.push(`▶ 오늘 운동 추천 가능 부위 (회복 ${READY_PERCENT}% 이상, 오늘 안 한 부위): ${ready.length ? ready.join(', ') : '없음 — 오늘은 휴식·가벼운 유산소·스트레칭 권장'}`);
     if (rest.length) out.push(`▶ 오늘 쉬어야 할 부위: ${rest.join(', ')}`);
+    // 루틴을 짤 때 쓸 종목 이름 (앱에 있는 이름 그대로)
+    const choices = ready.filter(g => exerciseChoices[g]?.length).map(g => `${g}: ${exerciseChoices[g].join(', ')}`);
+    if (choices.length) out.push(`▶ 부위별 종목 후보 (앱에 있는 이름):\n${choices.map(c => `- ${c}`).join('\n')}`);
   }
   out.push(`오늘 한 운동: ${today.exs.length ? `${today.groups.join(', ')} (${today.names.join(', ')})${live ? ' — 지금 진행 중' : ''}` : '아직 없음'}`);
   if (yesterday.exs.length) out.push(`어제 한 운동: ${yesterday.groups.join(', ')} (${yesterday.names.join(', ')})`);
@@ -100,6 +103,11 @@ export function buildCoachContext({ profile = {}, bodyStats = {}, bodyGoal, work
   }
   const weekLine = Object.entries(week).map(([g, c]) => `${g} ${c}회`);
   out.push(`이번 주 운동한 부위: ${weekLine.length ? weekLine.join(', ') : '아직 없음'}`);
+
+  // 다음 무게: 앱이 지난 기록·RPE·정체 여부로 계산한 값
+  if (nextWeights.length) {
+    out.push(`▶ 앱이 계산한 다음 무게 (이 숫자를 그대로 쓸 것):\n${nextWeights.map(w => `- ${w.name} [${w.group}]: 다음 ${w.text} — ${w.why}`).join('\n')}`);
+  }
 
   // 요일별 습관
   const pat = weekdayPattern(workouts, now, groupsOf, nameOf);
