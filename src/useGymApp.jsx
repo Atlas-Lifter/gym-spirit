@@ -89,6 +89,7 @@ export function useGymApp() {
   const [photoCardTheme, setPhotoCardTheme] = useState('neon');
   const [photoCardData, setPhotoCardData] = useState(null);
   const [isAiCoachOpen, setIsAiCoachOpen] = useState(false);
+  const [coachPopup, setCoachPopup] = useState(null); // 종목 설명서·자세 체크에서 띄우는 AI 코치 { exerciseId, seed? }
   const [activeRankingTab, setActiveRankingTab] = useState('global');
   const [rankingSortBy, setRankingSortBy] = useState('volume');
   const [isFriendSearchModalOpen, setIsFriendSearchModalOpen] = useState(false);
@@ -1114,6 +1115,18 @@ export function useGymApp() {
     });
     return out;
   };
+  // 종목 하나에 대한 내 기록 요약: 최근 3번의 최고 세트, 다음 무게 추천 (AI 코치 팝업에 같이 보낸다)
+  const getExerciseInsight = (exerciseId) => {
+    const ex = { exercise: EXERCISE_OPTIONS.find(e => e.id === String(exerciseId)) || { id: String(exerciseId) } };
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const hist = exerciseHistory(safeWorkouts, String(exerciseId), formatDate(tomorrow), getExId, loadOfEx(ex));
+    const history = hist.slice(0, 3).map(h => {
+      const top = h.sets.reduce((b, st) => (st.weight * (1 + st.reps / 30) > b.weight * (1 + b.reps / 30) ? st : b), h.sets[0]);
+      return `${h.date.slice(5)}: ${h.sets.length}세트, 최고 ${top.weight ? `${top.weight}kg × ` : ''}${top.reps}회${top.rpe ? ` (RPE ${top.rpe})` : ''}`;
+    });
+    const sug = suggestNext(hist, ruleOfEx(ex), recoveryOf(ex));
+    return { history, next: sug ? `${sug.text} — ${sug.why}` : null };
+  };
   // 코치가 짜 준 루틴으로 운동 시작 (추천 부위 루틴 시작과 같은 방식). items: [{ exercise, sets, reps, weight }]
   // 진행 중인 운동이 있으면 확인 창이 코치 창에 가리지 않게 코치를 먼저 닫는다
   const startCoachRoutine = ({ title, items }) => {
@@ -1815,6 +1828,9 @@ export function useGymApp() {
     getBestLifts,
     getCoachContext,
     getUsualWeekly,
+    getExerciseInsight,
+    coachPopup,
+    setCoachPopup,
     startCoachRoutine,
     getMuscleRecoveryStatus,
     getTop1RM,

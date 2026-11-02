@@ -101,7 +101,8 @@ const Rich = ({ text }) => text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (
   part.startsWith('**') && part.endsWith('**') ? <b key={i} className="font-black text-neutral-900">{part.slice(2, -2)}</b> : <React.Fragment key={i}>{part.replace(/^#{1,4}\s/gm, '')}</React.Fragment>
 ));
 
-export function CoachChat({ seed, onSeedUsed, getContext, canChat, exercises = [], hasGuide = () => false, onOpenGuide = () => {}, onStartRoutine, coachRoutine, onSaveRoutine, suggestWeekly }) {
+// topic: 종목 설명서에서 열 때 { title, context, quick } — 새 대화로 시작하고, 첫 질문에 종목 정보를 같이 보낸다
+export function CoachChat({ topic, seed, onSeedUsed, getContext, canChat, exercises = [], hasGuide = () => false, onOpenGuide = () => {}, onStartRoutine, coachRoutine, onSaveRoutine, suggestWeekly }) {
   const [store, setStore] = useState(loadThreads);
   const [showList, setShowList] = useState(false);
   const current = store.threads.find(t => t.id === store.currentId) || null;
@@ -134,7 +135,9 @@ export function CoachChat({ seed, onSeedUsed, getContext, canChat, exercises = [
     const text = String(raw || '').trim();
     if (!text || busy || !allowed) return;
     const base = fresh ? [] : msgs;
-    const history = [...base.filter(m => !m.error), { role: 'user', content: text, ...(display ? { display } : {}) }];
+    // 종목 대화의 첫 질문에는 종목 정보(설명·내 기록)를 붙인다. 화면에는 질문만
+    const withTopic = topic && !base.length && !display;
+    const history = [...base.filter(m => !m.error), { role: 'user', content: withTopic ? `${topic.context}\n\n질문: ${text}` : text, ...(display || withTopic ? { display: display || text } : {}) }];
     // 새 채팅이면 첫 질문을 보낼 때 대화를 만든다
     const id = current && !fresh ? current.id : newThreadId();
     if (current && !fresh) setMsgsOf(id, () => [...history, { role: 'assistant', content: '', pending: true }]);
@@ -183,7 +186,7 @@ export function CoachChat({ seed, onSeedUsed, getContext, canChat, exercises = [
   const ask = (raw) => {
     const text = String(raw || '').trim();
     if (!text || busy || !allowed) return;
-    if (!coachRoutine?.type && onSaveRoutine && !askedRef.current && WORKOUT_Q.test(text)) {
+    if (!coachRoutine?.type && onSaveRoutine && !askedRef.current && !topic && WORKOUT_Q.test(text)) {
       askedRef.current = true;
       setAsking(text);
       setInput('');
@@ -199,11 +202,13 @@ export function CoachChat({ seed, onSeedUsed, getContext, canChat, exercises = [
   const skipAsking = () => { const q = asking; setAsking(null); send(q); };
   // 저장한 루틴이 화면(props)에 들어온 뒤 미뤄 둔 질문을 보낸다
   useEffect(() => { if (queued && coachRoutine?.type) { send(queued); setQueued(null); } }, [coachRoutine, queued]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 종목 대화는 새 채팅으로 시작
+  useEffect(() => { if (topic) setStore(st => ({ ...st, currentId: null })); }, [topic?.title]); // eslint-disable-line react-hooks/exhaustive-deps
   // 상담 메뉴에서 넘어온 주제: 새 대화로 바로 묻는다
   useEffect(() => {
     if (!seed || !allowed) return;
     setAsking(null);
-    send(seed.content, { display: seed.display, fresh: true });
+    send(topic ? `${topic.context}\n\n${seed.content}` : seed.content, { display: seed.display, fresh: true });
     onSeedUsed?.(); // 탭을 오가며 다시 그려져도 같은 주제를 또 보내지 않게
   }, [seed?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -223,8 +228,8 @@ export function CoachChat({ seed, onSeedUsed, getContext, canChat, exercises = [
       )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-3">
         <div className="bg-gradient-to-br from-[#4768ff] to-indigo-500 text-white rounded-3xl p-4 shadow-md shadow-[#4768ff]/20">
-          <div className="flex items-center gap-2 text-[15px] font-black"><Sparkles className="w-4 h-4" />스피릿 코치에게 물어보기</div>
-          <p className="text-[12px] font-bold text-white/85 mt-1 leading-relaxed">최근 2주 운동·부위별 회복도·오늘 식단·체성분을 보고 답해요.</p>
+          <div className="flex items-center gap-2 text-[15px] font-black"><Sparkles className="w-4 h-4" />{topic ? `「${topic.title}」 물어보기` : '스피릿 코치에게 물어보기'}</div>
+          <p className="text-[12px] font-bold text-white/85 mt-1 leading-relaxed">{topic ? '이 종목 설명과 내 기록(지난 무게·다음 무게 추천)을 보고 답해요.' : '최근 2주 운동·부위별 회복도·오늘 식단·체성분을 보고 답해요.'}</p>
           <button onClick={() => setShowCtx(v => !v)} className="mt-2 text-[11px] font-black text-white/90 flex items-center gap-1">코치가 보는 내 기록 {showCtx ? '접기' : '보기'}<ChevronDown className={`w-3.5 h-3.5 transition-transform ${showCtx ? 'rotate-180' : ''}`} /></button>
           {showCtx && <pre className="mt-2 bg-black/15 rounded-xl p-2.5 text-[10px] font-bold whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">{getContext()}</pre>}
         </div>
@@ -246,7 +251,7 @@ export function CoachChat({ seed, onSeedUsed, getContext, canChat, exercises = [
 
         {msgs.length === 0 && allowed && !asking && (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {QUICK.map(q => <button key={q} onClick={() => ask(q)} className="text-[12px] font-black px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 active:scale-95 transition-all hover:border-[#4768ff]">{q}</button>)}
+            {(topic?.quick || QUICK).map(q => <button key={q} onClick={() => (topic ? send(q) : ask(q))} className="text-[12px] font-black px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 active:scale-95 transition-all hover:border-[#4768ff]">{q}</button>)}
           </div>
         )}
 

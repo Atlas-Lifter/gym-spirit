@@ -44,3 +44,9 @@ SOFTWARE.
 - 이용 조건: 공공데이터포털 표기 '이용허락범위 제한 없음'
 - 쓰는 곳: `public/data/kfood.json` (`.tools/kfood_build.py`·`.tools/kfood_pack.py` 로 이름·브랜드·열량·단백질·탄수화물·지방·1회 제공량만 추려 만듦)
 - 업체가 공개하지 않은 탄수화물·지방은 비워 두고 앱에서 '정보 없음'으로 표시함
+
+## MediaPipe Pose Landmarker — 실시간 자세 체크
+
+- 출처: https://github.com/google-ai-edge/mediapipe (Google)
+- 라이선스: Apache License 2.0
+- 쓰는 곳: `src/lib/pose.js` — `@mediapipe/tasks-vision@1.1.0` 엔진과 `pose_landmarker_lite` 모델을 자세 체크를 열 때 CDN(jsDelivr, Google Storage)에서 받아 휴대폰 안에서 실행한다. 영상은 밖으로 보내지 않는다

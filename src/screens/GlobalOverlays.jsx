@@ -1,5 +1,5 @@
-import React, { lazy, Suspense, useRef } from 'react';
-import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, X, Zap } from 'lucide-react';
+import React, { lazy, Suspense, useRef, useState } from 'react';
+import { AlertTriangle, Bell, Camera, CheckCircle2, Dumbbell, Lightbulb, MessageSquare, Video, X, Zap } from 'lucide-react';
 import * as cloud from '../cloud.js';
 import { EXERCISE_TIPS } from '../data/exerciseTips.js';
 import { ExercisePhotoPair, SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
@@ -14,6 +14,10 @@ import { InstallSheet } from '../pwa.jsx';
 import { FullBodyAvatar } from '../realAvatar.jsx';
 import { ALARM_SOUNDS, REPEAT_OPTIONS, REST_OPTIONS } from '../restAlarm.js';
 import { useApp } from '../appContext.js';
+import { CoachPopup } from '../components/CoachPopup.jsx';
+
+// 실시간 자세 체크는 열 때만 내려받는다
+const FormCheck = lazy(() => import('../components/FormCheck.jsx').then(m => ({ default: m.FormCheck })));
 
 
 // 운영자 콘솔 화면은 운영자 계정에서만 따로 내려받는다 (다른 회원의 앱에는 코드조차 오지 않는다)
@@ -40,6 +44,7 @@ export function GlobalOverlays() {
     getAlternativeExercises,
     goToSignup,
     guideExerciseId,
+    setCoachPopup,
     inviteFriends,
     isAddExerciseModalOpen,
     isAlarmSettingsOpen,
@@ -94,6 +99,7 @@ export function GlobalOverlays() {
     currentUser,
     devMock,
   } = useApp();
+  const [formCheckId, setFormCheckId] = useState(null); // 실시간 자세 체크 중인 종목
   const cardAvatarRef = useRef(null);
   return (
     <>
@@ -118,6 +124,17 @@ export function GlobalOverlays() {
           </div>
         </div>
       )}
+      <CoachPopup />
+      {formCheckId && (() => {
+        const fx = EXERCISE_OPTIONS.find(e => e.id === formCheckId);
+        if (!fx) return null;
+        return (
+          <Suspense fallback={null}>
+            <FormCheck exercise={fx} onClose={() => setFormCheckId(null)}
+              onAskCoach={cloudUser || import.meta.env.DEV ? (summary) => { setFormCheckId(null); setCoachPopup({ exerciseId: fx.id, seed: { id: Date.now(), display: `📹 방금 한 ${fx.name} 세트 자세 피드백해 주세요`, content: `방금 카메라 자세 체크로 한 세트를 했어요. 휴대폰이 잰 결과예요:\n${summary}\n\n이 결과를 보고 잘한 점, 가장 먼저 고칠 점 1~2개, 다음 세트에서 의식할 큐를 짧게 알려 주세요.` } }); } : null} />
+          </Suspense>
+        );
+      })()}
       {amAdmin && adminMode && isAdminConsoleOpen && <Suspense fallback={null}><AdminConsole open onClose={() => setIsAdminConsoleOpen(false)} api={adminApiImpl} onToast={showToast} onNoticeChanged={refreshNotice} /></Suspense>}
       {guideExerciseId && (() => {
         const ex = EXERCISE_OPTIONS.find(e => e.id === guideExerciseId);
@@ -140,6 +157,10 @@ export function GlobalOverlays() {
                   <p className="text-xs font-bold text-neutral-400">{ex.target} · {ex.tool}</p>
                 </div>
                 <button onClick={() => setGuideExerciseId(null)} className="p-2 bg-neutral-100 rounded-full hover:bg-neutral-200 transition-colors active:scale-90 self-start"><X className="w-5 h-5 text-neutral-500"/></button>
+              </div>
+              <div className="flex gap-2 px-5 py-3 border-b border-neutral-100">
+                <button onClick={() => setCoachPopup({ exerciseId: ex.id })} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#4768ff] to-indigo-500 text-white text-[13px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"><MessageSquare className="w-4 h-4"/>AI에게 물어보기</button>
+                <button onClick={() => setFormCheckId(ex.id)} className="flex-1 py-2.5 rounded-xl bg-neutral-900 text-white text-[13px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"><Video className="w-4 h-4"/>실시간 자세 체크</button>
               </div>
 
               <div className="flex-1 overflow-y-auto bg-neutral-50 px-5 py-5 space-y-5">
