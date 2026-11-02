@@ -79,7 +79,7 @@ export function KfoodBrowser({ initialQuery = '', onPick, onBack }) {
       if (r.brand && (!sub || r.sub === sub)) bc[r.brand] = (bc[r.brand] || 0) + 1;
     });
     const top = (o, n) => Object.entries(o).filter(([k]) => k !== '기타').sort((a, b) => b[1] - a[1]).slice(0, n);
-    return { subs: [...top(sc, 14), ...(sc['기타'] ? [['기타', sc['기타']]] : [])], brands: top(bc, 16) };
+    return { subs: [...top(sc, 40), ...(sc['기타'] ? [['기타', sc['기타']]] : [])], brands: top(bc, 16) };
   }, [inGroup, group, sub]);
 
   const list = useMemo(() => {
