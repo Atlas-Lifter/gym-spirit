@@ -93,6 +93,8 @@ export function GlobalOverlays() {
     adminMode,
     isAdminConsoleOpen,
     setIsAdminConsoleOpen,
+    adminFocusUser,
+    setAdminFocusUser,
     adminApiImpl,
     refreshNotice,
     pendingGuildCode,
@@ -143,7 +145,7 @@ export function GlobalOverlays() {
           </Suspense>
         );
       })()}
-      {amAdmin && adminMode && isAdminConsoleOpen && <Suspense fallback={null}><AdminConsole open onClose={() => setIsAdminConsoleOpen(false)} api={adminApiImpl} onToast={showToast} onNoticeChanged={refreshNotice} /></Suspense>}
+      {amAdmin && adminMode && isAdminConsoleOpen && <Suspense fallback={null}><AdminConsole open onClose={() => { setIsAdminConsoleOpen(false); setAdminFocusUser(null); }} api={adminApiImpl} onToast={showToast} onNoticeChanged={refreshNotice} focusUser={adminFocusUser} Avatar3={FullBodyAvatar} /></Suspense>}
       {guideExerciseId && (() => {
         const ex = EXERCISE_OPTIONS.find(e => e.id === guideExerciseId);
         // 그림 설명서가 없는 종목(사진으로 추가한 종목)은 사진 + 짧은 설명으로 보여준다

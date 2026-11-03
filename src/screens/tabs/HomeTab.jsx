@@ -25,11 +25,18 @@ export function HomeTab() {
     setSession,
     setWorkoutDurationSec,
     appNotice,
+    memberStatus,
   } = useApp();
   return (
     <div className="flex flex-col h-full animate-fade-in">
       <div className="flex-1 bg-neutral-50 text-neutral-900 p-5 pb-32 min-h-[60vh]">
         <NoticeBanner notice={appNotice} />
+        {memberStatus?.suspended && (
+          <div className="rounded-2xl px-4 py-3 mb-4 bg-rose-50 border border-rose-200 shadow-sm">
+            <div className="text-[10px] font-black text-rose-600">🚫 이용 정지 안내</div>
+            <div className="text-sm font-bold text-rose-950 break-words">운영자가 계정 이용을 정지했어요. 운동·식단 기록은 그대로 쓸 수 있지만 랭킹·길드 글·응원·친구 요청은 쉬어요.{memberStatus.reason ? ` (사유: ${memberStatus.reason})` : ''}</div>
+          </div>
+        )}
       <InstallBanner onOpen={() => setIsInstallOpen(true)} />
         <div className="flex gap-3 mb-8 mt-2">
           <div onClick={() => setCurrentScreen('diet')} className="flex-1 bg-white p-4 rounded-[24px] border border-neutral-100 flex items-center gap-3 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer active:scale-95 group">

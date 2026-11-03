@@ -251,7 +251,12 @@ export const adminApi = {
   deletePost: (id) => rpc('admin_delete_post', { p_id: id }),
   postNotice: (body) => rpc('admin_post_notice', { p_body: body }),
   endNotice: () => rpc('admin_end_notice'),
+  userDetail: (userId) => rpc('admin_user_detail', { p_user: userId }),
+  setMemberFlag: (userId, { suspended, rankHidden, reason }) => rpc('admin_set_member_flag', { p_user: userId, p_suspended: !!suspended, p_rank_hidden: !!rankHidden, p_reason: reason || '' }),
+  resetAvatar: (userId) => rpc('admin_reset_avatar', { p_user: userId }),
 };
+// 내 회원 상태: 이용 정지 여부, 운영자가 아바타·닉네임을 초기화한 시각 (DB 설정 전이면 빈 값)
+export const fetchMyMemberStatus = async () => (await rpc('my_member_status')) || {};
 
 // 나와 관련된 친구 요청이 생기거나 바뀌면 바로 알려준다 (실시간)
 export const subscribeFriendRequests = (uid, onChange) => {

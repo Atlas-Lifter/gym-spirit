@@ -63,15 +63,18 @@ export const createGuildMock = () => {
   const staff = () => { const m = mine(); return m && m.role !== 'member' ? m : null; };
   const leader = () => { const m = mine(); return m && m.role === 'leader' ? m : null; };
 
+  // 운영자 표시 (정지·랭킹 제외)
+  const flags = {};
+  const hidden = (u) => !!(flags[u]?.suspended || flags[u]?.rank_hidden);
   const globalRanking = () => wait([
     ...Object.values(guilds).filter(g => g.ranked && count(g.id) >= 2).map(g => {
       const ms = Object.entries(members).filter(([, m]) => m.guild === g.id).map(([u]) => users[u]);
       return { kind: 'guild', id: g.id, name: g.name, emblem: g.emblem, color: g.color, avatar: null, level: guildLevelInfo(g.xp).level, members: ms.length,
         volume: Math.round(ms.reduce((s, u) => s + u.volume, 0) / ms.length), lift: Math.round(ms.reduce((s, u) => s + u.lift, 0) / ms.length), cardio: Math.round(ms.reduce((s, u) => s + (u.cardio || 0), 0) / ms.length) };
     }),
-    ...Object.entries(users).filter(([u, x]) => x.solo && !members[u]).map(([u, x]) => ({ kind: 'solo', id: u, name: x.nickname, emblem: null, color: null, avatar: null, level: null, members: 1, volume: x.volume, lift: x.lift, cardio: x.cardio || 0 })),
+    ...Object.entries(users).filter(([u, x]) => x.solo && !members[u] && !hidden(u)).map(([u, x]) => ({ kind: 'solo', id: u, name: x.nickname, emblem: null, color: null, avatar: null, level: null, members: 1, volume: x.volume, lift: x.lift, cardio: x.cardio || 0 })),
   ]);
-  const friendRanking = () => wait(['me', 'u1', 'u4'].map(u => {
+  const friendRanking = () => wait(['me', 'u1', 'u4'].filter(u => u === ME || !hidden(u)).map(u => {
     const g = members[u] && guilds[members[u].guild];
     return { id: u, nickname: users[u].nickname, avatar: null, volume: users[u].volume, lift: users[u].lift, cardio: users[u].cardio || 0, fav: '벤치프레스', last_routine: null, guild_name: g?.name || null, guild_emblem: g?.emblem || null };
   }));
@@ -224,8 +227,24 @@ export const createGuildMock = () => {
   let notice = null;
   const isAdmin = new URLSearchParams(window.location.search).has('mockadmin');
   const adminApi = {
-    overview: () => wait({ users: 7, new_7d: 3, active_week: 5, guilds: Object.keys(guilds).length, ranked_guilds: Object.values(guilds).filter(g => g.ranked).length, solo_ranked: 2, posts_24h: posts.length, friendships: 2, week_volume: 162300, notice: notice && { id: 1, body: notice.body, at: new Date().toISOString() } }),
-    users: () => wait(Object.entries(users).map(([id, u]) => ({ id, nickname: u.nickname, joined_at: new Date().toISOString(), volume: u.volume, lift: u.lift, guild_name: members[id] ? guilds[members[id].guild]?.name : null, is_admin: id === ME && isAdmin }))),
+    overview: () => wait({ users: 7, new_7d: 3, active_week: 5, guilds: Object.keys(guilds).length, ranked_guilds: Object.values(guilds).filter(g => g.ranked).length, solo_ranked: 2, posts_24h: posts.length, friendships: 2, week_volume: 162300, suspended: Object.values(flags).filter(f => f.suspended).length, rank_hidden: Object.values(flags).filter(f => f.rank_hidden && !f.suspended).length, notice: notice && { id: 1, body: notice.body, at: new Date().toISOString() } }),
+    users: (q) => wait(Object.entries(users).filter(([id, u]) => (q === '!정지' ? hidden(id) : !q || u.nickname.includes(q))).map(([id, u]) => ({ id, nickname: u.nickname, joined_at: new Date().toISOString(), volume: u.volume, lift: u.lift, guild_name: members[id] ? guilds[members[id].guild]?.name : null, is_admin: id === ME && isAdmin, suspended: !!flags[id]?.suspended, rank_hidden: !!flags[id]?.rank_hidden, active_at: new Date().toISOString() }))),
+    userDetail: (id) => {
+      const u = users[id]; const g = members[id] && guilds[members[id].guild];
+      return wait({ id, nickname: u.nickname, joined_at: '2026-09-12T03:00:00Z', last_sign_in_at: new Date().toISOString(), active_at: new Date().toISOString(),
+        is_admin: id === ME && isAdmin, solo_ranked: u.solo, guild: g ? { name: g.name, emblem: g.emblem, role: members[id].role, ranked: g.ranked } : null,
+        friends: 2, posts: posts.filter(p => p.user === id).length, cheers_got: 7, workout_days: 41, last_workout: key(new Date()), total_volume: u.volume * 9,
+        flags: flags[id] ? { ...flags[id], by: '나' } : null,
+        public: { id, nickname: u.nickname, avatar: u.avatar || { years: 2, avatarColor: '#171717', gender: 'male', faceExpression: 'normal' }, volume: u.volume, lift: u.lift, cardio: u.cardio || 0, fav: '벤치프레스',
+          last_routine: { date: key(new Date()), items: [{ id: '1', name: '벤치프레스', sets: [{ weight: '80', reps: '8' }, { weight: '80', reps: '8' }] }, { id: '2', name: '인클라인 덤벨 프레스', sets: [{ weight: '28', reps: '10' }] }] },
+          guild_name: g?.name || null, guild_emblem: g?.emblem || null } });
+    },
+    setMemberFlag: (id, { suspended, rankHidden, reason }) => {
+      if (id === ME && isAdmin) return fail('GS:ADMIN_TARGET');
+      flags[id] = { ...(flags[id] || {}), suspended: !!suspended, rank_hidden: !!rankHidden, reason: reason || null, updated_at: new Date().toISOString() };
+      return wait(null);
+    },
+    resetAvatar: (id) => { users[id].avatar = {}; flags[id] = { ...(flags[id] || {}), avatar_reset_at: new Date().toISOString() }; return wait(null); },
     resetNickname: (id) => { users[id].nickname = '짐스피릿 유저'; return wait(null); },
     guilds: () => wait(Object.values(guilds).map(g => ({ ...g, level: guildLevelInfo(g.xp).level, members: count(g.id), leader: users[Object.keys(members).find(u => members[u].guild === g.id && members[u].role === 'leader')]?.nickname }))),
     setGuildRanked: (id, on) => { guilds[id].ranked = on; return wait(null); },

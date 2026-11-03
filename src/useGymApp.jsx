@@ -141,7 +141,7 @@ export function useGymApp() {
       showToast("🔥 힘찬 응원을 보냈습니다!");
     } catch (e) {
       setCheersData(prev => ({ ...prev, [userId]: Math.max(0, (prev[userId] || 1) - 1) }));
-      showToast('응원을 보내지 못했어요. 잠시 후 다시 시도해 주세요.');
+      showToast(String(e?.message || '').includes('GS:SUSPENDED') ? guildErrorText(e) : '응원을 보내지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   };
   // 다른 회원이 가장 최근에 저장한 운동을 오늘 운동으로 불러온다
@@ -1330,7 +1330,7 @@ export function useGymApp() {
       const r = await cloud.requestFriend(cloudUser.id, targetId);
       showToast(r === 'accepted' ? '🤝 서로 친구가 되었어요!' : '친구 요청을 보냈어요! 상대가 수락하면 친구가 돼요.');
       await refreshFriends();
-    } catch (e) { showToast('친구 요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+    } catch (e) { showToast(String(e?.message || '').includes('GS:SUSPENDED') ? guildErrorText(e) : '친구 요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.'); }
   };
   const acceptFriend = async (requestId) => {
     try { await cloud.acceptFriendRequest(requestId); showToast("친구 수락이 완료되었습니다!"); await refreshFriends(); }
@@ -1480,6 +1480,8 @@ export function useGymApp() {
   const [adminIdList, setAdminIdList] = useState(null); // null = 아직 못 불러옴
   const [appNotice, setAppNotice] = useState(null);
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState(false);
+  const [adminFocusUser, setAdminFocusUser] = useState(null); // 랭킹에서 '이 회원 관리하기'로 열면 그 회원 상세부터
+  const openAdminUser = (id) => { setAdminFocusUser(id); setIsAdminConsoleOpen(true); };
   const refreshNotice = () => (devMock ? devMock.notice() : cloud.fetchActiveNotice()).then(setAppNotice).catch(() => {});
   useEffect(() => {
     let alive = true; // 먼저 보낸 요청이 늦게 도착해 덮어쓰지 않게
@@ -1495,6 +1497,35 @@ export function useGymApp() {
     setCurrentUser(prev => ({ ...prev, adminMode: on, profile: { ...(prev.profile || {}), gm: on } }));
     showToast(on ? '👑 운영자 모드를 켰어요' : '일반 유저 모드로 바꿨어요');
   };
+  // 운영자가 정한 내 상태: 이용 정지 안내, 아바타·닉네임 초기화 (앱을 열 때·다시 볼 때 확인. DB 설정 전이면 조용히 넘어간다)
+  // 앱이 저장하면서 되돌리지 않도록 초기화는 이 기기 기록에 반영하고, 반영한 시각을 resetAck 로 남긴다
+  const [memberStatus, setMemberStatus] = useState({});
+  useEffect(() => {
+    if (!cloudReady || !cloudUser) { setMemberStatus({}); return undefined; }
+    let alive = true;
+    const check = () => cloud.fetchMyMemberStatus().then((st) => {
+      if (!alive || !st) return;
+      setMemberStatus(st);
+      setCurrentUser(prev => {
+        if (!prev || prev.cloudId !== cloudUser.id) return prev;
+        const ack = prev.resetAck || {};
+        const old = prev.profile || {};
+        let profile = old;
+        if (st.avatar_reset_at && st.avatar_reset_at !== ack.avatar) {
+          // 생김새만 기본값으로 (닉네임·성별·운동 경력·운영자 표시는 그대로)
+          profile = { nickname: old.nickname, gender: old.gender || 'male', years: old.years ?? 1, ...(old.gm ? { gm: old.gm } : {}),
+            avatarColor: '#171717', skinColor: SKIN_COLORS[0], shirtColor: SHIRT_COLORS[0], bottomColor: BOTTOM_COLORS[0], faceExpression: 'normal' };
+        }
+        if (st.nickname_reset_at && st.nickname_reset_at !== ack.nickname) profile = { ...profile, nickname: '짐스피릿 유저' };
+        if (profile === old) return prev;
+        return { ...prev, profile, resetAck: { avatar: st.avatar_reset_at || ack.avatar || null, nickname: st.nickname_reset_at || ack.nickname || null } };
+      });
+    }).catch(() => {});
+    check();
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { alive = false; document.removeEventListener('visibilitychange', onVisible); };
+  }, [cloudReady, cloudUser]);
   // 운영자가 아닌데 운영자 의상이 남아 있으면 벗긴다 (명단을 제대로 불러온 뒤에만)
   useEffect(() => {
     if (adminIdList && rankingUser && !amAdmin && currentUser?.profile?.gm) setCurrentUser(prev => ({ ...prev, adminMode: false, profile: { ...(prev.profile || {}), gm: false } }));
@@ -1699,6 +1730,10 @@ export function useGymApp() {
     refreshNotice,
     isAdminConsoleOpen,
     setIsAdminConsoleOpen,
+    adminFocusUser,
+    setAdminFocusUser,
+    openAdminUser,
+    memberStatus,
     amAdmin,
     adminMode,
     adminApiImpl,

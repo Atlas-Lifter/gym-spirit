@@ -113,7 +113,8 @@ const HeartBurst = ({ burst }) => (
   </span>
 );
 
-const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCheer, onSteal, onFriend, onClose, Avatar3, limited }) => {
+// preview: 운영자 콘솔의 회원 화면 미리보기 (버튼 없이 보이는 모습만) · onAdmin: 운영자 모드일 때만 보이는 회원 관리 버튼
+export const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCheer, onSteal, onFriend, onClose, Avatar3, limited, preview, onAdmin }) => {
   const [burst, setBurst] = useState(0);
   const [confirmSteal, setConfirmSteal] = useState(false);
   const [pop, setPop] = useState(false);
@@ -142,10 +143,15 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
             {isMe && <span className="text-[10px] font-black bg-[#4768ff] text-white px-1.5 py-0.5 rounded-md">ME</span>}
           </div>
           <div className={`inline-flex items-center gap-1 mt-1 text-[11px] font-black px-2 py-0.5 rounded-lg bg-gradient-to-r ${tier.bg} ${tier.text}`}>{tier.icon} {tier.name} 티어</div>
-          <div className="text-xs font-bold text-neutral-400 mt-1">{METRIC[metric].label} {rank}위{limited ? ' · 개인 참가' : ` · 최애 ${user.fav || '-'}`}{user.guild ? ` · ${user.guild.emblem} ${user.guild.name}` : ''}</div>
+          <div className="text-xs font-bold text-neutral-400 mt-1">{rank != null ? `${METRIC[metric].label} ${rank}위` : '랭킹'}{limited ? ' · 개인 참가' : ` · 최애 ${user.fav || '-'}`}{user.guild ? ` · ${user.guild.emblem} ${user.guild.name}` : ''}</div>
         </div>
-        <button onClick={onClose} aria-label="닫기" className="p-2 rounded-full bg-neutral-100 text-neutral-500 active:scale-90 transition-transform self-start"><X className="w-4 h-4" /></button>
+        {onClose && <button onClick={onClose} aria-label="닫기" className="p-2 rounded-full bg-neutral-100 text-neutral-500 active:scale-90 transition-transform self-start"><X className="w-4 h-4" /></button>}
       </div>
+      {onAdmin && !isMe && (
+        <button onClick={() => onAdmin(user.id)} className="w-full mb-4 py-2.5 rounded-2xl bg-neutral-900 text-yellow-300 text-xs font-black flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform">
+          👑 운영자 · 이 회원 관리하기
+        </button>
+      )}
 
       <div className="grid grid-cols-3 gap-2 mb-5">
         {[['주간 볼륨', `${user.volume.toLocaleString()}kg`], ['3대 중량', `${user.lift}kg`], ['받은 응원', `${count}`]].map(([k, v]) => (
@@ -173,7 +179,8 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
       </div>
       )}
 
-      {!isMe && (
+      {preview && <div className="w-full py-3 rounded-2xl bg-neutral-100 text-neutral-400 text-xs font-black text-center">미리보기 · 응원·친구 추가 버튼 자리예요</div>}
+      {!isMe && !preview && (
         <>
           <div className="flex gap-2 mb-2">
             <button onClick={cheer} className="relative flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-black text-sm shadow-[0_10px_24px_rgba(244,63,94,0.32)] active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5">
@@ -213,7 +220,7 @@ const UserSheet = ({ user, rank, metric, me, friends, sentRequests, cheers, onCh
 // · 전체 랭킹: 랭킹에 등록한 길드(소속 인원 평균)와 개인 참가자만
 // · 친구 랭킹: 서로 친구인 사람만 (친구가 아니면 기록이 보이지 않는다)
 // · 길드: 만들기·가입·내 길드
-export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [], friendUsers = [], globalEntries = [], me, meId, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3, guildApi, guildData, guildLoading, reloadGuild, onToast }) => {
+export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [], friendUsers = [], globalEntries = [], me, meId, friends = [], sentRequests = [], cheers = {}, weekLabel, daysLeft, onCheer, onSteal, onFriend, onFindFriends, onInvite, guest, onLogin, loading, Avatar3, guildApi, guildData, guildLoading, reloadGuild, onToast, onAdminUser }) => {
   const [scope, setScope] = useState(initialScope);
   const [metric, setMetric] = useState('volume');
   const [selected, setSelected] = useState(null);
@@ -483,7 +490,8 @@ export const RankingTab = ({ initialScope = 'global', onClaimXp, claimedKeys = [
         {lastSelected.current && (
           <UserSheet user={lastSelected.current} rank={list.findIndex(u => u.id === lastSelected.current.id) + 1 || '-'} metric={metric} me={me} friends={friends} sentRequests={sentRequests} cheers={cheers}
             limited={lastSelected.current.kind === 'solo' && !friends.includes(lastSelected.current.id) && !lastSelected.current.isMe}
-            onCheer={onCheer} onSteal={(u) => { setSelected(null); onSteal(u); }} onFriend={onFriend} onClose={() => setSelected(null)} Avatar3={Avatar3} />
+            onCheer={onCheer} onSteal={(u) => { setSelected(null); onSteal(u); }} onFriend={onFriend} onClose={() => setSelected(null)} Avatar3={Avatar3}
+            onAdmin={onAdminUser && ((id) => { setSelected(null); onAdminUser(id); })} />
         )}
       </Sheet>
       {guildApi && <GuildViewSheet guildId={viewGuild} api={guildApi} canJoin={!guest && !myGuildId} onJoined={reloadGuild} onClose={() => setViewGuild(null)} onToast={onToast} Avatar3={Avatar3} />}

@@ -34,6 +34,8 @@ export function RankingScreen() {
     cardioMinOn,
     rankingScope,
     setRankingScope,
+    adminMode,
+    openAdminUser,
   } = useApp();
   // 초대 링크로 가입한 직후 한 번만 길드 화면으로 연다
   useEffect(() => { if (rankingScope !== 'global') setRankingScope('global'); }, []);
@@ -78,6 +80,7 @@ export function RankingScreen() {
       onLogin={goToSignup}
       loading={rankLoading}
       Avatar3={FullBodyAvatar}
+      onAdminUser={adminMode ? openAdminUser : undefined}
     />
   );
 }
