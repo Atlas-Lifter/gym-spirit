@@ -71,3 +71,38 @@ export async function identifyExercise(frames, samples) {
   if (!res.ok || j.error) throw new Error(j.error || `운동 인식에 실패했어요 (${res.status})`);
   return (j.candidates || []).map(c => ({ exercise: EXERCISE_OPTIONS.find(e => e.id === c.id), confidence: c.confidence })).filter(c => c.exercise);
 }
+
+// 기구 사진 → { equipment, agree, candidates: [{ exercise, confidence }] } (그 기구로 하는 종목, 많이 하는 순)
+export async function identifyEquipment(file) {
+  const image = await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이 사진 형식은 열 수 없어요.')); };
+    img.src = url;
+  });
+  const list = EXERCISE_OPTIONS.filter(e => e.tool !== '맨몸');
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  const res = await fetch('/api/exercise-identify', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ frames: [image], choices: list.map(e => `${e.id}:${e.name}(${e.tool})`).join('\n'), mode: 'equipment' }),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || j.error) throw new Error(j.error || `기구 인식에 실패했어요 (${res.status})`);
+  return {
+    image,
+    equipment: j.equipment || '',
+    agree: !!j.agree, // 두 번 물은 답이 같은 운동을 1순위로 꼽음
+    candidates: (j.candidates || []).map(c => ({ exercise: EXERCISE_OPTIONS.find(e => e.id === c.id), confidence: c.confidence })).filter(c => c.exercise),
+  };
+}

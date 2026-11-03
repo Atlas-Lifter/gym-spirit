@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BookOpen, Camera, CheckCircle2, FileVideo, List, MessageSquare, Plus, RotateCcw, SwitchCamera, Target, X } from 'lucide-react';
+import { BookOpen, Camera, CheckCircle2, Dumbbell, FileVideo, List, MessageSquare, Plus, RotateCcw, SwitchCamera, Target, X } from 'lucide-react';
 import { BONES, LM, loadPose, nextTs } from '../lib/pose.js';
 import { createRepCounter, measure, profileFor, setSummary, SUPPORTED_LABELS } from '../lib/formRules.js';
-import { identifyExercise } from '../lib/exerciseIdentify.js';
+import { identifyEquipment, identifyExercise } from '../lib/exerciseIdentify.js';
 
 // 실시간 자세 체크: 카메라(또는 찍어 둔 영상) → (휴대폰 안에서) 관절 찾기 → 각도·반복 세기·반복마다 피드백
 // exercise 가 없으면(종목 추가 화면의 카메라) 먼저 어떤 운동인지 알아낸다: 장면 몇 장 + 관절 움직임을 AI 에 보내 앱 종목 중에서 고른다
@@ -50,6 +50,27 @@ export function FormCheck({ exercise, onClose, onAskCoach, onOpenGuide, onAddExe
   const [idState, setIdState] = useState(identify ? 'waiting' : 'done'); // waiting → asking → done | failed
   const fileInput = useRef(null);
   const fileUrl = useRef(null);
+  const photoInput = useRef(null);
+  const [equip, setEquip] = useState(null); // 기구 사진 결과 { image, equipment, candidates }
+
+  // 기구 사진: 무슨 기구인지 알아보고, 대표 운동이 확실하면 바로 그 설명서로
+  const fromEquipmentPhoto = async (file) => {
+    stop();
+    setStep('equipLoading');
+    setError('');
+    try {
+      const r = await identifyEquipment(file);
+      setEquip(r);
+      const [a, b] = r.candidates;
+      // 두 번 물은 답이 같고 확실할 때만 바로 설명서로 (아니면 후보 목록에서 고르게)
+      if (a && onOpenGuide && r.agree && a.confidence >= 0.8 && (!b || a.confidence - b.confidence >= 0.3)) { onOpenGuide(a.exercise.id); return; }
+      setStep('equip');
+    } catch (e) {
+      setError(e.message === 'Failed to fetch' ? '인터넷 연결을 확인해 주세요.' : e.message);
+      setStep('equipError');
+    }
+  };
+  const pickPhoto = () => { if (photoInput.current) { photoInput.current.value = ''; photoInput.current.click(); } };
 
   // 운동이 정해지면(또는 바꾸면) 그 규칙으로 처음부터 센다
   const chooseExercise = (e) => {
@@ -310,7 +331,56 @@ export function FormCheck({ exercise, onClose, onAskCoach, onOpenGuide, onAddExe
           </div>
           <button onClick={() => start()} className="w-full py-4 rounded-xl bg-[#4768ff] font-black text-lg flex items-center justify-center gap-2 active:scale-95"><Camera className="w-5 h-5" />{identify ? '카메라로 실시간 찍기' : '카메라 켜기'}</button>
           <button onClick={pickFile} className="w-full py-3.5 rounded-xl bg-white/15 font-black flex items-center justify-center gap-2 active:scale-95"><FileVideo className="w-5 h-5" />찍어 둔 영상 올리기</button>
+          {identify && (
+            <button onClick={pickPhoto} className="w-full py-3.5 rounded-xl bg-white/15 font-black flex items-center justify-center gap-2 active:scale-95"><Dumbbell className="w-5 h-5" />기구 사진으로 찾기</button>
+          )}
+          <input ref={photoInput} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) fromEquipmentPhoto(f); }} />
           <p className="text-[11px] font-bold text-white/40 text-center">AI가 관절 위치로 판단하는 참고용이에요. 통증이 있으면 바로 멈추세요.</p>
+        </div>
+      )}
+
+      {(step === 'equipLoading' || step === 'equipError') && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+          {step === 'equipLoading' ? (
+            <>
+              <div className="inline-flex gap-1">{[0, 1, 2].map(d => <span key={d} className="w-2.5 h-2.5 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: `${d * 0.15}s` }} />)}</div>
+              <div className="text-sm font-black">어떤 기구인지 보는 중…</div>
+              <div className="text-[11px] font-bold text-white/60">두 번 꼼꼼히 확인해서 10~20초 걸려요</div>
+            </>
+          ) : (
+            <>
+              <div className="text-base font-black">{error}</div>
+              <button onClick={pickPhoto} className="px-5 py-3 rounded-xl bg-[#4768ff] font-black flex items-center gap-2"><RotateCcw className="w-4 h-4" />다시 찍기</button>
+            </>
+          )}
+        </div>
+      )}
+
+      {step === 'equip' && equip && (
+        <div className="flex-1 overflow-y-auto px-5 pt-24 pb-6 space-y-4">
+          <img src={equip.image} alt="" className="w-full max-h-56 object-cover rounded-2xl" />
+          <div>
+            <div className="text-[12px] font-black text-[#8ea2ff]">이 기구는</div>
+            <div className="text-2xl font-black">{equip.equipment || '알아보지 못했어요'}</div>
+          </div>
+          {equip.candidates.length > 0 ? (
+            <div className="space-y-2">
+              <div className="text-[12px] font-bold text-white/60">이 기구로 하는 운동 · 눌러서 설명 보기</div>
+              {equip.candidates.map((c, i) => (
+                <button key={c.exercise.id} onClick={() => onOpenGuide?.(c.exercise.id)} className={`w-full text-left rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all ${i === 0 ? 'bg-white text-neutral-900' : 'bg-white/10'}`}>
+                  <BookOpen className={`w-5 h-5 flex-shrink-0 ${i === 0 ? 'text-[#4768ff]' : 'text-white/60'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black truncate">{c.exercise.name}</div>
+                    <div className={`text-[11px] font-bold ${i === 0 ? 'text-neutral-400' : 'text-white/50'}`}>{c.exercise.target} · {c.exercise.tool}</div>
+                  </div>
+                  {i === 0 && <span className="text-[10px] font-black text-[#4768ff] bg-[#4768ff]/10 rounded-lg px-2 py-1">가장 많이 해요</span>}
+                </button>
+              ))}
+            </div>
+          ) : <div className="bg-white/10 rounded-2xl p-4 text-sm font-bold text-white/80">이 기구로 하는 종목을 찾지 못했어요. 기구 전체가 나오게, 이름표가 보이면 같이 찍어 주세요.</div>}
+          <button onClick={pickPhoto} className="w-full py-3.5 rounded-xl bg-white/15 font-black flex items-center justify-center gap-2 active:scale-95"><Camera className="w-4 h-4" />다른 기구 찍기</button>
+          <button onClick={close} className="w-full py-3 rounded-xl text-white/60 font-black flex items-center justify-center gap-1"><List className="w-4 h-4" />목록에서 직접 고르기</button>
+          <p className="text-[11px] font-bold text-white/40 text-center">사진 한 장을 AI(NVIDIA 체험판)로 분석해요. 헷갈리면 이름표가 보이게 찍으면 더 정확해요.</p>
         </div>
       )}
 
