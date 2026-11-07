@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Bell, BookOpen, Camera, Check, Clock, Dumbbell, Flame, History, MoreVertical, Pause, Play, Plus, RotateCw, Save, Search, Settings, Target, Trash2, X, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bell, BookOpen, Camera, Check, ChevronDown, ChevronUp, Clock, Dumbbell, Flame, History, MoreVertical, Pause, Play, Plus, RotateCw, Save, Search, Settings, Target, Trash2, X, Zap } from 'lucide-react';
 import { EmergencyExitIcon, SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
 import { EXERCISE_OPTIONS, SET_TYPE_LABEL, SET_TYPE_STYLE, getExId, getExName, getExTarget, ruleOfEx, toolOfEx } from '../data/catalog.js';
 import { calculate1RM } from '../lib/dates.js';
 import { ALARM_SOUNDS, unlockAudio } from '../restAlarm.js';
 import { StopwatchDial } from '../StopwatchDial.jsx';
 import { formatPlates, platesFor, setLoad, sideWeight } from '../weightRules.js';
-import { RPE_SCALE, rpeMeaning, rpeTone } from '../lib/rpe.js';
+import { RPE_CHOICES, RPE_SCALE, RPE_TYPE_TIP, rpeMeaning, rpeTone } from '../lib/rpe.js';
 import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { useApp } from '../appContext.js';
 
@@ -45,7 +45,9 @@ export function WorkoutScreen() {
     bodyWeightKg,
     getNextSuggestion,
     prCelebration,
-    cycleSetType,
+    moveExercise,
+    insertSet,
+    setSetType,
     exCategoryFilter,
     exSearchQuery,
     exerciseHistoryModal,
@@ -107,6 +109,7 @@ export function WorkoutScreen() {
     none: 'bg-neutral-900/50 text-neutral-400 border-neutral-800',
   };
   const [rpePick, setRpePick] = useState(null); // RPE 고르는 중인 세트 id
+  const [setMenu, setSetMenu] = useState(null); // 세트 메뉴(종류·사이에 추가·삭제)를 연 세트 id
   return (
     <div className="min-h-screen bg-[#03060a] text-neutral-100 pb-32 flex flex-col relative animate-fade-in">
       {prCelebration && (
@@ -148,7 +151,7 @@ export function WorkoutScreen() {
             <p className="font-medium text-neutral-500 text-sm">하단의 버튼을 눌러 종목을 추가하세요.</p>
           </div>
         ) : (
-          session.map((ex) => {
+          session.map((ex, exIndex) => {
             const max1RM = (ex.sets || []).filter(s => s.completed && s.type === '-' && s.weight && s.reps).reduce((max, s) => Math.max(max, calculate1RM(s.weight, s.reps)), 0);
             const exNameStr = getExName(ex);
             const exTargetStr = getExTarget(ex);
@@ -178,6 +181,13 @@ export function WorkoutScreen() {
                      </div>
                   </div>
                   <div className="flex items-center flex-shrink-0">
+                    {session.length > 1 && (
+                      // 종목 순서 바꾸기
+                      <div className="flex flex-col -my-1">
+                        <button disabled={exIndex === 0} onClick={() => moveExercise(ex.id, -1)} aria-label="위로 옮기기" className="p-1 rounded-lg text-neutral-500 hover:text-white disabled:opacity-20 active:scale-90"><ChevronUp className="w-5 h-5" /></button>
+                        <button disabled={exIndex === session.length - 1} onClick={() => moveExercise(ex.id, 1)} aria-label="아래로 옮기기" className="p-1 rounded-lg text-neutral-500 hover:text-white disabled:opacity-20 active:scale-90"><ChevronDown className="w-5 h-5" /></button>
+                      </div>
+                    )}
                     <button onClick={() => setExerciseOptionsModal(ex.id)} className="text-neutral-500 hover:text-white transition-colors p-2 rounded-full hover:bg-neutral-800 active:scale-90"><MoreVertical className="w-6 h-6"/></button>
                   </div>
                 </div>
@@ -212,14 +222,14 @@ export function WorkoutScreen() {
                     return (
                       <div key={set.id} className="relative group/set">
                         <div className={`grid grid-cols-12 gap-2 items-center transition-all duration-300 ${set.completed ? 'opacity-50' : 'opacity-100'} ${isDropSet ? 'bg-rose-950/20 border border-rose-900/50 p-2 -mx-2 rounded-xl' : ''}`}>
-                          <button onClick={() => cycleSetType(ex.id, set.id)} title="누르면 워밍업 → 메인 → 드랍으로 바뀌어요" className={`col-span-2 h-[50px] rounded-xl flex flex-col items-center justify-center leading-none transition-colors active:scale-95 border ${SET_TYPE_STYLE[set.type] || SET_TYPE_STYLE['-']}`}>
+                          <button onClick={() => { setRpePick(null); setSetMenu(m => (m === set.id ? null : set.id)); }} aria-label="세트 메뉴" title="누르면 세트 종류·사이에 추가·삭제" className={`col-span-2 h-[50px] rounded-xl flex flex-col items-center justify-center leading-none transition-colors active:scale-95 border ${SET_TYPE_STYLE[set.type] || SET_TYPE_STYLE['-']} ${setMenu === set.id ? 'ring-2 ring-white/70' : ''}`}>
                             <span className="text-lg font-black tabular-nums">{ex.sets.slice(0, setIndex + 1).filter(st => (st.type || '-') === (set.type || '-')).length}</span>
                             <span className="text-[9px] font-black mt-1 tracking-tight">{SET_TYPE_LABEL[set.type] || '메인'}</span>
                           </button>
                           <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight ?? ''} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
                           <div className="col-span-3"><input type="number" placeholder="0" value={set.reps ?? ''} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
                           <div className="col-span-2">
-                            <button onClick={() => setRpePick(p => (p === set.id ? null : set.id))} aria-label="RPE 고르기"
+                            <button onClick={() => { setSetMenu(null); setRpePick(p => (p === set.id ? null : set.id)); }} aria-label="RPE 고르기"
                               className={`w-full h-[50px] rounded-xl border flex flex-col items-center justify-center leading-none transition-colors active:scale-95 ${String(set.rpe || '').trim() ? RPE_TONE[rpeTone(set.rpe)] : RPE_TONE.none} ${set.rpeAuto ? 'opacity-70' : ''} ${rpePick === set.id ? 'ring-2 ring-emerald-300' : ''}`}>
                               {String(set.rpe || '').trim()
                                 ? <><span className="text-sm font-black tabular-nums">{set.rpeAuto ? '≈' : ''}{set.rpe}</span><span className="text-[8px] font-black mt-1 opacity-80">{set.rpeAuto ? '추정' : (rpeMeaning(set.rpe)?.short || '')}</span></>
@@ -238,7 +248,7 @@ export function WorkoutScreen() {
                               const max = Math.max(1, Math.floor(info.max));
                               return <span className="ml-1.5 text-emerald-400/80">· 이 무게 최대 약 {max}회 · RPE 8(2개 남기기) ≈ {Math.max(1, max - 2)}회</span>;
                             })()}
-                            {setRpe !== null && !info?.over && parseInt(set.reps, 10) > 0 && (set.rpeAuto || !String(set.rpe || '').trim()) && <span className="ml-1.5 text-emerald-400/70">· 예상 RPE {setRpe} (지금 1RM 약 {info.rm}kg 기준)</span>}</span>
+                            {setRpe !== null && !info?.over && parseInt(set.reps, 10) > 0 && (set.rpeAuto || !String(set.rpe || '').trim()) && <span className="ml-1.5 text-emerald-400/70">· 예상 RPE {setRpe} (지금 1RM 약 {info.rm}kg{info.tired ? ` · ${set.type === 'D' ? '드랍 ' : ''}피로 ${info.tired}% 반영` : ''})</span>}</span>
                           {realLoad !== null && realLoad !== (parseFloat(set.weight) || 0) && (
                             <span className="text-[10px] font-bold text-sky-300">실제 부하 {realLoad}kg {exRule.key === 'assist' ? '(체중 − 보조)' : '(체중 포함)'}</span>
                           )}
@@ -249,6 +259,25 @@ export function WorkoutScreen() {
                             </button>
                           )}
                         </div>
+                        {setMenu === set.id && (
+                          <div className="-mt-2 mb-4 rounded-2xl border border-white/15 bg-black/60 p-3 animate-fade-in">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-black text-neutral-300">세트 종류</span>
+                              <button onClick={() => setSetMenu(null)} aria-label="닫기" className="p-1 text-neutral-500"><X className="w-4 h-4" /></button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5 mb-2">
+                              {['W', '-', 'D'].map(t => (
+                                <button key={t} onClick={() => setSetType(ex.id, set.id, t)}
+                                  className={`py-2 rounded-xl border text-xs font-black active:scale-95 ${SET_TYPE_STYLE[t]} ${(set.type || '-') === t ? 'ring-2 ring-white/70' : 'opacity-60'}`}>{SET_TYPE_LABEL[t]}</button>
+                              ))}
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              <button onClick={() => { insertSet(ex.id, set.id, 'above'); setSetMenu(null); }} className="py-2.5 rounded-xl bg-neutral-800 text-neutral-200 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95"><ArrowUp className="w-3.5 h-3.5" /> 위에 추가</button>
+                              <button onClick={() => { insertSet(ex.id, set.id, 'below'); setSetMenu(null); }} className="py-2.5 rounded-xl bg-neutral-800 text-neutral-200 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95"><ArrowDown className="w-3.5 h-3.5" /> 아래에 추가</button>
+                              <button onClick={() => { removeSet(ex.id, set.id); setSetMenu(null); }} className="py-2.5 rounded-xl bg-rose-950/50 border border-rose-900/60 text-rose-300 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95"><Trash2 className="w-3.5 h-3.5" /> 세트 삭제</button>
+                            </div>
+                          </div>
+                        )}
                         {rpePick === set.id && (
                           <div className="-mt-2 mb-4 rounded-2xl border border-emerald-500/30 bg-black/60 p-3 animate-fade-in">
                             <div className="flex items-center justify-between mb-2">
@@ -256,7 +285,7 @@ export function WorkoutScreen() {
                               <button onClick={() => setRpePick(null)} aria-label="닫기" className="p-1 text-neutral-500"><X className="w-4 h-4" /></button>
                             </div>
                             <div className="grid grid-cols-4 gap-1.5">
-                              {RPE_SCALE.map(o => {
+                              {RPE_SCALE.filter(o => (RPE_CHOICES[set.type || '-'] || RPE_CHOICES['-']).includes(o.v)).map(o => {
                                 const on = !set.rpeAuto && parseFloat(set.rpe) === o.v;
                                 return (
                                   <button key={o.v} onClick={() => { updateSet(ex.id, set.id, 'rpe', String(o.v)); setRpePick(null); }}
@@ -268,7 +297,8 @@ export function WorkoutScreen() {
                               })}
                             </div>
                             <div className="text-[10px] font-bold text-neutral-400 mt-2 leading-snug">
-                              RPE = 10 − 남은 반복. {setRpe !== null ? `무게·횟수로 본 예상은 ${setRpe} (${rpeMeaning(setRpe)?.text})예요. ` : ''}직접 고른 RPE 가 있어야 다음 무게 추천에 반영돼요.
+                              <span className="text-neutral-300">{SET_TYPE_LABEL[set.type || '-']} 세트 · </span>{RPE_TYPE_TIP[set.type || '-']}
+                              <br />RPE = 10 − 남은 반복. {setRpe !== null ? `무게·횟수로 본 예상은 ${setRpe} (${rpeMeaning(setRpe)?.text})${info?.tired ? `, 앞선 세트 피로 ${info.tired}% 반영` : ''}. ` : ''}{(set.type || '-') === '-' ? '직접 고른 RPE 가 있어야 다음 무게 추천에 반영돼요.' : ''}
                             </div>
                             {String(set.rpe || '').trim() && <button onClick={() => { updateSet(ex.id, set.id, 'rpe', ''); setRpePick(null); }} className="mt-2 text-[11px] font-black text-neutral-500">RPE 지우기</button>}
                           </div>
@@ -384,6 +414,15 @@ export function WorkoutScreen() {
           <div className="bg-neutral-900 w-full max-w-md rounded-t-[32px] pb-10 pt-3 px-6 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] border-t border-neutral-800 animate-slide-up" onClick={e => e.stopPropagation()}>
             <div className="flex justify-center mb-6"><div className="w-12 h-1.5 bg-neutral-700 rounded-full"></div></div>
             <div className="space-y-3">
+              {session.length > 1 && (() => {
+                const i = session.findIndex(e => e.id === exerciseOptionsModal);
+                return (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button disabled={i <= 0} onClick={() => moveExercise(exerciseOptionsModal, -1)} className="flex items-center justify-center gap-2 p-3.5 bg-neutral-800 hover:bg-neutral-700 rounded-2xl font-black text-white text-sm disabled:opacity-30 active:scale-95"><ArrowUp className="w-4 h-4" /> 위로 옮기기</button>
+                    <button disabled={i < 0 || i >= session.length - 1} onClick={() => moveExercise(exerciseOptionsModal, 1)} className="flex items-center justify-center gap-2 p-3.5 bg-neutral-800 hover:bg-neutral-700 rounded-2xl font-black text-white text-sm disabled:opacity-30 active:scale-95"><ArrowDown className="w-4 h-4" /> 아래로 옮기기</button>
+                  </div>
+                );
+              })()}
               <button onClick={() => { setSwapTargetExerciseId(exerciseOptionsModal); setExerciseOptionsModal(null); setIsAddExerciseModalOpen(true); }} className="w-full flex items-center gap-3 p-4 bg-neutral-800 hover:bg-neutral-700 rounded-2xl transition-colors text-left active:scale-95">
                 <div className="bg-neutral-900 p-2.5 rounded-xl"><RotateCw className="w-5 h-5 text-neutral-400"/></div>
                 <div><div className="font-black text-white">종목 변경하기</div><div className="text-xs font-bold text-neutral-400">다른 운동으로 대체합니다.</div></div>

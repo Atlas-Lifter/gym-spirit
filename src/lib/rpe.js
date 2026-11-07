@@ -27,12 +27,13 @@ export const e1rmRpe = (load, reps, rpe = 10) => {
   const rir = rpe > 0 ? Math.max(0, Math.min(4, 10 - rpe)) : 0;
   return load / pctForReps(reps + rir);
 };
-// 이 무게·반복의 추정 RPE (6~10, 0.5 단위). 1RM 보다 많이 해냈으면 over: 기준 1RM 이 낮게 잡힌 것이라 숫자를 내지 않는다
-export const estimateRpe = (load, reps, oneRM) => {
+// 이 무게·반복의 추정 RPE (minRpe~10, 0.5 단위). 1RM 보다 많이 해냈으면 over: 기준 1RM 이 낮게 잡힌 것이라 숫자를 내지 않는다
+// minRpe: 가장 낮게 낼 RPE (워밍업은 3, 그 밖은 6. 그보다 쉬운 세트는 숫자가 크게 의미 없다)
+export const estimateRpe = (load, reps, oneRM, minRpe = 6) => {
   const max = maxRepsAt(load, oneRM);
   if (max === null || !(reps > 0)) return null;
   if (reps > max + 0.75) return { rpe: null, over: true, max };
-  const rpe = Math.max(6, Math.min(10, 10 - (max - reps)));
+  const rpe = Math.max(minRpe, Math.min(10, 10 - (max - reps)));
   return { rpe: Math.round(rpe * 2) / 2, over: false, max };
 };
 // 이 무게로 목표 RPE 에 맞는 반복 수
@@ -43,7 +44,9 @@ export const repsForRpe = (load, oneRM, rpe = 8) => {
 
 // RPE 고르기 칸에 보여줄 뜻
 export const RPE_SCALE = [
-  { v: 6, short: '가벼움', text: '4개 이상 더 가능 · 워밍업 느낌' },
+  { v: 4, short: '몸풀기', text: '6개 이상 더 가능 · 아주 가벼움' },
+  { v: 5, short: '가벼움', text: '5개쯤 더 가능 · 워밍업' },
+  { v: 6, short: '여유', text: '4개 더 가능 · 워밍업 마지막 세트 느낌' },
   { v: 7, short: '3개 남음', text: '3개 더 가능 · 속도가 아직 빠름' },
   { v: 7.5, short: '2~3개', text: '2~3개 더 가능' },
   { v: 8, short: '2개 남음', text: '2개 더 가능 · 근성장에 가장 많이 쓰는 강도' },
@@ -52,6 +55,13 @@ export const RPE_SCALE = [
   { v: 9.5, short: '어쩌면 1개', text: '1개 더 할 수 있을지 모름' },
   { v: 10, short: '한계', text: '더는 못 함 (실패 직전)' },
 ];
+// 세트 종류별로 고를 칸: 워밍업은 가볍게, 메인은 6~10, 드랍은 지친 뒤라 7~10
+export const RPE_CHOICES = { W: [4, 5, 6, 7], '-': [6, 7, 7.5, 8, 8.5, 9, 9.5, 10], D: [7, 8, 8.5, 9, 9.5, 10] };
+export const RPE_TYPE_TIP = {
+  W: '워밍업은 RPE 4~6 정도로 가볍게 해요. 평균 RPE·다음 무게 추천에는 들어가지 않아요.',
+  '-': '메인 세트는 보통 RPE 7~9 (1~3개 남기기). 세트를 거듭할수록 같은 무게도 조금씩 힘들어져요.',
+  D: '드랍 세트는 메인 세트로 지친 뒤 쉬지 않고 이어서 하니, 가벼운 무게도 훨씬 힘들어요. 보통 RPE 9~10 까지 해요.',
+};
 export const rpeMeaning = (v) => {
   const n = parseFloat(v);
   if (!(n > 0)) return null;

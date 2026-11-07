@@ -753,6 +753,31 @@ export function useGymApp() {
       return ex;
     }));
   };
+  // 종목 순서 바꾸기 (운동 중에도): dir -1 위로, +1 아래로
+  const moveExercise = (exerciseId, dir) => {
+    const i = session.findIndex(e => e.id === exerciseId);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= session.length) return;
+    const next = [...session];
+    [next[i], next[j]] = [next[j], next[i]];
+    setSession(next);
+  };
+  // 세트 사이에 새 세트 넣기: 기준 세트의 종류·무게·횟수를 복사해 위('above') 또는 아래('below')에
+  const insertSet = (exerciseId, setId, where = 'below') => {
+    setSession(session.map(ex => {
+      if (ex.id !== exerciseId) return ex;
+      const i = ex.sets.findIndex(st => st.id === setId);
+      if (i < 0) return ex;
+      const base = ex.sets[i];
+      const fresh = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, type: base.type || '-', weight: base.weight ?? '', reps: base.reps ?? '', rpe: '', completed: false };
+      const at = where === 'above' ? i : i + 1;
+      return { ...ex, sets: [...ex.sets.slice(0, at), fresh, ...ex.sets.slice(at)] };
+    }));
+  };
+  // 세트 종류 바로 고르기 (워밍업 W · 메인 - · 드랍 D). 자동 RPE 는 종류에 맞게 다시 계산되도록 비운다
+  const setSetType = (exerciseId, setId, type) => {
+    setSession(session.map(ex => (ex.id !== exerciseId ? ex : { ...ex, sets: ex.sets.map(st => (st.id !== setId ? st : { ...st, type, ...(st.rpeAuto ? { rpe: '', rpeAuto: false } : {}) })) })));
+  };
   const removeSet = (exerciseId, setId) => {
     setSession(session.map(ex => {
       if (ex.id === exerciseId) return { ...ex, sets: ex.sets.filter(s => s.id !== setId) };
@@ -803,14 +828,36 @@ export function useGymApp() {
     if (!rm && ruleOfEx(ex).key !== 'bodyweight' && ruleOfEx(ex).key !== 'assist') rm = estimateFromLifts(id, { sq: getEffective1RM('sq'), bp: getEffective1RM('bp'), dl: getEffective1RM('dl') })?.rm || 0;
     return Math.round(rm * 2) / 2;
   };
-  // 이 세트의 추정 RPE 정보 { rpe, over, max, rm } (워밍업·부하를 모르는 맨몸 세트·기준 기록이 없으면 null)
+  // 같은 종목에서 앞서 한 세트 때문에 지친 정도 (기준 1RM 에 곱한다)
+  // · 메인 세트는 쉬고 하더라도 앞선 메인 세트 1개마다 약 2%씩 덜 들 수 있다 (최대 10%)
+  // · 드랍 세트는 쉬지 않고 바로 이어서 하니 16% 더, 드랍을 연달아 하면 한 번마다 8%씩 더 지친다
+  const fatigueOf = (ex, set) => {
+    const sets = ex.sets || [];
+    const i = sets.findIndex(st => st.id === set.id);
+    if (i < 0) return { f: 1, mains: 0, drops: 0 };
+    const mains = sets.slice(0, i).filter(st => (st.type || '-') === '-').length;
+    let f = 1 - Math.min(0.1, 0.02 * mains);
+    let drops = 0;
+    if (set.type === 'D') {
+      drops = 1;
+      for (let j = i - 1; j >= 0 && sets[j].type === 'D'; j--) drops++;
+      f *= 1 - 0.16 - 0.08 * (drops - 1);
+    }
+    return { f: Math.max(0.5, f), mains, drops };
+  };
+  // 이 세트의 추정 RPE 정보 { rpe, over, max, rm, tired } (부하를 모르는 맨몸 세트·기준 기록이 없으면 null)
+  // · 워밍업: 지치지 않은 상태로 보고 RPE 3 까지 (가벼운 세트라 6 아래도 의미가 있다)
+  // · 메인·드랍: 앞선 세트로 지친 만큼 기준 1RM 을 낮춰서 계산 (tired: 반영한 비율 %)
   const rpeInfo = (ex, set) => {
-    if ((set.type || '-') === 'W') return null;
     const oneRM = exOneRM(ex, set.id);
     const l = loadOfEx(ex)(set), r = parseInt(set.reps, 10);
     if (!(oneRM > 0) || !(l > 0)) return null;
-    if (!(r > 0)) return { rpe: null, over: false, max: estimateRpe(l, 1, oneRM)?.max ?? null, rm: oneRM };
-    return { ...estimateRpe(l, r, oneRM), rm: oneRM };
+    const warm = (set.type || '-') === 'W';
+    const { f } = warm ? { f: 1 } : fatigueOf(ex, set);
+    const rm = oneRM * f;
+    const tired = Math.round((1 - f) * 100);
+    if (!(r > 0)) return { rpe: null, over: false, max: estimateRpe(l, 1, rm)?.max ?? null, rm: oneRM, tired };
+    return { ...estimateRpe(l, r, rm, warm ? 3 : 6), rm: oneRM, tired };
   };
   const suggestRpe = (ex, set) => rpeInfo(ex, set)?.rpe ?? null;
   // 신기록 축하 (운동 화면 위에 잠깐 뜬다)
@@ -1858,6 +1905,9 @@ export function useGymApp() {
     addExerciseFromModal,
     swapExercise,
     removeExercise,
+    moveExercise,
+    insertSet,
+    setSetType,
     addSet,
     removeSet,
     cycleSetType,
