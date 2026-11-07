@@ -111,7 +111,7 @@ export function AnalysisTab() {
             {[
               { label: '운동일', value: `${load.current.days}일` },
               { label: '본세트', value: `${load.current.sets}` },
-              { label: '평균 RPE', value: load.current.avgRpe !== null ? load.current.avgRpe.toFixed(1) : '-' },
+              { label: load.current.rpeEstimated ? '평균 RPE(추정)' : '평균 RPE', value: load.current.avgRpe !== null ? load.current.avgRpe.toFixed(1) : '-' },
               { label: '연속 운동', value: `${load.streak}일`, warn: load.streak >= 4 },
             ].map(m => (
               <div key={m.label} className="bg-neutral-50 py-3 px-1 rounded-xl border border-neutral-100">

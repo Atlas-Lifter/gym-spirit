@@ -18,7 +18,7 @@ const exLine = (ex, nameOf) => {
   const sets = (ex.sets || []).filter(done);
   if (!sets.length) return null;
   const best = sets.reduce((b, s) => (num(s.weight) * (1 + int(s.reps) / 30) > num(b.weight) * (1 + int(b.reps) / 30) ? s : b), sets[0]);
-  const rpe = sets.map(s => num(s.rpe)).filter(Boolean);
+  const rpe = sets.filter(s => !s.rpeAuto).map(s => num(s.rpe)).filter(Boolean); // 직접 적은 RPE 만
   const w = num(best.weight);
   return `${nameOf(ex)} ${sets.length}세트 (최고 ${w ? `${w}kg×` : '맨몸 '}${int(best.reps)}${rpe.length ? `, RPE ${Math.max(...rpe)}` : ''})`;
 };

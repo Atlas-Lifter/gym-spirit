@@ -12,6 +12,7 @@ import { MAX_LEVEL, levelInfo, xpForLevel } from './questSystem.js';
 import { CARDIO_DAMAGE_PER_MIN } from './data/cardio.js';
 import { computeRecovery, MUSCLE_GROUP } from './recovery.js';
 import { detectPR, exerciseHistory, suggestNext } from './lib/progress.js';
+import { e1rmRpe, estimateRpe } from './lib/rpe.js';
 import { DEFAULT_TIMER_SETTINGS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
 import { estimateFromLifts, bodyStandard } from './strengthRatios.js';
 import { setLoad } from './weightRules.js';
@@ -780,25 +781,38 @@ export function useGymApp() {
       return ex;
     }));
   };
-  // 추천 RPE: 1RM(3대는 분석 탭에 입력한 값과 기록 중 큰 값, 그 외 종목은 내 최고 기록)으로
-  // 이 무게를 최대 몇 번 들 수 있는지(Epley 역산) 구하고, 남은 반복 수를 RPE로 바꾼다 (RPE = 10 - 남은 반복)
-  const exOneRM = (ex) => {
+  // 자동 RPE 의 기준 1RM: 지금 근력 (실제 부하 기준. 맨몸 종목은 체중 포함)
+  // · 최근 8주 기록 중 최고 추정 1RM (직접 적은 RPE 가 있으면 남은 반복까지 넣어서) + 오늘 앞서 완료한 다른 세트
+  // · 8주 안에 기록이 없으면 예전 최고의 95% (쉬는 동안 조금 빠진다고 본다)
+  // · 3대는 분석 탭에 입력한 1RM 과 비교해 큰 값, 내 기록이 전혀 없으면 3대 수준으로 추정 (strengthRatios.js)
+  // skipSetId: 그 세트 자신은 빼고 (세트 하나가 스스로의 기준이 되면 늘 RPE 10 이 나온다)
+  const exOneRM = (ex, skipSetId = null) => {
     const id = String(getExId(ex));
-    if (['sq', 'bp', 'dl'].includes(id)) return getEffective1RM(id);
-    // 내 기록이 있으면 그 기록, 없으면 3대 수준으로 추정 (strengthRatios.js)
-    const own = getTop1RM(id);
-    if (own > 0) return own;
-    return estimateFromLifts(id, { sq: getEffective1RM('sq'), bp: getEffective1RM('bp'), dl: getEffective1RM('dl') })?.rm || 0;
+    const load = loadOfEx(ex);
+    const hist = historyFor(ex);
+    const since = new Date(currentDate); since.setDate(since.getDate() - 56);
+    const cut = formatDate(since);
+    // RPE 를 안 적은 세트는 보통 1개쯤 남기고 끝내므로 RPE 9 로 본다 (실패로 보면 같은 세트를 반복할 때마다 'RPE 10' 이 나온다)
+    const bestOf = (sets) => sets.reduce((m, st) => Math.max(m, st.reps <= 15 ? e1rmRpe(st.load, st.reps, st.rpe || 9) : 0), 0);
+    let rm = bestOf(hist.filter(h => h.date >= cut).flatMap(h => h.sets));
+    if (!rm) rm = bestOf(hist.flatMap(h => h.sets)) * 0.95;
+    const today = (ex.sets || []).filter(st => st.id !== skipSetId && st.completed && (st.type || '-') !== 'W' && parseInt(st.reps, 10) > 0)
+      .map(st => ({ load: load(st), reps: parseInt(st.reps, 10), rpe: st.rpeAuto ? 0 : parseFloat(st.rpe) || 0 }));
+    rm = Math.max(rm, bestOf(today));
+    if (['sq', 'bp', 'dl'].includes(id)) rm = Math.max(rm, parseFloat(activeUser?.manual1RM?.[id]) || 0);
+    if (!rm && ruleOfEx(ex).key !== 'bodyweight' && ruleOfEx(ex).key !== 'assist') rm = estimateFromLifts(id, { sq: getEffective1RM('sq'), bp: getEffective1RM('bp'), dl: getEffective1RM('dl') })?.rm || 0;
+    return Math.round(rm * 2) / 2;
   };
-  const suggestRpe = (ex, set, oneRM = exOneRM(ex)) => {
-    const rule = ruleOfEx(ex);
-    if (rule.key === 'bodyweight' || rule.key === 'assist') return null;
-    const w = parseFloat(set.weight), r = parseInt(set.reps, 10);
-    if (!(oneRM > 0) || !(w > 0) || !(r > 0)) return null;
-    const maxReps = w >= oneRM ? 1 : 30 * (oneRM / w - 1);
-    const rpe = Math.max(5, Math.min(10, 10 - (maxReps - r)));
-    return Math.round(rpe * 2) / 2;
+  // 이 세트의 추정 RPE 정보 { rpe, over, max, rm } (워밍업·부하를 모르는 맨몸 세트·기준 기록이 없으면 null)
+  const rpeInfo = (ex, set) => {
+    if ((set.type || '-') === 'W') return null;
+    const oneRM = exOneRM(ex, set.id);
+    const l = loadOfEx(ex)(set), r = parseInt(set.reps, 10);
+    if (!(oneRM > 0) || !(l > 0)) return null;
+    if (!(r > 0)) return { rpe: null, over: false, max: estimateRpe(l, 1, oneRM)?.max ?? null, rm: oneRM };
+    return { ...estimateRpe(l, r, oneRM), rm: oneRM };
   };
+  const suggestRpe = (ex, set) => rpeInfo(ex, set)?.rpe ?? null;
   // 신기록 축하 (운동 화면 위에 잠깐 뜬다)
   const [prCelebration, setPrCelebration] = useState(null);
   const prTimer = useRef(null);
@@ -986,7 +1000,8 @@ export function useGymApp() {
   const getWeeklyLoadReport = (mondayDate) => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const weekLoad = (startDate) => {
-      let volume = 0, sets = 0, days = 0, rpeSum = 0, rpeCount = 0;
+      // 평균 RPE: 직접 적은 RPE 가 있으면 그것만, 없으면 앱이 넣은 자동(추정) RPE 로
+      let volume = 0, sets = 0, days = 0, rpeSum = 0, rpeCount = 0, autoSum = 0, autoCount = 0;
       const groupSets = Object.fromEntries(LOAD_GROUPS.map(g => [g, 0]));
       for (let i = 0; i < 7; i++) {
         const d = new Date(startDate); d.setDate(d.getDate() + i);
@@ -1002,13 +1017,13 @@ export function useGymApp() {
             daySets++;
             if (groupSets[group] !== undefined) groupSets[group]++;
             const r = parseFloat(s.rpe);
-            if (!isNaN(r) && r > 0) { rpeSum += r; rpeCount++; }
+            if (!isNaN(r) && r > 0) { if (s.rpeAuto) { autoSum += r; autoCount++; } else { rpeSum += r; rpeCount++; } }
           });
         });
         if (daySets > 0) days++;
         sets += daySets;
       }
-      return { volume, sets, days, groupSets, avgRpe: rpeCount ? rpeSum / rpeCount : null, rpeCount };
+      return { volume, sets, days, groupSets, avgRpe: rpeCount ? rpeSum / rpeCount : autoCount ? autoSum / autoCount : null, rpeCount, rpeEstimated: !rpeCount && autoCount > 0 };
     };
 
     const current = weekLoad(mondayDate);
@@ -1055,8 +1070,8 @@ export function useGymApp() {
     const topic = (word) => { const c = word.charCodeAt(word.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 !== 0 ? '은' : '는'; };
     const lowNames = low.map(gs => gs.group).join(', ');
     if (current.sets > 0 && low.length) advice.push({ tone: 'info', text: `${lowNames}${topic(lowNames)} 이번 주 10세트 미만입니다. 근육을 키우려면 부위당 주 10세트 이상을 목표로 하세요.` });
-    if (current.avgRpe !== null && current.avgRpe >= 9) advice.push({ tone: 'caution', text: `평균 RPE ${current.avgRpe.toFixed(1)}로 한계에 가까운 세트가 많습니다. 대부분의 세트는 1~2회 여유(RPE 7~8)를 남기면 회복이 빨라집니다.` });
-    if (current.sets > 0 && current.rpeCount === 0) advice.push({ tone: 'info', text: '세트에 RPE(체감 강도 1~10)를 적으면 강도까지 함께 분석해 드려요.' });
+    if (current.avgRpe !== null && current.avgRpe >= 9) advice.push({ tone: 'caution', text: `평균 RPE ${current.avgRpe.toFixed(1)}${current.rpeEstimated ? '(추정)' : ''}로 한계에 가까운 세트가 많습니다. 대부분의 세트는 1~2회 여유(RPE 7~8)를 남기면 회복이 빨라집니다.` });
+    if (current.sets > 0 && current.rpeCount === 0) advice.push({ tone: 'info', text: current.rpeEstimated ? '지금 평균 RPE 는 무게·횟수로 추정한 값이에요. 세트를 마칠 때 RPE 를 직접 고르면 강도 분석과 다음 무게 추천이 더 정확해져요.' : '세트에 RPE(체감 강도 1~10)를 적으면 강도까지 함께 분석해 드려요.' });
     if (streak >= 4) advice.push({ tone: streak >= 5 ? 'danger' : 'caution', text: `${streak}일 연속 운동 중입니다. 내일은 쉬거나 가벼운 유산소만 하세요.` });
 
     return { current, history, chronicSets, acwr, streak, groupStatus, level, advice, isCurrentWeek: mondayDate <= today && today <= sunday };
@@ -1849,6 +1864,7 @@ export function useGymApp() {
     updateSet,
     exOneRM,
     suggestRpe,
+    rpeInfo,
     toggleSetComplete,
     adjustTimer,
     getPreviousRecord,

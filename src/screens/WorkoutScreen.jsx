@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Bell, BookOpen, Camera, Check, Clock, Dumbbell, Flame, History, MoreVertical, Pause, Play, Plus, RotateCw, Save, Search, Settings, Target, Trash2, X, Zap } from 'lucide-react';
 import { EmergencyExitIcon, SmartExerciseThumbnail } from '../components/ExerciseVisuals.jsx';
 import { EXERCISE_OPTIONS, SET_TYPE_LABEL, SET_TYPE_STYLE, getExId, getExName, getExTarget, ruleOfEx, toolOfEx } from '../data/catalog.js';
@@ -6,6 +6,7 @@ import { calculate1RM } from '../lib/dates.js';
 import { ALARM_SOUNDS, unlockAudio } from '../restAlarm.js';
 import { StopwatchDial } from '../StopwatchDial.jsx';
 import { formatPlates, platesFor, setLoad, sideWeight } from '../weightRules.js';
+import { RPE_SCALE, rpeMeaning, rpeTone } from '../lib/rpe.js';
 import { GlobalOverlays } from './GlobalOverlays.jsx';
 import { useApp } from '../appContext.js';
 
@@ -46,7 +47,6 @@ export function WorkoutScreen() {
     prCelebration,
     cycleSetType,
     exCategoryFilter,
-    exOneRM,
     exSearchQuery,
     exerciseHistoryModal,
     exerciseOptionsModal,
@@ -81,7 +81,7 @@ export function WorkoutScreen() {
     showToast,
     startRest,
     stopAlarm,
-    suggestRpe,
+    rpeInfo,
     swapExercise,
     swapTargetExerciseId,
     timeLeft,
@@ -99,13 +99,14 @@ export function WorkoutScreen() {
     if (s.completed && s.reps) return sum + setVolume(ex, s);
     return sum;
   }, 0), 0);
-  const getRpeColor = (rpeStr) => {
-    const r = parseInt(rpeStr, 10);
-    if (isNaN(r)) return 'bg-neutral-900/50 text-neutral-400 focus:border-neutral-500 border-neutral-800';
-    if (r >= 9) return 'bg-rose-950/40 text-rose-400 focus:border-rose-500 border-rose-900/50 shadow-[0_0_10px_rgba(225,29,72,0.2)]';
-    if (r >= 7) return 'bg-amber-950/40 text-amber-400 focus:border-amber-500 border-amber-900/50 shadow-[0_0_10px_rgba(217,119,6,0.2)]';
-    return 'bg-emerald-950/40 text-emerald-400 focus:border-emerald-500 border-emerald-900/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]';
+  // RPE 칸 색: 직접 고른 값은 진하게, 앱이 추정한 값은 흐리게
+  const RPE_TONE = {
+    hard: 'bg-rose-950/40 text-rose-400 border-rose-900/50 shadow-[0_0_10px_rgba(225,29,72,0.2)]',
+    mid: 'bg-amber-950/40 text-amber-400 border-amber-900/50 shadow-[0_0_10px_rgba(217,119,6,0.2)]',
+    easy: 'bg-emerald-950/40 text-emerald-400 border-emerald-900/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]',
+    none: 'bg-neutral-900/50 text-neutral-400 border-neutral-800',
   };
+  const [rpePick, setRpePick] = useState(null); // RPE 고르는 중인 세트 id
   return (
     <div className="min-h-screen bg-[#03060a] text-neutral-100 pb-32 flex flex-col relative animate-fade-in">
       {prCelebration && (
@@ -154,7 +155,6 @@ export function WorkoutScreen() {
             const exIdStr = getExId(ex);
             const exToolStr = ex.exercise && ex.exercise.tool ? String(ex.exercise.tool) : '바벨';
             const exRule = ruleOfEx(ex);
-            const exRM = exOneRM(ex);
             return (
               <div key={ex.id} className="bg-[#060b10]/95 rounded-[28px] p-5 border border-emerald-500/30 shadow-[0_0_28px_rgba(16,185,129,0.12),inset_0_0_24px_rgba(16,185,129,0.05)] relative overflow-hidden">
                 <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-emerald-300 to-transparent shadow-[0_0_14px_rgba(16,185,129,1)]" />
@@ -191,7 +191,7 @@ export function WorkoutScreen() {
                     <div className={`-mt-1 mb-4 rounded-2xl border px-3 py-2.5 flex items-center gap-3 ${look.box}`}>
                       <span className="text-xl leading-none">{look.icon}</span>
                       <div className="flex-1 min-w-0">
-                        <div className={`text-[12px] font-black ${look.title}`}>{look.label} · {sug.text}</div>
+                        <div className={`text-[12px] font-black ${look.title}`}>{look.label} · {sug.text}{sug.rpe ? <span className="opacity-70"> · RPE {sug.rpe}</span> : null}</div>
                         <div className="text-[10px] font-bold text-neutral-400 leading-snug mt-0.5 break-keep">{sug.why}</div>
                       </div>
                       <button onClick={() => applySuggestion(ex.id)} className={`flex-shrink-0 px-3 py-2 rounded-xl text-[11px] font-black active:scale-95 transition-transform ${look.btn}`}>적용</button>
@@ -207,6 +207,8 @@ export function WorkoutScreen() {
                     const realLoad = (exRule.key === 'bodyweight' || exRule.key === 'assist') && bodyWeightKg > 0 ? setLoad(exIdStr, toolOfEx(ex), set.weight, bodyWeightKg) : null;
                     const isDropSet = set.type === 'D';
                     const prevSet = getPreviousRecord(exIdStr, setIndex);
+                    const info = rpeInfo(ex, set);
+                    const setRpe = info?.rpe ?? null;
                     return (
                       <div key={set.id} className="relative group/set">
                         <div className={`grid grid-cols-12 gap-2 items-center transition-all duration-300 ${set.completed ? 'opacity-50' : 'opacity-100'} ${isDropSet ? 'bg-rose-950/20 border border-rose-900/50 p-2 -mx-2 rounded-xl' : ''}`}>
@@ -216,18 +218,27 @@ export function WorkoutScreen() {
                           </button>
                           <div className="col-span-3"><input type="number" inputMode="decimal" placeholder={exRule.placeholder} value={set.weight ?? ''} onChange={(e) => updateSet(ex.id, set.id, 'weight', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
                           <div className="col-span-3"><input type="number" placeholder="0" value={set.reps ?? ''} onChange={(e) => updateSet(ex.id, set.id, 'reps', e.target.value)} className="w-full bg-black text-white text-center font-black rounded-xl py-3 outline-none border border-emerald-500/25 focus:border-emerald-300 focus:shadow-[0_0_16px_rgba(16,185,129,0.5)] transition-all text-lg placeholder:text-neutral-700" /></div>
-                          <div className="col-span-2"><input type="number" inputMode="decimal" step="0.5" placeholder={suggestRpe(ex, set, exRM) !== null ? `≈${suggestRpe(ex, set, exRM)}` : '-'} min="1" max="10" value={set.rpe ?? ''} onChange={(e) => updateSet(ex.id, set.id, 'rpe', e.target.value)} className={`w-full text-center font-bold text-sm rounded-xl py-3 outline-none border transition-colors ${getRpeColor(set.rpe)}`} /></div>
+                          <div className="col-span-2">
+                            <button onClick={() => setRpePick(p => (p === set.id ? null : set.id))} aria-label="RPE 고르기"
+                              className={`w-full h-[50px] rounded-xl border flex flex-col items-center justify-center leading-none transition-colors active:scale-95 ${String(set.rpe || '').trim() ? RPE_TONE[rpeTone(set.rpe)] : RPE_TONE.none} ${set.rpeAuto ? 'opacity-70' : ''} ${rpePick === set.id ? 'ring-2 ring-emerald-300' : ''}`}>
+                              {String(set.rpe || '').trim()
+                                ? <><span className="text-sm font-black tabular-nums">{set.rpeAuto ? '≈' : ''}{set.rpe}</span><span className="text-[8px] font-black mt-1 opacity-80">{set.rpeAuto ? '추정' : (rpeMeaning(set.rpe)?.short || '')}</span></>
+                                : setRpe !== null ? <><span className="text-sm font-black text-neutral-500 tabular-nums">≈{setRpe}</span><span className="text-[8px] font-black mt-1 text-neutral-600">예상</span></>
+                                : <span className="text-sm font-black text-neutral-600">-</span>}
+                            </button>
+                          </div>
                           <div className="col-span-2 flex justify-center relative">
                              <button onClick={() => toggleSetComplete(ex.id, set.id)} className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-75 z-10 relative ${set.completed ? 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'bg-black text-emerald-500/40 hover:text-emerald-300 hover:shadow-[0_0_12px_rgba(16,185,129,0.4)] border border-emerald-500/30'}`}><Check className="w-6 h-6 stroke-[3]" /></button>
                              <button onClick={() => removeSet(ex.id, set.id)} className="absolute -right-8 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-rose-500 transition-all opacity-0 group-hover/set:opacity-100 bg-neutral-900 rounded-full shadow-md"><X className="w-4 h-4"/></button>
                           </div>
                         </div>
                         <div className="flex justify-between items-start gap-2 px-2 mt-2 mb-4 min-h-[16px]">
-                          <span className="flex-1 min-w-0 text-[10px] text-neutral-500 font-bold leading-snug">{set.completed && Array.isArray(set.pr) && set.pr.length > 0 && <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded-md bg-amber-400/15 border border-amber-400/50 text-amber-300 font-black">🏅 신기록</span>}{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}{(set.rpeAuto || !String(set.rpe || '').trim()) && suggestRpe(ex, set, exRM) !== null && <span className="ml-1.5 text-emerald-400/80">· RPE {set.rpeAuto ? '자동' : '추천'} {suggestRpe(ex, set, exRM)} (1RM {exRM}kg 기준)</span>}
-                            {!(parseInt(set.reps, 10) > 0) && parseFloat(set.weight) > 0 && exRM > 0 && exRule.key !== 'bodyweight' && exRule.key !== 'assist' && (() => {
-                              const max = parseFloat(set.weight) >= exRM ? 1 : Math.floor(30 * (exRM / parseFloat(set.weight) - 1));
-                              return <span className="ml-1.5 text-emerald-400/80">· 이 무게 최대 약 {max}회 (RPE 8 ≈ {Math.max(1, max - 2)}회) · 횟수를 넣으면 RPE 자동</span>;
-                            })()}</span>
+                          <span className="flex-1 min-w-0 text-[10px] text-neutral-500 font-bold leading-snug">{set.completed && Array.isArray(set.pr) && set.pr.length > 0 && <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded-md bg-amber-400/15 border border-amber-400/50 text-amber-300 font-black">🏅 신기록</span>}{prevSet ? `이전: ${prevSet.weight}kg x ${prevSet.reps}회` : ''}{info?.over && <span className="ml-1.5 text-amber-300/90">· 예상보다 많이 했어요 💪 RPE 를 직접 골라 주세요</span>}
+                            {!(parseInt(set.reps, 10) > 0) && info?.max > 0 && (() => {
+                              const max = Math.max(1, Math.floor(info.max));
+                              return <span className="ml-1.5 text-emerald-400/80">· 이 무게 최대 약 {max}회 · RPE 8(2개 남기기) ≈ {Math.max(1, max - 2)}회</span>;
+                            })()}
+                            {setRpe !== null && !info?.over && parseInt(set.reps, 10) > 0 && (set.rpeAuto || !String(set.rpe || '').trim()) && <span className="ml-1.5 text-emerald-400/70">· 예상 RPE {setRpe} (지금 1RM 약 {info.rm}kg 기준)</span>}</span>
                           {realLoad !== null && realLoad !== (parseFloat(set.weight) || 0) && (
                             <span className="text-[10px] font-bold text-sky-300">실제 부하 {realLoad}kg {exRule.key === 'assist' ? '(체중 − 보조)' : '(체중 포함)'}</span>
                           )}
@@ -238,6 +249,30 @@ export function WorkoutScreen() {
                             </button>
                           )}
                         </div>
+                        {rpePick === set.id && (
+                          <div className="-mt-2 mb-4 rounded-2xl border border-emerald-500/30 bg-black/60 p-3 animate-fade-in">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-black text-emerald-300">이 세트 얼마나 힘들었나요? (RPE)</span>
+                              <button onClick={() => setRpePick(null)} aria-label="닫기" className="p-1 text-neutral-500"><X className="w-4 h-4" /></button>
+                            </div>
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {RPE_SCALE.map(o => {
+                                const on = !set.rpeAuto && parseFloat(set.rpe) === o.v;
+                                return (
+                                  <button key={o.v} onClick={() => { updateSet(ex.id, set.id, 'rpe', String(o.v)); setRpePick(null); }}
+                                    className={`rounded-xl py-2 border flex flex-col items-center leading-none active:scale-95 transition-transform ${on ? 'bg-emerald-400 text-black border-emerald-300' : `${RPE_TONE[rpeTone(o.v)]}`}`}>
+                                    <span className="text-sm font-black tabular-nums">{o.v}</span>
+                                    <span className="text-[9px] font-black mt-1 opacity-80">{o.short}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div className="text-[10px] font-bold text-neutral-400 mt-2 leading-snug">
+                              RPE = 10 − 남은 반복. {setRpe !== null ? `무게·횟수로 본 예상은 ${setRpe} (${rpeMeaning(setRpe)?.text})예요. ` : ''}직접 고른 RPE 가 있어야 다음 무게 추천에 반영돼요.
+                            </div>
+                            {String(set.rpe || '').trim() && <button onClick={() => { updateSet(ex.id, set.id, 'rpe', ''); setRpePick(null); }} className="mt-2 text-[11px] font-black text-neutral-500">RPE 지우기</button>}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

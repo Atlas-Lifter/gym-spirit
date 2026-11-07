@@ -9,12 +9,13 @@ const int = (v) => parseInt(v, 10) || 0;
 const isWork = (s) => s && s.completed && (s.type || '-') !== 'W' && int(s.reps) > 0;
 
 // 이 종목의 지난 기록 (오늘 이전 날짜, 최근 순). loadOf(set) 은 실제 부하
+// rpe 는 직접 적은 값만 (완료할 때 앱이 넣은 자동 RPE 는 추정이라 0 으로 본다)
 export const exerciseHistory = (workouts, exId, beforeDate, idOf, loadOf) => Object.keys(workouts || {})
   .filter(d => d < beforeDate && Array.isArray(workouts[d]))
   .sort((a, b) => (a < b ? 1 : -1))
   .map(date => {
     const sets = workouts[date].filter(ex => String(idOf(ex)) === String(exId)).flatMap(ex => ex.sets || []).filter(isWork)
-      .map(s => ({ load: loadOf(s), reps: int(s.reps), rpe: num(s.rpe), weight: num(s.weight), type: s.type || '-' }));
+      .map(s => ({ load: loadOf(s), reps: int(s.reps), rpe: s.rpeAuto ? 0 : num(s.rpe), weight: num(s.weight), type: s.type || '-' }));
     return { date, sets };
   })
   .filter(h => h.sets.length);
@@ -62,8 +63,14 @@ const LEVEL = ['초급', '입문', '중급', '상급', '엘리트'];
 // · 지난 기록보다 무조건 올리지 않는다. 최근 기록으로 잰 지금 근력(추정 1RM)이 같은 체격 평균의 어느 수준인지 보고,
 //   수준이 높을수록 반복 수를 더 채워야 무게를 올린다 (초보는 빨리 늘고, 상급자는 천천히 는다)
 // · 가벼운 무게에서 한 칸 올리는 게 10% 넘게 무거워지면(예: 덤벨 6→8kg) 반복을 더 채운 뒤 올린다
-// 결과: { kind: 'up' | 'reps' | 'same' | 'deload' | 'rest', weight, reps, text, why } 또는 null(지난 기록 없음)
+// 결과: { kind: 'up' | 'reps' | 'same' | 'deload' | 'rest', weight, reps, rpe(목표 RPE), text, why } 또는 null(지난 기록 없음)
+// 목표 RPE: 평소 세트는 2개 남기기(8), 회복·디로드 날은 3개 남기기(7)
+const TARGET_RPE = { up: 8, reps: 8.5, same: 8, deload: 7, rest: 7 };
 export const suggestNext = (history, rule, recovery = null, body = null) => {
+  const out = suggestRaw(history, rule, recovery, body);
+  return out && { ...out, rpe: TARGET_RPE[out.kind] || 8 };
+};
+const suggestRaw = (history, rule, recovery, body) => {
   const last = history[0];
   if (!last) return null;
   const main = last.sets.filter(s => s.type !== 'D');
