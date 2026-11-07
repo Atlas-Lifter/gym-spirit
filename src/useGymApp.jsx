@@ -13,7 +13,7 @@ import { CARDIO_DAMAGE_PER_MIN } from './data/cardio.js';
 import { computeRecovery, MUSCLE_GROUP } from './recovery.js';
 import { detectPR, exerciseHistory, suggestNext } from './lib/progress.js';
 import { DEFAULT_TIMER_SETTINGS, playAlarm, playTick, unlockAudio } from './restAlarm.js';
-import { estimateFromLifts } from './strengthRatios.js';
+import { estimateFromLifts, bodyStandard } from './strengthRatios.js';
 import { setLoad } from './weightRules.js';
 import { buildCoachContext, usualGroupsByWeekday } from './lib/coachContext.js';
 
@@ -870,7 +870,9 @@ export function useGymApp() {
     const g = String(getExTarget(ex)).split('(')[0];
     return recoveryCache[g] ? recoveryCache[g].percent : null;
   };
-  const getNextSuggestion = (ex) => suggestNext(historyFor(ex), ruleOfEx(ex), recoveryOf(ex));
+  // 내 체중·성별에 맞춘 이 종목 기준표 (지금 근력이 같은 체격 평균의 어느 수준인지 보고 추천을 조율한다)
+  const bodyStdOf = (ex) => bodyStandard(String(getExId(ex)), bodyWeightKg, activeUser?.profile?.gender);
+  const getNextSuggestion = (ex) => suggestNext(historyFor(ex), ruleOfEx(ex), recoveryOf(ex), bodyStdOf(ex));
   const applySuggestion = (sessionExId) => {
     const ex = session.find(e => e.id === sessionExId);
     const sug = ex && getNextSuggestion(ex);
@@ -1100,7 +1102,7 @@ export function useGymApp() {
     });
     return [...seen.values()].slice(0, 14).map(ex => {
       // 다음 운동 날 기준이라 회복도는 넣지 않는다 (오늘 할 부위는 회복 80% 규칙으로 따로 거른다)
-      const sug = suggestNext(exerciseHistory(safeWorkouts, getExId(ex), before, getExId, loadOfEx(ex)), ruleOfEx(ex), null);
+      const sug = suggestNext(exerciseHistory(safeWorkouts, getExId(ex), before, getExId, loadOfEx(ex)), ruleOfEx(ex), null, bodyStdOf(ex));
       return sug && { name: getExName(ex), group: coachGroupOf(ex), text: sug.text, weight: sug.weight, reps: sug.reps, why: sug.why };
     }).filter(Boolean);
   };

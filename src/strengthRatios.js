@@ -117,3 +117,27 @@ export const estimateFromLifts = (id, anchors = {}) => {
 };
 
 export const hasStrengthStandard = (id) => !!MAP[id];
+
+// 내 체중·성별에 맞춘 이 종목의 기준표 [초급, 입문, 중급, 상급, 엘리트] (오늘 추천 무게를 조율할 때 쓴다)
+// · 기준표는 남성 80kg 기준이라, 체중은 근력이 체중의 2/3 제곱에 비례한다는 일반적인 환산(allometric)으로 맞춘다
+// · 여성은 Strength Level 여성 기준표를 같은 체중에서 비교한 비율(하체 약 0.7, 상체 약 0.58)을 곱한다
+// · 체중을 모르면 남성 75kg·여성 60kg 으로 본다 (assumed: true)
+const LOWER_TABLES = new Set(['squat', 'front_squat', 'leg_press', 'hack_squat', 'smith_squat', 'leg_extension', 'seated_leg_curl',
+  'rdl', 'sldl', 'hip_thrust', 'db_lunge', 'db_bss', 'goblet', 'calf_machine', 'hip_add', 'hip_abd', 'deadlift', 'rack_pull']);
+const STD_ID = { sq: 'squat', bp: 'bench', dl: 'deadlift' };
+export const bodyStandard = (id, bodyWeight, gender) => {
+  const m = MAP[id] || (STD_ID[id] && [STD_ID[id], 1]);
+  if (!m) return null;
+  const [key, factor] = m;
+  const female = gender === 'female';
+  const bwIn = parseFloat(bodyWeight);
+  const assumed = !(bwIn >= 30 && bwIn <= 250);
+  const bw = assumed ? (female ? 60 : 75) : bwIn;
+  const sex = female ? (LOWER_TABLES.has(key) ? 0.7 : 0.58) : 1;
+  const k = Math.pow(bw / 80, 2 / 3) * factor * sex;
+  return { table: SL[key].map(v => Math.round(v * k * 10) / 10), bodyWeight: bw, assumed };
+};
+// 기준표에서 내 1RM 의 위치 (0=초급 … 4=엘리트)
+export const strengthLevel = (oneRM, table) => (table ? levelOf(oneRM, table) : null);
+export const LEVEL_NAMES = ['초급', '입문', '중급', '상급', '엘리트'];
+export const levelName = (p) => LEVEL_NAMES[Math.max(0, Math.min(4, Math.floor(p)))];
